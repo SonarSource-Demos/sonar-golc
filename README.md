@@ -9,8 +9,7 @@
 **GoLC** counts physical lines of source code in numerous programming languages supported by the Developer, Enterprise, and Data Center editions of [SonarQube](https://www.sonarsource.com/knowledge/languages/) across your Bitbucket Cloud, Bitbucket Data Center, GitHub, GitLab, and Azure DevOps repositories.
 GoLC can be used to estimate LoC counts that would be produced by a Sonar analysis of these projects, without having to implement this analysis.
 
-GoLC scans your repositories and identifies the main branch of each repository, tallying the total lines of code per language for that branch.
-At the end of the analysis, a text and PDF report is generated, along with a JSON result file for each repository. It starts an HTTP service to display an HTML page with the results.
+GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
 > This initial version is available for Bitbucket Cloud and Bitbucket DC, and for GitHub, GitLab, Azure DevOps, and Files the next updates will be available soon, integrating these platforms.A Docker version will be planned.
 
