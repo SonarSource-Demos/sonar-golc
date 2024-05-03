@@ -1,9 +1,10 @@
-module github.com/colussim/GoLC
+module github.com/emmanuel-colussi-sonarsource/sonar-golc
 
 go 1.21
 
 require (
 	github.com/briandowns/spinner v1.18.1
+	github.com/colussim/GoLC v0.0.0-20240503041722-075af4b0f904
 	github.com/go-git/go-git/v5 v5.8.1
 	github.com/hashicorp/go-getter v1.7.0
 	github.com/jung-kurt/gofpdf v1.16.2
