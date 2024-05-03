@@ -1,0 +1,91 @@
+{
+    "platforms": {
+      "BitBucketSRV": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxx",
+        "DevOps": "bitbucket_dc",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "http://X.X.X.X/",
+        "Apiver": "1.0",
+        "Baseapi": "rest/api/",
+        "Protocol": "http",
+        "FileExclusion":".cloc_bitbucketdc_ignore"
+      },
+      "BitBucket": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxx",
+        "DevOps": "bitbucket",
+        "Workspace":"sonarsource",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "https://api.bitbucket.org/",
+        "Apiver": "2.0",
+        "Baseapi": "bitbucket.org",
+        "Protocol": "http",
+        "FileExclusion":".cloc_bitbucket_ignore"
+      },
+      "Github": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxxxxxx",
+        "DevOps": "github",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "https://api.github.com/",
+        "Apiver": "",
+        "Baseapi": "api.github.com/",
+        "Protocol": "https",
+        "FileExclusion":".cloc_github_ignore"
+      },
+      "Gitlab": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxxxx",
+        "DevOps": "gitlab",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "https://gitlab.com/",
+        "Apiver": "v4",
+        "Baseapi": "api/",
+        "Protocol": "https",
+        "FileExclusion":".cloc_gitlab_ignore"
+      },
+      "Azure": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxxxx",
+        "DevOps": "azure",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "https://dev.azure.com/",
+        "Apiver": "7.1",
+        "Baseapi": "_apis/git/",
+        "Protocol": "https",
+        "FileExclusion":".cloc_azure_ignore"
+      },
+      "File": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxxxxx",
+        "DevOps": "file",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "Url": "",
+        "Apiver": "",
+        "Baseapi": "",
+        "Protocol": "",
+        "FileExclusion":".cloc_file_ignore"
+      }
+    }
+  }
+  
+
