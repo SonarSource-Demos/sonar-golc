@@ -405,8 +405,10 @@ func AnalyseReposListBitSRV(DestinationResult string, user string, AccessToken s
 
 	// Wait for all goroutines to complete
 	for i := 0; i < len(repolist); i++ {
+		fmt.Printf("\r Waiting for workers...")
 		<-results
 	}
+	//spinWaiting.Stop()
 
 	return cpt
 }
@@ -537,6 +539,7 @@ func AnalyseReposListBitC(DestinationResult, AccessToken, Protocol, Baseurl, wor
 
 	// Wait for all goroutines to complete
 	for i := 0; i < len(repolist); i++ {
+		fmt.Printf("\r Waiting for workers...")
 		<-results
 	}
 
