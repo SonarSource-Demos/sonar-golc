@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/colussim/GoLC/pkg/scanner"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/scanner"
 )
 
 type LanguageSorter struct {
