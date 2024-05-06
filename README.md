@@ -16,7 +16,7 @@ GoLC The tool analyzes your repositories and identifies the largest branch of ea
 ---
 ## Installation
 
-You can install from the stable release by clicking [here](https://github.com/colussim/GoLC/releases/tag/v1.0.0.0)
+You can install from the stable release by clicking here
 
 ## Prerequisites 
 
@@ -134,7 +134,7 @@ If '**Projects**' and '**Repos**' are not specified, the analysis will be conduc
 "Project": "",
 "Repos": "",
 ```
-For Bitbucket DC, you must provide the URL with your server address and change the '**Protocol**' entry if you are using an https connection , ending with '**/**'. The '**Branch**' entry is not used at the moment.
+For Bitbucket DC, you must provide the URL with your server address and change the '**Protocol**' entry if you are using an https connection , ending with '**/**'. The '**Branch**' input allows you to select a specific branch for all repositories within an organization or project, or for a single repository. For example, if you only want all branches to be "main", '**"Branch":"main"**' .
 ```json
  "Url": "http://X.X.X.X/"
  ```
@@ -165,10 +165,9 @@ flag : <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>
  ```
  ❗️ And for now, only the **BitBucketSRV** and **BitBucket** flags are supported...
 
- If the '**Results**' directory exists, GoLC will prompt you to delete it before starting a new analysis and will also offer to save the previous analysis. If you respond '**y**', a '**Saves**' directory will be created containing a zip file, which will be a compressed version of the '**Results**' directory.
-
 ```bash
 
+If the Results directory exists, GoLC will prompt you to delete it before starting a new analysis and will also offer to save the previous analysis. If you respond 'y', a Saves directory will be created containing a zip file, which will be a compressed version of the Results directory.
 
 $:> golc -devops BitBucket
 

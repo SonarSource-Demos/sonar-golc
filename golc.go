@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc"
+	"github.com/colussim/GoLC/assets"
+	"github.com/colussim/GoLC/pkg/goloc"
 
-	getbibucket "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucket"
-	getbibucketdc "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucketdc"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgithub"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgitlab"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	getbibucket "github.com/colussim/GoLC/pkg/devops/getbitbucket"
+	getbibucketdc "github.com/colussim/GoLC/pkg/devops/getbitbucketdc"
+	"github.com/colussim/GoLC/pkg/devops/getgithub"
+	"github.com/colussim/GoLC/pkg/devops/getgitlab"
+	"github.com/colussim/GoLC/pkg/utils"
 )
 
 type OrganizationData struct {
@@ -691,7 +691,7 @@ func main() {
 	}
 
 	// Temporary function for future functionality
-	if *devopsFlag == "Github" || *devopsFlag == "Gitlab" || *devopsFlag == "Azure" || *devopsFlag == "File" {
+	if *devopsFlag == "Gitlab" || *devopsFlag == "Azure" || *devopsFlag == "File" {
 		fmt.Println("❗️ Functionality coming soon...")
 		os.Exit(0)
 	}
@@ -779,7 +779,7 @@ func main() {
 	case "github":
 
 		var EmptyR = 0
-		var fileexclusion = ".clocignore"
+		var fileexclusion = ".cloc_github_ignore"
 		repositories, err := getgithub.GetRepoGithubList(platformConfig["AccessToken"].(string), platformConfig["Organization"].(string))
 		if err != nil {
 			fmt.Printf("Error Get Info Repositories in organization '%s' : '%s'", platformConfig["Organization"].(string), err)
@@ -859,14 +859,22 @@ func main() {
 		fileexclusionEX := getFileNameIfExists(fileexclusion)
 
 		startTime = time.Now()
-		projects, err := getbibucketdc.GetProjectBitbucketList(platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string), platformConfig["AccessToken"].(string), fileexclusionEX, platformConfig["Project"].(string), platformConfig["Repos"].(string))
+		projects, err := getbibucketdc.GetProjectBitbucketList(platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string), platformConfig["AccessToken"].(string), fileexclusionEX, platformConfig["Project"].(string), platformConfig["Repos"].(string), platformConfig["Branch"].(string))
 		if err != nil {
 			fmt.Printf("❌ Error Get Info Projects in Bitbucket server '%s' : ", err)
 			os.Exit(1)
 		}
 
-		// Run scanning repositories
-		NumberRepos = AnalyseReposListBitSRV(DestinationResult, platformConfig["Users"].(string), platformConfig["AccessToken"].(string), platformConfig["Protocol"].(string), platformConfig["Url"].(string), platformConfig["DevOps"].(string), projects)
+		if len(projects) == 0 {
+			fmt.Printf("❌ No Analysis performed...")
+			os.Exit(1)
+
+		} else {
+
+			// Run scanning repositories
+			NumberRepos = AnalyseReposListBitSRV(DestinationResult, platformConfig["Users"].(string), platformConfig["AccessToken"].(string), platformConfig["Protocol"].(string), platformConfig["Url"].(string), platformConfig["DevOps"].(string), projects)
+
+		}
 
 	case "bitbucket":
 		var fileexclusion = platformConfig["FileExclusion"].(string)
@@ -874,14 +882,20 @@ func main() {
 
 		startTime = time.Now()
 
-		projects1, err := getbibucket.GetProjectBitbucketListCloud(platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string), platformConfig["AccessToken"].(string), platformConfig["Workspace"].(string), fileexclusionEX, platformConfig["Project"].(string), platformConfig["Repos"].(string))
+		projects1, err := getbibucket.GetProjectBitbucketListCloud(platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string), platformConfig["AccessToken"].(string), platformConfig["Workspace"].(string), fileexclusionEX, platformConfig["Project"].(string), platformConfig["Repos"].(string), platformConfig["Branch"].(string))
 		if err != nil {
 			fmt.Printf("❌ Error Get Info Projects in Bitbucket cloud '%s' : ", err)
 			return
 		}
+		if len(projects1) == 0 {
+			fmt.Printf("❌ No Analysis performed...")
+			os.Exit(1)
 
-		// Run scanning repositories
-		NumberRepos = AnalyseReposListBitC(DestinationResult, platformConfig["AccessToken"].(string), platformConfig["Protocol"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), platformConfig["DevOps"].(string), projects1)
+		} else {
+
+			// Run scanning repositories
+			NumberRepos = AnalyseReposListBitC(DestinationResult, platformConfig["AccessToken"].(string), platformConfig["Protocol"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), platformConfig["DevOps"].(string), projects1)
+		}
 
 	case "file":
 
