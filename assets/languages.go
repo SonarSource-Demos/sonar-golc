@@ -179,4 +179,9 @@ var Languages = language.Languages{
 		MultiLineComments: [][]string{},
 		Extensions:        []string{".tf"},
 	},
+	"JCL": {
+		LineComments:      []string{"//"},
+		MultiLineComments: [][]string{{"/*", "*/"}},
+		Extensions:        []string{".jcl", ".JCL"},
+	},
 }
