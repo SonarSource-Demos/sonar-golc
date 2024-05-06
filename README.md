@@ -21,6 +21,9 @@ You can install from the stable release by clicking here
 ## Prerequisites 
 
 * A personal access tokens for : Bitbucket Cloud,Bitbucket DC,GitHub, GitLab and Azure DevOps.The token must have repo scope.
+  * For Bitbucket DC :
+       - Perform pull request actions
+     - Push, pull and clone repositories
 * [Go language installed](https://go.dev/) : If you want to use the sources...
 
  ## Usage
