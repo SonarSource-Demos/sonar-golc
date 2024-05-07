@@ -696,7 +696,7 @@ func ifExistBranches(repoURL, accessToken string) ([]Branch, error) {
 
 	var branch Branch
 	if resp.StatusCode == http.StatusOK {
-		// La requête a réussi, analyser les données de la branche
+
 		err = json.NewDecoder(resp.Body).Decode(&branch)
 		if err != nil {
 			return nil, err
@@ -922,13 +922,11 @@ func isRepositoryEmpty(workspace, repoSlug, accessToken, bitbucketURLBase string
 
 	urlMain := fmt.Sprintf("%srepositories/%s/%s/src/main/?pagelen=100", bitbucketURLBase, workspace, repoSlug)
 
-	// Récupérer les fichiers de la branche principale
 	filesResp, err := fetchFiles(urlMain, accessToken)
 	if err != nil {
 		return false, fmt.Errorf("❌ Error when testing if repo: %s is empty - Function: %s - %v", repoSlug, "getbibucket-isRepositoryEmpty", err)
 	}
 
-	// Si la réponse est nulle, essayer avec la branche "master"
 	if filesResp == nil {
 		urlMaster := fmt.Sprintf("%srepositories/%s/%s/src/master/?pagelen=100", bitbucketURLBase, workspace, repoSlug)
 		filesResp, err = fetchFiles(urlMaster, accessToken)
@@ -937,7 +935,6 @@ func isRepositoryEmpty(workspace, repoSlug, accessToken, bitbucketURLBase string
 		}
 	}
 
-	// Vérifier si la liste de fichiers est vide
 	if len(filesResp.Values) == 0 {
 		return true, nil
 	}
