@@ -11,19 +11,19 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This initial version is available for Bitbucket Cloud and Bitbucket DC, and for GitHub, GitLab, Azure DevOps, and Files the next updates will be available soon, integrating these platforms.A Docker version will be planned.
+> This version ver1.01 is available for Bitbucket Cloud , Bitbucket DC, GitHub and Files, for GitLab and Azure DevOps the next updates will be available soon, integrating these platforms.A Docker version will be planned.
 
 ---
 ## Installation
 
-You can install from the stable release by clicking here
+You can install from the stable release by clicking [here](https://github.com/colussim/GoLC/releases/tag/V1.0.1)
 
 ## Prerequisites 
 
 * A personal access tokens for : Bitbucket Cloud,Bitbucket DC,GitHub, GitLab and Azure DevOps.The token must have repo scope.
-  * For Bitbucket DC :
-       - Perform pull request actions
+     - Perform pull request actions
      - Push, pull and clone repositories
+  
 * [Go language installed](https://go.dev/) : If you want to use the sources...
 
  ## Usage
@@ -31,6 +31,7 @@ You can install from the stable release by clicking here
  ✅ Environment Configuration
 
  Before running GoLC, you need to configure your environment by initializing the various values in the config.json file.
+ Copy the **config_sample.json** file to **config.json** and modify the various entries.
 
  ```json
 {
@@ -47,7 +48,12 @@ You can install from the stable release by clicking here
         "Apiver": "1.0",
         "Baseapi": "rest/api/",
         "Protocol": "http",
-        "FileExclusion":".cloc_bitbucketdc_ignore"
+        "FileExclusion":".cloc_bitbucketdc_ignore",
+         "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "BitBucket": {
         "Users": "xxxxxxxxxxxxxx",
@@ -62,7 +68,12 @@ You can install from the stable release by clicking here
         "Apiver": "2.0",
         "Baseapi": "bitbucket.org",
         "Protocol": "http",
-        "FileExclusion":".cloc_bitbucket_ignore"
+        "FileExclusion":".cloc_bitbucket_ignore",
+         "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Github": {
         "Users": "xxxxxxxxxxxxxx",
@@ -71,12 +82,17 @@ You can install from the stable release by clicking here
         "DevOps": "github",
         "Project": "",
         "Repos": "",
-        "Branch": "",
+        "Branch": "2022-11-28",
         "Url": "https://api.github.com/",
         "Apiver": "",
         "Baseapi": "api.github.com/",
         "Protocol": "https",
-        "FileExclusion":".cloc_github_ignore"
+        "FileExclusion":".cloc_github_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Gitlab": {
         "Users": "xxxxxxxxxxxxxx",
@@ -90,7 +106,12 @@ You can install from the stable release by clicking here
         "Apiver": "v4",
         "Baseapi": "api/",
         "Protocol": "https",
-        "FileExclusion":".cloc_gitlab_ignore"
+        "FileExclusion":".cloc_gitlab_ignore",
+         "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Azure": {
         "Users": "xxxxxxxxxxxxxx",
@@ -104,21 +125,18 @@ You can install from the stable release by clicking here
         "Apiver": "7.1",
         "Baseapi": "_apis/git/",
         "Protocol": "https",
-        "FileExclusion":".cloc_azure_ignore"
+        "FileExclusion":".cloc_azure_ignore",
+         "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "File": {
-        "Users": "",
-        "AccessToken": "",
-        "Organization": "xxxxxxxxx",
         "DevOps": "file",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "Url": "",
-        "Apiver": "",
-        "Baseapi": "",
-        "Protocol": "",
-        "FileExclusion":".cloc_file_ignore"
+        "Directory": "",
+        "FileExclusion":".cloc_file_ignore",
+         "FileLoad":".cloc_file_load"
       }
     }
   }
@@ -137,6 +155,8 @@ If '**Projects**' and '**Repos**' are not specified, the analysis will be conduc
 "Project": "",
 "Repos": "",
 ```
+❗️ The '**Projects**' entry is supported exclusively on the BitBucket platform.
+
 For Bitbucket DC, you must provide the URL with your server address and change the '**Protocol**' entry if you are using an https connection , ending with '**/**'. The '**Branch**' input allows you to select a specific branch for all repositories within an organization or project, or for a single repository. For example, if you only want all branches to be "main", '**"Branch":"main"**' .
 ```json
  "Url": "http://X.X.X.X/"
@@ -145,7 +165,7 @@ You can create a **.cloc_'your_platform'_ignore** file to ignore projects or rep
 ```json
    "FileExclusion":".cloc_bitbucketdc_ignore"
 ```
-The syntax of this file is as follows:
+The syntax of this file is as follows for BitBucket:
 
 ```
 REPO_KEY
@@ -158,6 +178,35 @@ PROJECT_KEY/REPO_KEY
 - PROJECT_KEY = for one Project
 - PROJECT_KEY/REPO_KEY For un Repository in one Project
 ```
+
+The syntax of this file is as follows for GitHub:
+
+```
+REPO1_KEY
+REPO2_KEY
+...
+```
+
+```
+- REPO1_KEY = for one Repository
+```
+
+The syntax of this file is as follows for File:
+
+```
+DIRECTORY_NAME
+FILE_NAME
+...
+```
+
+ ✅  Config.json File Settings
+
+❗️ For the **File** mode, if you want to have a list of directories to analyze, you create a **.cloc_file_load** file and add the directories or files to be analyzed line by line.If the **.cloc_file_load**. file is provided, its contents will override the **Directory** parameter."
+
+❗️ The parameters **'Period'**, **'Factor'**, and **'Stats'** should not be modified as they will be used in a future version.
+
+❗️ The parameters **'Multithreading'** and **'Workers'** initialize whether multithreading is enabled or not, allowing parallel analysis. You can disable it by setting **'Multithreading'** to **false**. **'Workers'** corresponds to the number of concurrent analyses.
+
 
  ✅ Run GoLC
 

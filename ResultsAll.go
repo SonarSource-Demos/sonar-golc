@@ -189,6 +189,7 @@ func main() {
 
 	pdf.Image("imgs/bg2.jpg", 0, 0, 210, 297, false, "", 0, "")
 	logoPath := "imgs/Logo.png"
+	hasMoreContent := true
 
 	pdf.Image(logoPath, 10, 10, 50, 0, false, "", 0, "")
 	pdf.Ln(10)
@@ -200,23 +201,34 @@ func main() {
 	pdf.Cell(0, 10, "Results")
 	pdf.Ln(10)
 
-	pdf.SetFont("Arial", "B", 14)
+	pdf.SetFont("Arial", "B", 12)
 	pdf.SetFillColor(51, 153, 255)
 	pdf.CellFormat(100, 10, Org, "0", 1, "", true, 0, "")
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("Arial", "", 10)
 	pdf.SetFillColor(102, 178, 255)
 	pdf.CellFormat(100, 10, Tloc, "0", 1, "", true, 0, "")
 	pdf.CellFormat(100, 10, Lrepos, "0", 1, "", true, 0, "")
 	pdf.CellFormat(100, 10, Lrepoloc, "0", 1, "", true, 0, "")
 	pdf.CellFormat(100, 10, NBrepos, "0", 1, "", true, 0, "")
-	pdf.Ln(10) // Aller à la ligne
+	pdf.Ln(10)
 
-	pdf.SetFont("Arial", "B", 14)
-	pdf.SetFillColor(51, 153, 255)
-	pdf.CellFormat(100, 10, "Languages :", "0", 1, "", true, 0, "")
-	pdf.SetFont("Arial", "", 12)
-	pdf.SetFillColor(102, 178, 255)
+	for hasMoreContent {
 
+		pdf.AddPage()
+		pdf.ImageOptions("imgs/bg2.jpg", 0, 0, 210, 297, false, gofpdf.ImageOptions{ReadDpi: true}, 0, "")
+		logoPath := "imgs/Logo.png"
+		pdf.Image(logoPath, 10, 10, 50, 0, false, "", 0, "")
+		pdf.Ln(10)
+		pdf.Ln(10)
+
+		pdf.SetFont("Arial", "B", 12)
+		pdf.SetFillColor(51, 153, 255)
+		pdf.CellFormat(100, 10, "Languages :", "0", 1, "", true, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		pdf.SetFillColor(102, 178, 255)
+
+		hasMoreContent = false
+	}
 	// Calculating percentages
 	total := 0
 	for _, lang := range languages {
@@ -322,7 +334,7 @@ func main() {
 		}
 
 	} else {
-		// Si l'utilisateur répond autre chose que "Y" ou "y", quitter le programme
+
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
@@ -379,7 +391,7 @@ const htmlTemplate = `
         <div class="row align-items-center py-lg-8 py-6" style="margin-top: -5%">
           <div class="col-lg-6 text-center text-lg-start">
             <h1 class="text-white fs-5 fs-xl-6">Results</h1>     
-              <div class="card text-white bg-primary mb-4" style="max-width: 23rem;">
+              <div class="card text-white bg-primary mb-4" style="max-width: 24rem;">
                 <h5 class="card-header text-white" style="padding: 1rem 1rem;"> <i class="fas fa-chart-line"></i> Organization: {{.GlobalReport.Organization}}
 
                 {{if eq .GlobalReport.DevOpsPlatform "bitbucket_dc"}}
@@ -410,7 +422,7 @@ const htmlTemplate = `
                </div>
           </div>
           <div class="col-lg-6  mt-3 mt-lg-0">
-            <div class="card text-white bg-primary mb-4" style="max-width: 20rem;">
+            <div class="card text-white bg-primary mb-4" style="max-width: 21rem;">
                 <h5 class="card-header text-white" style="padding: 1rem 1rem;"><i class="fas fa-code"></i> Languages</h5>
                 <div class="card-body text-white" style="padding: 1rem 1rem;">
                     <ul>

@@ -52,6 +52,19 @@ type Project struct {
 	} `json:"links"`
 }
 
+type Projectc struct {
+	Key         string `json:"key"`
+	UUID        string `json:"uuid"`
+	IsPrivate   bool   `json:"is_private"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Links       struct {
+		Self struct {
+			Href string `json:"href"`
+		} `json:"self"`
+	} `json:"links"`
+}
+
 type RepoResponse struct {
 	Size          int    `json:"size"`
 	Limit         int    `json:"limit"`
@@ -72,6 +85,25 @@ type Repo struct {
 			Href string `json:"href"`
 		} `json:"self"`
 	} `json:"links"`
+}
+
+type ProjectRepo struct {
+	Type string `json:"type"`
+	Key  string `json:"key"`
+	UUID string `json:"uuid"`
+	Name string `json:"name"`
+}
+
+type ParamsReposDC struct {
+	Projects         string
+	URL              string
+	BaseAPI          string
+	APIVersion       string
+	AccessToken      string
+	BitbucketURLBase string
+	ExclusionList    *ExclusionList
+	Branch           string
+	Spin             *spinner.Spinner
 }
 
 type BranchResponse struct {
@@ -123,6 +155,19 @@ type ExclusionList struct {
 	Repos    map[string]bool `json:"repos"`
 }
 
+type ParamsReposProjectDC struct {
+	Projects         []Project
+	URL              string
+	BaseAPI          string
+	APIVersion       string
+	AccessToken      string
+	BitbucketURLBase string
+	NBRepos          int
+	ExclusionList    *ExclusionList
+	Spin             *spinner.Spinner
+	Branch           string
+}
+
 func loadExclusionList(filename string) (*ExclusionList, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -154,8 +199,7 @@ func loadExclusionList(filename string) (*ExclusionList, error) {
 
 	return exclusionList, nil
 }
-
-func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain string, nbRepos int, exclusionList *ExclusionList, spin *spinner.Spinner) ([]ProjectBranch, int, int) {
+func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketURLBase string, nbRepos int, exclusionList *ExclusionList) ([]ProjectBranch, int, int) {
 
 	var largestRepoSize int
 	var largestRepoBranch string
@@ -168,10 +212,10 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 	spin1.Prefix = "Get Projects... "
 	spin1.Color("green", "bold")
 
-	spin.Start()
+	parms.Spin.Start()
 	messageF := fmt.Sprintf("✅ The number of project(s) to analyze is %d\n", len(projects))
-	spin.FinalMSG = messageF
-	spin.Stop()
+	parms.Spin.FinalMSG = messageF
+	parms.Spin.Stop()
 
 	for _, project := range projects {
 
@@ -179,12 +223,12 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 		largestRepoSize = 0
 		largestRepoBranch = ""
 
-		urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos", url, baseapi, apiver, project.Key)
+		urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos", parms.URL, parms.BaseAPI, parms.APIVersion, project.Key)
 
-		repos, err := fetchAllRepos(urlrepos, accessToken, exclusionList)
+		repos, err := fetchAllRepos(urlrepos, parms.AccessToken, exclusionList)
 		if err != nil {
 			fmt.Println("\r❌ Get Repos for each Project:", err)
-			spin.Stop()
+			parms.Spin.Stop()
 			continue
 		}
 
@@ -199,7 +243,7 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 			var branches []Branch
 			var Nobranch int = 0
 
-			isEmpty, err := isRepositoryEmpty(project.Key, repo.Slug, accessToken, bitbucketURLBase, apiver)
+			isEmpty, err := isRepositoryEmpty(project.Key, repo.Slug, parms.AccessToken, bitbucketURLBase, parms.APIVersion)
 			if err != nil {
 				fmt.Printf("❌ Error when Testing if repo is empty %s: %v\n", repo.Name, err)
 				continue
@@ -207,22 +251,22 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 
 			if !isEmpty {
 
-				if len(branchmain) == 0 {
+				if len(parms.Branch) == 0 {
 
-					urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches", url, baseapi, apiver, project.Key, repo.Slug)
+					urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches", parms.URL, parms.BaseAPI, parms.APIVersion, project.Key, repo.Slug)
 
-					branches, err = fetchAllBranches(urlrepos, accessToken)
+					branches, err = fetchAllBranches(urlrepos, parms.AccessToken)
 					if err != nil {
 						fmt.Printf("❌ Error when retrieving branches for repo %s: %v\n", repo.Name, err)
-						spin.Stop()
+						parms.Spin.Stop()
 						os.Exit(1)
 					}
 				} else {
-					urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?filterText=%s", url, baseapi, apiver, project.Key, repo.Slug, branchmain)
+					urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?filterText=%s", parms.URL, parms.BaseAPI, parms.APIVersion, project.Key, repo.Slug, parms.Branch)
 
-					branches, err = ifExistBranches(urlrepos, accessToken)
+					branches, err = ifExistBranches(urlrepos, parms.AccessToken)
 					if err != nil || len(branches) == 0 {
-						fmt.Printf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file  \n", branchmain, repo.Slug)
+						fmt.Printf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file  \n", parms.Branch, repo.Slug)
 						Nobranch = 1
 						continue
 
@@ -241,7 +285,7 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 							spin1.Prefix = messageB
 							spin1.Start()
 
-							size, err := fetchBranchSize(project.Key, repo.Slug, branch.Name, accessToken, url, apiver)
+							size, err := fetchBranchSize(project.Key, repo.Slug, branch.Name, parms.AccessToken, parms.URL, parms.APIVersion)
 							messageF = ""
 							spin1.FinalMSG = messageF
 
@@ -249,7 +293,7 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 
 							if err != nil {
 								fmt.Println("\n❌ Error retrieving branch size:", err)
-								spin.Stop()
+								parms.Spin.Stop()
 								os.Exit(1)
 							}
 
@@ -263,10 +307,10 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 
 						fmt.Printf("\t     ✅ The largest branch of the repo is <%s> of size : %s\n", largestRepoBranch, utils.FormatSize(int64(largestRepoSize)))
 					} else {
-						size1, err1 := fetchBranchSize1(project.Key, repo.Slug, accessToken, url)
+						size1, err1 := fetchBranchSize1(project.Key, repo.Slug, parms.AccessToken, parms.URL)
 						if err1 != nil {
 							fmt.Println("\n❌ Error retrieving branch size:", err1)
-							spin.Stop()
+							parms.Spin.Stop()
 							os.Exit(1)
 						}
 						largestRepoSize = size1
@@ -311,7 +355,7 @@ func GetReposProject(projects []Project, url, baseapi, apiver, accessToken, bitb
 	return importantBranches, nbRepos, emptyRepo
 }
 
-func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain string, exclusionList *ExclusionList, spin *spinner.Spinner) ([]ProjectBranch, int, int) {
+func GetRepos(project string, repos []Repo, parms ParamsReposDC, bitbucketURLBase string, exclusionList *ExclusionList) ([]ProjectBranch, int, int) {
 
 	var largestRepoSize int
 	var largestRepoBranch string
@@ -324,22 +368,22 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 
 	fmt.Printf("\n🟢 Analyse Projet: %s \n", project)
 
-	isEmpty, err := isRepositoryEmpty(project, repos[0].Slug, accessToken, bitbucketURLBase, apiver)
+	isEmpty, err := isRepositoryEmpty(project, repos[0].Slug, parms.AccessToken, bitbucketURLBase, parms.APIVersion)
 	if err != nil {
 		fmt.Printf("❌ Error when Testing if repo is empty %s: %v\n", repos[0].Name, err)
-		spin.Stop()
+		parms.Spin.Stop()
 		os.Exit(1)
 	}
 	if !isEmpty {
 
-		if len(branchmain) == 0 {
+		if len(parms.Branch) == 0 {
 
-			urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches", url, baseapi, apiver, project, repos[0].Slug)
+			urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches", parms.URL, parms.BaseAPI, parms.APIVersion, project, repos[0].Slug)
 
-			branches, err = fetchAllBranches(urlrepos, accessToken)
+			branches, err = fetchAllBranches(urlrepos, parms.AccessToken)
 			if err != nil {
 				fmt.Printf("❌ Error when retrieving branches for repo %s: %v\n", repos[0].Name, err)
-				spin.Stop()
+				parms.Spin.Stop()
 				os.Exit(1)
 			}
 
@@ -347,12 +391,12 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 			fmt.Printf("\n\t   ✅ Repo: <%s> - Number of branches: %d\n", repos[0].Name, len(branches))
 		} else {
 
-			urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?filterText=%s", url, baseapi, apiver, project, repos[0].Slug, branchmain)
+			urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?filterText=%s", parms.URL, parms.BaseAPI, parms.APIVersion, project, repos[0].Slug, parms.Branch)
 
-			branches, err = ifExistBranches(urlrepos, accessToken)
+			branches, err = ifExistBranches(urlrepos, parms.AccessToken)
 
 			if err != nil || len(branches) == 0 {
-				fmt.Printf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file  \n", branchmain, repos[0].Slug)
+				fmt.Printf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file  \n", parms.Branch, repos[0].Slug)
 				Nobranch = 1
 				os.Exit(1)
 
@@ -364,19 +408,19 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 			if len(branches) > 1 {
 				for _, branch := range branches {
 					messageB := fmt.Sprintf("\t   Analysis branch <%s> size...", branch.Name)
-					spin.Prefix = messageB
-					spin.Start()
+					parms.Spin.Prefix = messageB
+					parms.Spin.Start()
 
-					size, err := fetchBranchSize(project, repos[0].Slug, branch.Name, accessToken, url, apiver)
+					size, err := fetchBranchSize(project, repos[0].Slug, branch.Name, parms.AccessToken, parms.URL, parms.APIVersion)
 					if err != nil {
 						fmt.Println("❌ Error retrieving branch size:", err)
-						spin.Stop()
+						parms.Spin.Stop()
 						continue
 					}
 					messageF := ""
-					spin.FinalMSG = messageF
+					parms.Spin.FinalMSG = messageF
 
-					spin.Stop()
+					parms.Spin.Stop()
 
 					if size > largestRepoSize {
 						largestRepoSize = size
@@ -386,10 +430,10 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 
 				}
 			} else {
-				size1, err1 := fetchBranchSize1(project, repos[0].Slug, accessToken, url)
+				size1, err1 := fetchBranchSize1(project, repos[0].Slug, parms.AccessToken, parms.URL)
 				if err1 != nil {
 					fmt.Println("\n❌ Error retrieving branch size:", err1)
-					spin.Stop()
+					parms.Spin.Stop()
 					os.Exit(1)
 				}
 				largestRepoSize = size1
@@ -416,7 +460,7 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 	result.ProjectBranches = importantBranches
 
 	// Save Result of Analysis
-	file, err := os.Create("Results/config/analysis_repos.json")
+	file, err := os.Create("Results/config/analysis_repos_bitbucketdc.json")
 	if err != nil {
 		fmt.Println("❌ Error creating Analysis file:", err)
 		return importantBranches, nbRepos, emptyRepo
@@ -426,7 +470,7 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 
 	err = encoder.Encode(result)
 	if err != nil {
-		fmt.Println("Error encoding JSON file <Results/config/analysis_repos.json> :", err)
+		fmt.Println("Error encoding JSON file <Results/config/analysis_repos_bitbucketdc.json> :", err)
 		return importantBranches, nbRepos, emptyRepo
 	}
 
@@ -434,7 +478,9 @@ func GetRepos(project string, repos []Repo, url, baseapi, apiver, accessToken, b
 
 }
 
-func GetProjectBitbucketList(url, baseapi, apiver, accessToken, exlusionfile, project, repo, branchmain string) ([]ProjectBranch, error) {
+//func GetProjectBitbucketList(url, baseapi, apiver, accessToken, exlusionfile, project, repo, branchmain string) ([]ProjectBranch, error) {
+
+func GetProjectBitbucketList(platformConfig map[string]interface{}, exlusionfile string) ([]ProjectBranch, error) {
 
 	var largestRepoSize int
 	var totalSize int
@@ -446,8 +492,8 @@ func GetProjectBitbucketList(url, baseapi, apiver, accessToken, exlusionfile, pr
 	totalSize = 0
 	nbRepos := 0
 	emptyRepo := 0
-	bitbucketURLBase := url
-	bitbucketURL := fmt.Sprintf("%s%s%s/projects", url, baseapi, apiver)
+	bitbucketURLBase := platformConfig["Url"].(string)
+	bitbucketURL := fmt.Sprintf("%s%s%s/projects", platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string))
 
 	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
 
@@ -472,63 +518,101 @@ func GetProjectBitbucketList(url, baseapi, apiver, accessToken, exlusionfile, pr
 
 	}
 
-	if len(project) == 0 && len(repo) == 0 {
+	if len(platformConfig["Project"].(string)) == 0 && len(platformConfig["Repos"].(string)) == 0 {
 
 		spin.Start()
-		projects, err := fetchAllProjects(bitbucketURL, accessToken, exclusionList)
+		projects, err := fetchAllProjects(bitbucketURL, platformConfig["AccessToken"].(string), exclusionList)
 		if err != nil {
 			fmt.Println("\r❌ Error Get All Projects:", err)
 			spin.Stop()
 			return nil, err
 		}
 
-		importantBranches, nbRepos, emptyRepo = GetReposProject(projects, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain, nbRepos, exclusionList, spin)
+		parms := ParamsReposProjectDC{
+			Projects:         projects,
+			URL:              platformConfig["Url"].(string),
+			BaseAPI:          platformConfig["Baseapi"].(string),
+			APIVersion:       platformConfig["Apiver"].(string),
+			AccessToken:      platformConfig["AccessToken"].(string),
+			BitbucketURLBase: bitbucketURLBase,
+			NBRepos:          nbRepos,
+			ExclusionList:    exclusionList,
+			Spin:             spin,
+			Branch:           platformConfig["Branch"].(string),
+		}
 
-	} else if len(project) > 0 && len(repo) == 0 {
-		if isProjectExcluded1(project, *exclusionList) {
-			fmt.Println("\n❌ Projet", project, "is excluded from the analysis... edit <.cloc_bitbucket_ignore> file")
+		importantBranches, nbRepos, emptyRepo = GetReposProject(projects, parms, bitbucketURLBase, nbRepos, exclusionList)
+
+	} else if len(platformConfig["Project"].(string)) > 0 && len(platformConfig["Repos"].(string)) == 0 {
+		if isProjectExcluded1(platformConfig["Project"].(string), *exclusionList) {
+			fmt.Println("\n❌ Projet", platformConfig["Project"].(string), "is excluded from the analysis... edit <.cloc_bitbucket_ignore> file")
 			os.Exit(1)
 		} else {
 
 			spin.Start()
-			bitbucketURLProject := fmt.Sprintf("%s/%s", bitbucketURL, project)
+			bitbucketURLProject := fmt.Sprintf("%s/%s", bitbucketURL, platformConfig["Project"].(string))
 
-			projects, err := fetchOnelProjects(bitbucketURLProject, accessToken, exclusionList)
+			projects, err := fetchOnelProjects(bitbucketURLProject, platformConfig["AccessToken"].(string), exclusionList)
 			if err != nil {
-				fmt.Printf("\n❌ Error Get Project:%s - %v", project, err)
+				fmt.Printf("\n❌ Error Get Project:%s - %v", platformConfig["Project"].(string), err)
 				spin.Stop()
 				return nil, err
 			}
 			spin.Stop()
 
 			if len(projects) == 0 {
-				fmt.Printf("\n❌ Error Project:%s not exist - %v", project, err)
+				fmt.Printf("\n❌ Error Project:%s not exist - %v", platformConfig["Project"].(string), err)
 				spin.Stop()
 				return nil, err
 			} else {
-				importantBranches, nbRepos, emptyRepo = GetReposProject(projects, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain, nbRepos, exclusionList, spin)
+				parms := ParamsReposProjectDC{
+					Projects:         projects,
+					URL:              platformConfig["Url"].(string),
+					BaseAPI:          platformConfig["Baseapi"].(string),
+					APIVersion:       platformConfig["Apiver"].(string),
+					AccessToken:      platformConfig["AccessToken"].(string),
+					BitbucketURLBase: bitbucketURLBase,
+					NBRepos:          nbRepos,
+					ExclusionList:    exclusionList,
+					Spin:             spin,
+					Branch:           platformConfig["Branch"].(string),
+				}
 
+				//importantBranches, nbRepos, emptyRepo = GetReposProject(projects, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain, nbRepos, exclusionList, spin)
+				importantBranches, nbRepos, emptyRepo = GetReposProject(projects, parms, bitbucketURLBase, nbRepos, exclusionList)
 			}
 		}
-	} else if len(project) > 0 && len(repo) > 0 {
-		Texclude := project + "/" + repo
+	} else if len(platformConfig["Project"].(string)) > 0 && len(platformConfig["Repos"].(string)) > 0 {
+		Texclude := platformConfig["Project"].(string) + "/" + platformConfig["Repos"].(string)
 		if isProjectAndRepoExcluded(Texclude, *exclusionList) {
-			fmt.Println("\n❌ Projet ", project, "and the repository ", repo, "are excluded from the analysis...edit <.cloc_bitbucket_ignore> file")
+			fmt.Println("\n❌ Projet ", platformConfig["Project"].(string), "and the repository ", platformConfig["Repos"].(string), "are excluded from the analysis...edit <.cloc_bitbucket_ignore> file")
 			os.Exit(1)
 		} else {
 
 			spin.Start()
-			bitbucketURLProject := fmt.Sprintf("%s/%s/repos/%s", bitbucketURL, project, repo)
-			Repos, err := fetchOneRepos(bitbucketURLProject, accessToken, exclusionList)
+			bitbucketURLProject := fmt.Sprintf("%s/%s/repos/%s", bitbucketURL, platformConfig["Project"].(string), platformConfig["Repos"].(string))
+			Repos, err := fetchOneRepos(bitbucketURLProject, platformConfig["AccessToken"].(string), exclusionList)
 			if err != nil {
-				fmt.Printf("\n❌ Error Get Repo:%s/%s - %v", project, repo, err)
+				fmt.Printf("\n❌ Error Get Repo:%s/%s - %v", platformConfig["Project"].(string), platformConfig["Repos"].(string), err)
 				spin.Stop()
 				return nil, err
 			}
 			fmt.Printf("Taille : %d", len(Repos))
 			spin.Stop()
 
-			importantBranches, nbRepos, emptyRepo = GetRepos(project, Repos, url, baseapi, apiver, accessToken, bitbucketURLBase, branchmain, exclusionList, spin)
+			parms := ParamsReposDC{
+				Projects:         platformConfig["Project"].(string),
+				URL:              platformConfig["Url"].(string),
+				BaseAPI:          platformConfig["Baseapi"].(string),
+				APIVersion:       platformConfig["Apiver"].(string),
+				AccessToken:      platformConfig["AccessToken"].(string),
+				BitbucketURLBase: bitbucketURLBase,
+				ExclusionList:    exclusionList,
+				Branch:           platformConfig["Branch"].(string),
+				Spin:             spin,
+			}
+
+			importantBranches, nbRepos, emptyRepo = GetRepos(platformConfig["Project"].(string), Repos, parms, bitbucketURLBase, exclusionList)
 		}
 	} else {
 		spin.Stop()

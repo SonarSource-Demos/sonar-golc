@@ -473,7 +473,7 @@ func GetRepos(parms ParamsReposCloud) ([]ProjectBranch, int, int) {
 	result.ProjectBranches = importantBranches
 
 	// Save Result of Analysis
-	file, err := os.Create("Results/config/analysis_repos.json")
+	file, err := os.Create("Results/config/analysis_repos_bitbucket.json")
 	if err != nil {
 		fmt.Println("❌ Error creating Analysis file:", err)
 		return importantBranches, nbRepos, emptyRepo
@@ -483,7 +483,7 @@ func GetRepos(parms ParamsReposCloud) ([]ProjectBranch, int, int) {
 
 	err = encoder.Encode(result)
 	if err != nil {
-		fmt.Println("Error encoding JSON file <Results/config/analysis_repos.json> :", err)
+		fmt.Println("Error encoding JSON file <Results/config/analysis_repos_bitbucket.json> :", err)
 		return importantBranches, nbRepos, emptyRepo
 	}
 
@@ -491,8 +491,7 @@ func GetRepos(parms ParamsReposCloud) ([]ProjectBranch, int, int) {
 
 }
 
-func GetProjectBitbucketListCloud(url, baseapi, apiver, accessToken, workspace, exlusionfile, project, repo, branchmain string) ([]ProjectBranch, error) {
-
+func GetProjectBitbucketListCloud(platformConfig map[string]interface{}, exlusionfile string) ([]ProjectBranch, error) {
 	var largestRepoSize int
 	var totalSize int
 	var largestRepoProject, largestRepoBranch, largesRepo string
@@ -501,11 +500,12 @@ func GetProjectBitbucketListCloud(url, baseapi, apiver, accessToken, workspace, 
 	var exclusionList *ExclusionList
 	var err1 error
 	var emptyRepo int
+	result := AnalysisResult{}
 
 	nbRepos := 0
 
-	bitbucketURLBase := fmt.Sprintf("%s%s/", url, apiver)
-	bitbucketURL := fmt.Sprintf("%s%s/workspaces/%s/projects/?pagelen=100", url, apiver, workspace)
+	bitbucketURLBase := fmt.Sprintf("%s%s/", platformConfig["Url"].(string), platformConfig["Apiver"].(string))
+	bitbucketURL := fmt.Sprintf("%s%s/workspaces/%s/projects/?pagelen=100", platformConfig["Url"].(string), platformConfig["Apiver"].(string), platformConfig["Workspace"].(string))
 
 	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
 
@@ -529,9 +529,9 @@ func GetProjectBitbucketListCloud(url, baseapi, apiver, accessToken, workspace, 
 
 	}
 
-	if len(project) == 0 && len(repo) == 0 {
+	if len(platformConfig["Project"].(string)) == 0 && len(platformConfig["Repos"].(string)) == 0 {
 
-		projects, err1 = CloudAllProjects(bitbucketURL, accessToken, exclusionList)
+		projects, err1 = CloudAllProjects(bitbucketURL, platformConfig["AccessToken"].(string), exclusionList)
 		if err1 != nil {
 			fmt.Println("\r❌ Error Get All Projects:", err1)
 			spin.Stop()
@@ -541,86 +541,86 @@ func GetProjectBitbucketListCloud(url, baseapi, apiver, accessToken, workspace, 
 
 		parms := ParamsReposProjectCloud{
 			Projects:         projects,
-			URL:              url,
-			BaseAPI:          baseapi,
-			APIVersion:       apiver,
-			AccessToken:      accessToken,
+			URL:              platformConfig["Url"].(string),
+			BaseAPI:          platformConfig["Baseapi"].(string),
+			APIVersion:       platformConfig["Apiver"].(string),
+			AccessToken:      platformConfig["AccessToken"].(string),
 			BitbucketURLBase: bitbucketURLBase,
-			Workspace:        workspace,
+			Workspace:        platformConfig["Workspace"].(string),
 			NBRepos:          nbRepos,
 			ExclusionList:    exclusionList,
 			Spin:             spin,
-			Branch:           branchmain,
+			Branch:           platformConfig["Branch"].(string),
 		}
 
 		importantBranches, nbRepos, emptyRepo = GetReposProjectCloud(parms)
 
-	} else if len(project) > 0 && len(repo) == 0 {
+	} else if len(platformConfig["Project"].(string)) > 0 && len(platformConfig["Repos"].(string)) == 0 {
 
-		if isProjectExcluded1(project, *exclusionList) {
-			fmt.Println("\n❌ Projet", project, "is excluded from the analysis... edit <.cloc_bitbucket_ignore> file")
+		if isProjectExcluded1(platformConfig["Project"].(string), *exclusionList) {
+			fmt.Println("\n❌ Projet", platformConfig["Project"].(string), "is excluded from the analysis... edit <.cloc_bitbucket_ignore> file")
 			os.Exit(1)
 		} else {
 			spin.Start()
-			bitbucketURLProject := fmt.Sprintf("%s%s/workspaces/%s/projects/%s", url, apiver, workspace, project)
+			bitbucketURLProject := fmt.Sprintf("%s%s/workspaces/%s/projects/%s", platformConfig["Url"].(string), platformConfig["Apiver"].(string), platformConfig["Workspace"].(string), platformConfig["Project"].(string))
 
-			projects, err := CloudOnelProjects(bitbucketURLProject, accessToken, exclusionList)
+			projects, err := CloudOnelProjects(bitbucketURLProject, platformConfig["AccessToken"].(string), exclusionList)
 			if err != nil {
-				fmt.Printf("\n❌ Error Get Project:%s - %v", project, err)
+				fmt.Printf("\n❌ Error Get Project:%s - %v", platformConfig["Project"].(string), err)
 				spin.Stop()
 				return nil, err
 			}
 			spin.Stop()
 
 			if len(projects) == 0 {
-				fmt.Printf("\n❌ Error Project:%s not exist - %v", project, err)
+				fmt.Printf("\n❌ Error Project:%s not exist - %v", platformConfig["Project"].(string), err)
 				spin.Stop()
 				os.Exit(1)
 				//return nil, err
 			} else {
 				parms := ParamsReposProjectCloud{
 					Projects:         projects,
-					URL:              url,
-					BaseAPI:          baseapi,
-					APIVersion:       apiver,
-					AccessToken:      accessToken,
+					URL:              platformConfig["Url"].(string),
+					BaseAPI:          platformConfig["Baseapi"].(string),
+					APIVersion:       platformConfig["Apiver"].(string),
+					AccessToken:      platformConfig["AccessToken"].(string),
 					BitbucketURLBase: bitbucketURLBase,
-					Workspace:        workspace,
+					Workspace:        platformConfig["Workspace"].(string),
 					NBRepos:          nbRepos,
 					ExclusionList:    exclusionList,
 					Spin:             spin,
-					Branch:           branchmain,
+					Branch:           platformConfig["Branch"].(string),
 				}
 				importantBranches, nbRepos, emptyRepo = GetReposProjectCloud(parms)
 
 			}
 		}
-	} else if len(project) > 0 && len(repo) > 0 {
+	} else if len(platformConfig["Project"].(string)) > 0 && len(platformConfig["Repos"].(string)) > 0 {
 
-		Texclude := project + "/" + repo
+		Texclude := platformConfig["Project"].(string) + "/" + platformConfig["Repos"].(string)
 		if isProjectAndRepoExcluded(Texclude, *exclusionList) {
-			fmt.Println("\n❌ Projet ", project, "and the repository ", repo, "are excluded from the analysis...edit <.cloc_bitbucket_ignore> file")
+			fmt.Println("\n❌ Projet ", platformConfig["Project"].(string), "and the repository ", platformConfig["Repos"].(string), "are excluded from the analysis...edit <.cloc_bitbucket_ignore> file")
 			os.Exit(1)
 		} else {
 
-			bitbucketURLProject := fmt.Sprintf("%s%s/repositories/%s/%s?q=project.key=\"%s\"", url, apiver, workspace, repo, project)
-			Repos, err := fetchOneRepos(bitbucketURLProject, accessToken, exclusionList)
+			bitbucketURLProject := fmt.Sprintf("%s%s/repositories/%s/%s?q=project.key=\"%s\"", platformConfig["Url"].(string), platformConfig["Apiver"].(string), platformConfig["Workspace"].(string), platformConfig["Repos"].(string), platformConfig["Project"].(string))
+			Repos, err := fetchOneRepos(bitbucketURLProject, platformConfig["AccessToken"].(string), exclusionList)
 			if err != nil {
-				fmt.Printf("\n❌ Error Get Repo:%s/%s - %v", project, repo, err)
+				fmt.Printf("\n❌ Error Get Repo:%s/%s - %v", platformConfig["Project"].(string), platformConfig["Repos"].(string), err)
 				spin.Stop()
 				return nil, err
 			}
 			parms := ParamsReposCloud{
-				Projects:         project,
+				Projects:         platformConfig["Project"].(string),
 				Repos:            Repos,
-				URL:              url,
-				BaseAPI:          baseapi,
-				APIVersion:       apiver,
-				AccessToken:      accessToken,
+				URL:              platformConfig["Url"].(string),
+				BaseAPI:          platformConfig["Baseapi"].(string),
+				APIVersion:       platformConfig["Apiver"].(string),
+				AccessToken:      platformConfig["AccessToken"].(string),
 				BitbucketURLBase: bitbucketURLBase,
-				Workspace:        workspace,
+				Workspace:        platformConfig["Workspace"].(string),
 				ExclusionList:    exclusionList,
-				Branch:           branchmain,
+				Branch:           platformConfig["Branch"].(string),
 			}
 
 			importantBranches, nbRepos, emptyRepo = GetRepos(parms)
@@ -651,6 +651,26 @@ func GetProjectBitbucketListCloud(url, baseapi, apiver, accessToken, workspace, 
 	fmt.Printf("\n✅ The largest repo is <%s> in the project <%s> with the branch <%s> and a size of %s\n", largesRepo, largestRepoProject, largestRepoBranch, largestRepoSizeMB)
 	fmt.Printf("\r✅ Total size of your organization's repositories: %s\n", totalSizeMB)
 	fmt.Printf("\r✅ Total repositories analyzed: %d - Find empty : %d\n", nbRepos-emptyRepo, emptyRepo)
+
+	result.NumProjects = 1
+	result.NumRepositories = nbRepos
+	result.ProjectBranches = importantBranches
+
+	// Save Result of Analysis
+	file, err := os.Create("Results/config/analysis_repos_bitbucketdc.json")
+	if err != nil {
+		fmt.Println("❌ Error creating Analysis file:", err)
+		return importantBranches, nil
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+
+	err = encoder.Encode(result)
+	if err != nil {
+		fmt.Println("Error encoding JSON file <Results/config/analysis_repos_bitbucketdc.json> :", err)
+		return importantBranches, nil
+	}
+
 	return importantBranches, nil
 }
 
@@ -696,7 +716,7 @@ func ifExistBranches(repoURL, accessToken string) ([]Branch, error) {
 
 	var branch Branch
 	if resp.StatusCode == http.StatusOK {
-
+		// La requête a réussi, analyser les données de la branche
 		err = json.NewDecoder(resp.Body).Decode(&branch)
 		if err != nil {
 			return nil, err
@@ -922,6 +942,7 @@ func isRepositoryEmpty(workspace, repoSlug, accessToken, bitbucketURLBase string
 
 	urlMain := fmt.Sprintf("%srepositories/%s/%s/src/main/?pagelen=100", bitbucketURLBase, workspace, repoSlug)
 
+	// Récupérer les fichiers de la branche principale
 	filesResp, err := fetchFiles(urlMain, accessToken)
 	if err != nil {
 		return false, fmt.Errorf("❌ Error when testing if repo: %s is empty - Function: %s - %v", repoSlug, "getbibucket-isRepositoryEmpty", err)

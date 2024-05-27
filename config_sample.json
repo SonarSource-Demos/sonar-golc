@@ -12,7 +12,12 @@
         "Apiver": "1.0",
         "Baseapi": "rest/api/",
         "Protocol": "http",
-        "FileExclusion":".cloc_bitbucketdc_ignore"
+        "FileExclusion":".cloc_bitbucketdc_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "BitBucket": {
         "Users": "xxxxxxxxxxxxxx",
@@ -27,7 +32,12 @@
         "Apiver": "2.0",
         "Baseapi": "bitbucket.org",
         "Protocol": "http",
-        "FileExclusion":".cloc_bitbucket_ignore"
+        "FileExclusion":".cloc_bitbucket_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Github": {
         "Users": "xxxxxxxxxxxxxx",
@@ -41,7 +51,12 @@
         "Apiver": "",
         "Baseapi": "api.github.com/",
         "Protocol": "https",
-        "FileExclusion":".cloc_github_ignore"
+        "FileExclusion":".cloc_github_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Gitlab": {
         "Users": "xxxxxxxxxxxxxx",
@@ -55,7 +70,12 @@
         "Apiver": "v4",
         "Baseapi": "api/",
         "Protocol": "https",
-        "FileExclusion":".cloc_gitlab_ignore"
+        "FileExclusion":".cloc_gitlab_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "Azure": {
         "Users": "xxxxxxxxxxxxxx",
@@ -69,21 +89,20 @@
         "Apiver": "7.1",
         "Baseapi": "_apis/git/",
         "Protocol": "https",
-        "FileExclusion":".cloc_azure_ignore"
+        "FileExclusion":".cloc_azure_ignore",
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 50
       },
       "File": {
-        "Users": "xxxxxxxxxxxxxx",
-        "AccessToken": "xxxxxxxxxxxxxx",
         "Organization": "xxxxxxxxx",
         "DevOps": "file",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "Url": "",
-        "Apiver": "",
-        "Baseapi": "",
-        "Protocol": "",
-        "FileExclusion":".cloc_file_ignore"
+        "Directory":"",
+        "FileExclusion":".cloc_file_ignore",
+        "FileLoad":".cloc_file_load"
+
       }
     }
   }
