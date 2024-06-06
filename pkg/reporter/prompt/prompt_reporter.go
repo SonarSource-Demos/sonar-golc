@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/sorter"
+	"github.com/colussim/GoLC/pkg/sorter"
 	"github.com/olekukonko/tablewriter"
 )
 

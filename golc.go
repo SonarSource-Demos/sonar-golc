@@ -15,13 +15,14 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc"
+	"github.com/colussim/GoLC/assets"
+	"github.com/colussim/GoLC/pkg/goloc"
 
-	getbibucket "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucket"
-	getbibucketdc "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucketdc"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgithub"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	getbibucket "github.com/colussim/GoLC/pkg/devops/getbitbucket/v2"
+	getbibucketdc "github.com/colussim/GoLC/pkg/devops/getbitbucketdc"
+	"github.com/colussim/GoLC/pkg/devops/getgithub"
+	"github.com/colussim/GoLC/pkg/devops/getgitlab"
+	"github.com/colussim/GoLC/pkg/utils"
 )
 
 type OrganizationData struct {
@@ -88,15 +89,12 @@ type LanguageRes struct {
 	CodeLines  int    `json:"CodeLines"`
 }
 
-type Repository1 interface {
-	GetID() int
-	GetName() string
-	GetPath() string
-}
-
-type Project1 interface {
-	GetID() int
-	GetName() string
+type RepoParams struct {
+	ProjectKey string
+	Namespace  string
+	RepoSlug   string
+	MainBranch string
+	PathToScan string
 }
 
 const errorMessageRepo = "\n❌ Error Analyse Repositories: "
@@ -259,9 +257,8 @@ func addFileToZip(filePath, relPath string, fileInfo os.FileInfo, zipWriter *zip
 	return nil
 }
 
-/* ---------------- Analyse Repositories bitbucket Cloud  ---------------- */
-
-func AnalyseReposListBitC(DestinationResult string, platformConfig map[string]interface{}, repolist []getbibucket.ProjectBranch) (cpt int) {
+// Generic function to analyze repositories
+func AnalyseReposList(DestinationResult string, platformConfig map[string]interface{}, repolist interface{}, analyseRepoFunc func(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int)) (cpt int) {
 	fmt.Print("\n🔎 Analysis of Repos ...\n")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
@@ -274,253 +271,104 @@ func AnalyseReposListBitC(DestinationResult string, platformConfig map[string]in
 	count := 1
 
 	if platformConfig["Multithreading"].(bool) {
-		if len(repolist) > 50 {
+		if len(repolist.([]interface{})) > int(platformConfig["NumberWorkerRepos"].(float64)) {
 			// Launch goroutines in batches of X
 			X := int(platformConfig["Workers"].(float64))
-			batches := len(repolist) / X
-			remainder := len(repolist) % X
+			batches := len(repolist.([]interface{})) / X
+			remainder := len(repolist.([]interface{})) % X
 			for i := 0; i < batches; i++ {
 				for j := i * X; j < (i+1)*X; j++ {
-					go analyseBitCRepo(repolist[j], DestinationResult, platformConfig, spin, results, &count)
-				}
-				waitForWorkers(batches*X, results)
-			}
-			// Launch remaining goroutines
-			for i := batches * X; i < batches*X+remainder; i++ {
-				go analyseBitCRepo(repolist[i], DestinationResult, platformConfig, spin, results, &count)
-			}
-			waitForWorkers(len(repolist), results)
-		} else {
-			// Launch goroutines for each repo
-			for _, project := range repolist {
-				go analyseBitCRepo(project, DestinationResult, platformConfig, spin, results, &count)
-			}
-			waitForWorkers(len(repolist), results)
-		}
-	} else {
-		// Without multithreading
-		for _, project := range repolist {
-			// Execute the analysis synchronously
-			analyseBitCRepo(project, DestinationResult, platformConfig, spin, results, &count)
-		}
-	}
-
-	return len(repolist)
-}
-
-func analyseBitCRepo(project getbibucket.ProjectBranch, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
-
-	pathToScan := fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), project.RepoSlug)
-	outputFileName := fmt.Sprintf("Result_%s_%s_%s", project.ProjectKey, project.RepoSlug, project.MainBranch)
-
-	params := goloc.Params{
-		Path:              pathToScan,
-		ByFile:            false,
-		ExcludePaths:      []string{},
-		ExcludeExtensions: []string{},
-		IncludeExtensions: []string{},
-		OrderByLang:       false,
-		OrderByFile:       false,
-		OrderByCode:       false,
-		OrderByLine:       false,
-		OrderByBlank:      false,
-		OrderByComment:    false,
-		Order:             "DESC",
-		OutputName:        outputFileName,
-		OutputPath:        DestinationResult,
-		ReportFormats:     []string{"json"},
-		Branch:            project.MainBranch,
-	}
-	MessB := fmt.Sprintf("   Extracting files from repo : %s ", project.RepoSlug)
-	spin.Suffix = MessB
-	spin.Start()
-
-	gc, err := goloc.NewGCloc(params, assets.Languages)
-	if err != nil {
-		fmt.Println(errorMessageRepo, err)
-		//os.Exit(1)
-	}
-
-	gc.Run()
-	*count++
-
-	// Remove Repository Directory
-	err1 := os.RemoveAll(gc.Repopath)
-	if err1 != nil {
-		fmt.Printf(errorMessageDi, err1)
-		//return
-	}
-
-	spin.Stop()
-	fmt.Printf("\t✅ The repository <%s> has been analyzed\n", project.RepoSlug)
-
-	// Send result through channel
-	results <- 1
-}
-
-/* ---------------- End Analyse Repositories bitbucket Cloud  ---------------- */
-
-/* ---------------- Analyse Repositories bitbucket DC  ---------------- */
-
-func AnalyseReposListBitSRV(DestinationResult string, platformConfig map[string]interface{}, repolist []getbibucketdc.ProjectBranch) (cpt int) {
-	URLcut := platformConfig["Protocol"].(string) + "://"
-	trimmedURL := strings.TrimPrefix(platformConfig["Url"].(string), URLcut)
-
-	fmt.Print("\n🔎 Analysis of Repos ...\n")
-
-	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-	spin.Color("green", "bold")
-	messageF := ""
-	spin.FinalMSG = messageF
-
-	// Create a channel to receive results
-	results := make(chan int)
-	count := 1
-
-	if platformConfig["Multithreading"].(bool) {
-		if len(repolist) > 50 {
-			// Launch goroutines in batches of X
-			X := int(platformConfig["Workers"].(float64))
-			batches := len(repolist) / X
-			remainder := len(repolist) % X
-			for i := 0; i < batches; i++ {
-				for j := i * X; j < (i+1)*X; j++ {
-					go analyseBitSRVRepo(repolist[j], DestinationResult, platformConfig, trimmedURL, spin, results, &count)
-				}
-				waitForWorkers(batches*X, results)
-			}
-			// Launch remaining goroutines
-			for i := batches * X; i < batches*X+remainder; i++ {
-				go analyseBitSRVRepo(repolist[i], DestinationResult, platformConfig, trimmedURL, spin, results, &count)
-			}
-			waitForWorkers(len(repolist), results)
-		} else {
-			// Launch goroutines for each repo
-			for _, project := range repolist {
-				go analyseBitSRVRepo(project, DestinationResult, platformConfig, trimmedURL, spin, results, &count)
-			}
-			waitForWorkers(len(repolist), results)
-		}
-	} else {
-		// Without multithreading
-		for _, project := range repolist {
-			// Execute the analysis synchronously
-			analyseBitSRVRepo(project, DestinationResult, platformConfig, trimmedURL, spin, results, &count)
-		}
-	}
-
-	return len(repolist)
-}
-
-func analyseBitSRVRepo(project getbibucketdc.ProjectBranch, DestinationResult string, platformConfig map[string]interface{}, trimmedURL string, spin *spinner.Spinner, results chan int, count *int) {
-
-	pathToScan := fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, project.ProjectKey, project.RepoSlug)
-	outputFileName := fmt.Sprintf("Result_%s_%s_%s", project.ProjectKey, project.RepoSlug, project.MainBranch)
-
-	params := goloc.Params{
-		Path:              pathToScan,
-		ByFile:            false,
-		ExcludePaths:      []string{},
-		ExcludeExtensions: []string{},
-		IncludeExtensions: []string{},
-		OrderByLang:       false,
-		OrderByFile:       false,
-		OrderByCode:       false,
-		OrderByLine:       false,
-		OrderByBlank:      false,
-		OrderByComment:    false,
-		Order:             "DESC",
-		OutputName:        outputFileName,
-		OutputPath:        DestinationResult,
-		ReportFormats:     []string{"json"},
-		Branch:            project.MainBranch,
-	}
-	MessB := fmt.Sprintf("   Extracting files from repo : %s ", project.RepoSlug)
-	spin.Suffix = MessB
-	spin.Start()
-
-	gc, err := goloc.NewGCloc(params, assets.Languages)
-	if err != nil {
-		fmt.Println(errorMessageRepo, err)
-		//os.Exit(1)
-	}
-
-	gc.Run()
-	*count++
-
-	// Remove Repository Directory
-	err1 := os.RemoveAll(gc.Repopath)
-	if err1 != nil {
-		fmt.Printf(errorMessageDi, err1)
-		//return
-	}
-
-	spin.Stop()
-	fmt.Printf("\t✅ The repository <%s> has been analyzed\n", project.RepoSlug)
-
-	// Send result through channel
-	results <- 1
-}
-
-/* ----------------End Analyse Repositories bitbucket DC  ---------------- */
-
-/* ---------------- Analyse Repositories GitHub  ---------------- */
-func AnalyseReposListGithub(DestinationResult string, platformConfig map[string]interface{}, repolist []getgithub.ProjectBranch) (cpt int) {
-	fmt.Print("\n🔎 Analysis of Repos ...\n")
-
-	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-	spin.Color("green", "bold")
-	messageF := ""
-	spin.FinalMSG = messageF
-
-	// Create a channel to receive results
-	results := make(chan int)
-	count := 1
-
-	if platformConfig["Multithreading"].(bool) {
-		// Check if the number of repos is greater than 50
-		if len(repolist) > 50 {
-			// Launch goroutines in batches of X
-			X := int(platformConfig["Workers"].(float64))
-			batches := len(repolist) / X
-			remainder := len(repolist) % X
-			for i := 0; i < batches; i++ {
-				for j := i * X; j < (i+1)*X; j++ {
-					go analyseRepo(repolist[j], DestinationResult, platformConfig, spin, results, &count)
+					go analyseRepoFunc(repolist.([]interface{})[j], DestinationResult, platformConfig, spin, results, &count)
 				}
 				waitForWorkers(X, results)
 			}
 			// Launch remaining goroutines
 			for i := batches * X; i < batches*X+remainder; i++ {
-				go analyseRepo(repolist[i], DestinationResult, platformConfig, spin, results, &count)
+				go analyseRepoFunc(repolist.([]interface{})[i], DestinationResult, platformConfig, spin, results, &count)
 			}
 			waitForWorkers(remainder, results)
-
 		} else {
 			// Launch goroutines for each repo
-			for _, project := range repolist {
-				go analyseRepo(project, DestinationResult, platformConfig, spin, results, &count)
+			for _, project := range repolist.([]interface{}) {
+				go analyseRepoFunc(project, DestinationResult, platformConfig, spin, results, &count)
 			}
-			waitForWorkers(len(repolist), results)
+			waitForWorkers(len(repolist.([]interface{})), results)
 		}
 	} else {
 		// Without multithreading
-		for _, project := range repolist {
+		for _, project := range repolist.([]interface{}) {
 			// Execute the analysis synchronously
-			analyseRepo(project, DestinationResult, platformConfig, spin, results, &count)
+			analyseRepoFunc(project, DestinationResult, platformConfig, spin, results, &count)
 		}
 	}
 
-	return len(repolist)
+	return len(repolist.([]interface{}))
 }
 
-func analyseRepo(project getgithub.ProjectBranch, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
-	pathToScan := fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), project.Org, project.RepoSlug)
+// Analysis functions for different repository types
 
-	outputFileName := fmt.Sprintf("Result_%s_%s_%s", project.Org, project.RepoSlug, project.MainBranch)
+// Analysis functions for Bitbucket Cloud
+func analyseBitCRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
+	p := project.(getbibucket.ProjectBranch)
+	params := RepoParams{
+		ProjectKey: p.ProjectKey,
+		Namespace:  "",
+		RepoSlug:   p.RepoSlug,
+		MainBranch: p.MainBranch,
+		PathToScan: fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug),
+	}
+	performRepoAnalysis(params, DestinationResult, spin, results, count)
+}
 
-	params := goloc.Params{
-		Path:              pathToScan,
+// Analysis functions for Bitbucket DC
+func analyseBitSRVRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, trimmedURL string, spin *spinner.Spinner, results chan int, count *int) {
+	p := project.(getbibucketdc.ProjectBranch)
+	params := RepoParams{
+		ProjectKey: p.ProjectKey,
+		Namespace:  "",
+		RepoSlug:   p.RepoSlug,
+		MainBranch: p.MainBranch,
+		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
+	}
+	performRepoAnalysis(params, DestinationResult, spin, results, count)
+}
+
+// Analysis functions for GitHub
+func analyseGithubRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
+	p := project.(getgithub.ProjectBranch)
+	params := RepoParams{
+		ProjectKey: p.Org,
+		Namespace:  "",
+		RepoSlug:   p.RepoSlug,
+		MainBranch: p.MainBranch,
+		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
+	}
+	performRepoAnalysis(params, DestinationResult, spin, results, count)
+}
+
+// Analysis functions for GitLab
+func analyseGitlabRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
+	p := project.(getgitlab.ProjectBranch)
+	params := RepoParams{
+		ProjectKey: p.Org,
+		Namespace:  p.Namespace,
+		RepoSlug:   p.RepoSlug,
+		MainBranch: p.MainBranch,
+		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "gitlab.com", p.Namespace),
+	}
+	performRepoAnalysis(params, DestinationResult, spin, results, count)
+}
+
+// Perform repository analysis (common logic)
+func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int) {
+	var outputFileName = ""
+	if len(params.Namespace) > 0 {
+		outputFileName = fmt.Sprintf("Result_%s_%s", params.Namespace, params.MainBranch)
+	} else {
+		outputFileName = fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
+	}
+	golocParams := goloc.Params{
+		Path:              params.PathToScan,
 		ByFile:            false,
 		ExcludePaths:      []string{},
 		ExcludeExtensions: []string{},
@@ -535,18 +383,16 @@ func analyseRepo(project getgithub.ProjectBranch, DestinationResult string, plat
 		OutputName:        outputFileName,
 		OutputPath:        DestinationResult,
 		ReportFormats:     []string{"json"},
-		Branch:            project.MainBranch,
-		Token:             platformConfig["AccessToken"].(string),
+		Branch:            params.MainBranch,
 	}
-	MessB := fmt.Sprintf("   Extracting files from repo : %s ", project.RepoSlug)
+	MessB := fmt.Sprintf("   Extracting files from repo : %s ", params.RepoSlug)
 	spin.Suffix = MessB
 	spin.Start()
 
-	gc, err := goloc.NewGCloc(params, assets.Languages)
+	gc, err := goloc.NewGCloc(golocParams, assets.Languages)
 	if err != nil {
 		fmt.Println(errorMessageRepo, err)
-		//os.Exit(1)
-
+		return
 	}
 
 	gc.Run()
@@ -556,16 +402,16 @@ func analyseRepo(project getgithub.ProjectBranch, DestinationResult string, plat
 	err1 := os.RemoveAll(gc.Repopath)
 	if err1 != nil {
 		fmt.Printf(errorMessageDi, err1)
-		//return
 	}
 
 	spin.Stop()
-	fmt.Printf("\r✅ %d The repository <%s> has been analyzed\n", *count, project.RepoSlug)
+	fmt.Printf("\r✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
 
 	// Send result through channel
 	results <- 1
 }
 
+// Wait for all goroutines to complete
 func waitForWorkers(numWorkers int, results chan int) {
 	for i := 0; i < numWorkers; i++ {
 		fmt.Printf("\r Waiting for workers...\n")
@@ -573,7 +419,47 @@ func waitForWorkers(numWorkers int, results chan int) {
 	}
 }
 
-/* ---------------- End  Analyse Repositories GitHub  ---------------- */
+// Specific analysis functions calling the generic one
+
+// Analysis function call for BitBucket Cloud
+func AnalyseReposListBitC(DestinationResult string, platformConfig map[string]interface{}, repolist []getbibucket.ProjectBranch) (cpt int) {
+	repoInterfaces := make([]interface{}, len(repolist))
+	for i, v := range repolist {
+		repoInterfaces[i] = v
+	}
+	return AnalyseReposList(DestinationResult, platformConfig, repoInterfaces, analyseBitCRepo)
+}
+
+// Analysis function call for BitBucket DC
+func AnalyseReposListBitSRV(DestinationResult string, platformConfig map[string]interface{}, repolist []getbibucketdc.ProjectBranch) (cpt int) {
+	URLcut := platformConfig["Protocol"].(string) + "://"
+	trimmedURL := strings.TrimPrefix(platformConfig["Url"].(string), URLcut)
+	repoInterfaces := make([]interface{}, len(repolist))
+	for i, v := range repolist {
+		repoInterfaces[i] = v
+	}
+	return AnalyseReposList(DestinationResult, platformConfig, repoInterfaces, func(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
+		analyseBitSRVRepo(project, DestinationResult, platformConfig, trimmedURL, spin, results, count)
+	})
+}
+
+// Analysis function call for GitHub
+func AnalyseReposListGithub(DestinationResult string, platformConfig map[string]interface{}, repolist []getgithub.ProjectBranch) (cpt int) {
+	repoInterfaces := make([]interface{}, len(repolist))
+	for i, v := range repolist {
+		repoInterfaces[i] = v
+	}
+	return AnalyseReposList(DestinationResult, platformConfig, repoInterfaces, analyseGithubRepo)
+}
+
+// Analysis function call for Gitlab
+func AnalyseReposListGitlab(DestinationResult string, platformConfig map[string]interface{}, repolist []getgitlab.ProjectBranch) (cpt int) {
+	repoInterfaces := make([]interface{}, len(repolist))
+	for i, v := range repolist {
+		repoInterfaces[i] = v
+	}
+	return AnalyseReposList(DestinationResult, platformConfig, repoInterfaces, analyseGitlabRepo)
+}
 
 /* ---------------- Analyse Directory ---------------- */
 
@@ -774,7 +660,7 @@ func main() {
 	}
 
 	// Temporary function for future functionality
-	if *devopsFlag == "Gitlab" || *devopsFlag == "Azure" {
+	if *devopsFlag == "Azure" {
 		fmt.Println("❗️ Functionality coming soon...")
 		os.Exit(0)
 	}
@@ -907,8 +793,26 @@ func main() {
 
 	case "gitlab":
 
-		/*var EmptyR = 0
-		var fileexclusion = ".clocignore"*/
+		var fileexclusion = ".cloc_gitlab_ignore"
+		fileexclusionEX := getFileNameIfExists(fileexclusion)
+
+		startTime = time.Now()
+
+		gitproject, err := getgitlab.GetRepoGitLabList(platformConfig, fileexclusionEX)
+		if err != nil {
+			fmt.Printf("Error Get Info Repositories in organization '%s' : '%s'", platformConfig["Organization"].(string), err)
+			return
+		}
+
+		if len(gitproject) == 0 {
+			fmt.Printf(errorMessageAnalyse)
+			os.Exit(1)
+
+		} else {
+			//os.Exit(1)
+			NumberRepos = AnalyseReposListGitlab(DestinationResult, platformConfig, gitproject)
+
+		}
 
 	case "bitbucket_dc":
 
@@ -941,7 +845,7 @@ func main() {
 		projects1, err := getbibucket.GetProjectBitbucketListCloud(platformConfig, fileexclusionEX)
 
 		if err != nil {
-			fmt.Printf("❌ Error Get Info Projects in Bitbucket cloud '%s' : ", err)
+			fmt.Printf("❌ Error Get Info Project(s) in Bitbucket cloud '%v' ", err)
 			return
 		}
 		if len(projects1) == 0 {

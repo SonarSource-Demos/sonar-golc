@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	"github.com/colussim/GoLC/pkg/utils"
 	"github.com/jung-kurt/gofpdf"
 )
 
