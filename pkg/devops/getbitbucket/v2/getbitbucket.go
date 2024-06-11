@@ -799,7 +799,7 @@ func getCommitsForLastMonth(client *bitbucket.Client, workspace, repoSlug, branc
 
 func SaveResult(result AnalysisResult) error {
 	// Open or create the file
-	file, err := os.Create("Results/config/analysis_analysis_result.json")
+	file, err := os.Create("Results/config/analysis_result_bitbucket.json")
 	if err != nil {
 		fmt.Println("❌ Error creating Analysis file:", err)
 		return err
