@@ -11,7 +11,7 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This version ver1.0.2 is available for Bitbucket Cloud , Bitbucket DC, GitHub, GitLab and Files, for Azure DevOps the next updates will be available soon, integrating these platforms.A Docker version will be planned.
+> This version ver1.0.2 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab and Files, for Azure DevOps the next updates will be available soon, integrating these platforms.A Docker version will be planned.
 
 ---
 ## Installation
