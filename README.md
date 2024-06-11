@@ -1,6 +1,5 @@
 ![Static Badge](https://img.shields.io/badge/Go-v1.22-blue:)
 
-
 ## Introduction
 
 ![logo](imgs/Logob.png)
@@ -12,12 +11,12 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This version ver1.0.2 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab and Files, for Azure DevOps the next updates will be available soon, integrating these platforms.A Docker version will be planned.
+> This version ver1.0.3 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab , Azure DevOps and Files.A Docker version will be planned.
 
 ---
 ## Installation
 
-You can install from the stable release by clicking [here](https://github.com/colussim/GoLC/releases/tag/V1.0.2)
+You can install from the stable release by clicking [here](https://github.com/colussim/GoLC/releases/tag/V1.0.3)
 
 ## Prerequisites 
 
@@ -168,7 +167,7 @@ If '**Projects**' and '**Repos**' are not specified, the analysis will be conduc
 "Project": "",
 "Repos": "",
 ```
-❗️ The '**Projects**' entry is supported exclusively on the BitBucket platform.
+❗️ The '**Projects**' entry is supported exclusively on the BitBucket and AzureDevops platform.
 
 For Bitbucket DC, you must provide the URL with your server address and change the '**Protocol**' entry if you are using an https connection , ending with '**/**'. The '**Branch**' input allows you to select a specific branch for all repositories within an organization or project, or for a single repository. For example, if you only want all branches to be "main", '**"Branch":"main"**' .
 ```json
@@ -210,6 +209,13 @@ The syntax of this file is as follows for File:
 DIRECTORY_NAME
 FILE_NAME
 ...
+```
+
+The syntax of this file is as follows for Azure Devops :
+
+```
+PROJECT_KEY/REPO_SLUG
+PROJECT_KEY
 ```
 
  ✅  Config.json File Settings

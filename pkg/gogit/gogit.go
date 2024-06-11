@@ -10,6 +10,9 @@ import (
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	//"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
 func Getrepos(src, branch, token string) (string, error) {
@@ -26,12 +29,13 @@ func Getrepos(src, branch, token string) (string, error) {
 	}
 	log.SetOutput(os.Stderr)
 
+	transport.UnsupportedCapabilities = []capability.Capability{
+		capability.ThinPack,
+	}
+
 	_, err = git.PlainClone(dst, false, &git.CloneOptions{
-		/*Auth: &http.BasicAuth{
-			Username: "x-token-auth",
-			Password: token,
-		},*/
-		URL:           src,
+		URL: src,
+
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
 		//ReferenceName: plumbing.ReferenceName(branch),
 
@@ -40,7 +44,7 @@ func Getrepos(src, branch, token string) (string, error) {
 	})
 
 	if err != nil {
-		fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s %s-- Source: %s", plumbing.NewBranchReferenceName(branch), err, src)
+		fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s - %s-- Source: %s -", plumbing.Main, err, src)
 	}
 
 	symLink, err := isSymLink(dst)
