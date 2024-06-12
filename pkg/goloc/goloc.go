@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/colussim/GoLC/pkg/analyzer"
-	"github.com/colussim/GoLC/pkg/filesystem"
-	"github.com/colussim/GoLC/pkg/getter"
-	"github.com/colussim/GoLC/pkg/gogit"
-	"github.com/colussim/GoLC/pkg/goloc/language"
-	"github.com/colussim/GoLC/pkg/reporter"
-	"github.com/colussim/GoLC/pkg/reporter/json"
-	"github.com/colussim/GoLC/pkg/reporter/prompt"
-	"github.com/colussim/GoLC/pkg/scanner"
-	"github.com/colussim/GoLC/pkg/sorter"
-	"github.com/colussim/GoLC/pkg/utils"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/analyzer"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/filesystem"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/getter"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/gogit"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc/language"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter/json"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter/prompt"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/scanner"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/sorter"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
 )
 
 type Params struct {
