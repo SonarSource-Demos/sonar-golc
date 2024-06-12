@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/colussim/GoLC/pkg/utils"
+	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
 )
 
 type ProjectBranch struct {
