@@ -36,7 +36,7 @@ To show all supported languages use the subcommand languages :
 $:> golc.go -languages
 
 Language           | Extensions                               | Single Comments | Multi Line
-                   |                                          |                 | Comments
+                    |                                          |                 | Comments
 -------------------+------------------------------------------+-----------------+--------------
 Objective-C        | .m                                       | //              | /* */ 
 Ruby               | .rb                                      | #               | =begin =end 
