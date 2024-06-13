@@ -27,6 +27,60 @@ You can install from the stable release by clicking [here](https://github.com/em
   
 * [Go language installed](https://go.dev/) : If you want to use the sources...
 
+
+## Supported languages
+
+To show all supported languages use the subcommand languages :
+
+ ```
+$:> golc.go -languages
+
+Language           | Extensions                               | Single Comments | Multi Line
+                   |                                          |                 | Comments
+-------------------+------------------------------------------+-----------------+--------------
+Objective-C        | .m                                       | //              | /* */ 
+Ruby               | .rb                                      | #               | =begin =end 
+Visual Basic .NET  | .vb                                      | '               | 
+YAML               | .yaml, .yml                              | #               | 
+C#                 | .cs                                      | //              | /* */ 
+Flex               | .as                                      | //              | /* */ 
+C++ Header         | .hh, .hpp                                | //              | /* */ 
+CSS                | .css                                     | //              | /* */ 
+Abap               | .abap, .ab4, .flow                       | "               | /* */ 
+PL/I               | .pl1                                     | --              | /* */ 
+RPG                | .rpg                                     | #               | 
+Swift              | .swift                                   | //              | /* */ 
+JCL                | .jcl, .JCL                               | //              | /* */ 
+Apex               | .cls, .trigger                           | //              | /* */ 
+PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
+TypeScript         | .ts, .tsx                                | //              | /* */ 
+XML                | .xml, .XML                               | <!--            | <!-- --> 
+XHTML              | .xhtml                                   | <!--            | <!-- --> 
+Terraform          | .tf                                      |                 | 
+T-SQL              | .tsql                                    | --              | 
+Vue                | .vue                                     | <!--            | <!-- --> 
+COBOL              | .cbl, .ccp, .cob, .cobol, .cpy           | *, /            | 
+HTML               | .html, .htm, .cshtml, .vbhtml, .aspx,    |                 | <!-- --> 
+                    | .ascx, .rhtml, .erb, .shtml, .shtm, cmp  |                 | <!-- -->
+JavaScript         | .js, .jsx, .jsp, .jspf                   | //              | /* */ 
+Python             | .py                                      | #               | """ """ 
+Scss               | .scss                                    | //              | /* */ 
+SQL                | .sql                                     | --              | /* */ 
+C Header           | .h                                       | //              | /* */ 
+C++                | .cpp, .cc                                | //              | /* */ 
+Golang             | .go                                      | //              | /* */ 
+Oracle PL/SQL      | .pkb                                     | --              | /* */ 
+ActionScript       | .as                                      | //              | /* */ 
+C                  | .c                                       | //              | /* */ 
+Java               | .java, .jav                              | //              | /* */ 
+Kotlin             | .kt, .kts                                | //              | /* */ 
+Scala              | .scala                                   | //              | /* */ 
+
+ ```
+
+ ❗️ To add a new language, you need to add an entry to the Languages structure defined in the file [assets/languages.go](assets/languages.go).
+
+
  ## Usage
 
  ✅ Environment Configuration
@@ -254,16 +308,6 @@ $:> golc -devops BitBucket
           ✅ The number of Repository found is: 1
         ✅ Repo: testempty - Number of branches: 1
 
-        🟢  Analyse Projet: LSA 
-          ✅ The number of Repository found is: 0
-
-        🟢  Analyse Projet: AdfsTestingTools 
-          ✅ The number of Repository found is: 0
-
-        🟢  Analyse Projet: cloc 
-          ✅ The number of Repository found is: 1
-        ✅ Repo: gcloc - Number of branches: 2
-
         🟢  Analyse Projet: sri 
           ✅ The number of Repository found is: 0
 
@@ -274,13 +318,8 @@ $:> golc -devops BitBucket
         ✅ Repo: official-pipes - Number of branches: 14
         ✅ Repo: sonarqube-scan - Number of branches: 7
         ✅ Repo: sonarqube-quality-gate - Number of branches: 2
+         ........
 
-        🟢  Analyse Projet: SonarCloud Analysis Samples 
-          ✅ The number of Repository found is: 4
-        ✅ Repo: sample-maven-project - Number of branches: 6
-        ✅ Repo: sample-gradle-project - Number of branches: 3
-        ✅ Repo: sample-nodejs-project - Number of branches: 6
-        ✅ Repo: sample-dotnet-project-azuredevops - Number of branches: 2
 
 ✅ The largest repo is <sample-nodejs-project> in the project <SAMPLES> with the branch <demo-app-week> and a size of 425.45 KB
 
