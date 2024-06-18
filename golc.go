@@ -10,18 +10,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/SonarSource-Demos/sonar-golc/assets"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc"
 
-	getbibucket "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucket"
-	getbibucketdc "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucketdc"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgithub"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket"
+	getbibucketdc "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucketdc"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgithub"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
 type OrganizationData struct {
@@ -739,6 +740,7 @@ func main() {
 	var ListDirectory []string
 	var ListExclusion []string
 	var message3, message4, message5 string
+	var version = "1.0.1"
 
 	// Test command line Flags
 
@@ -746,6 +748,7 @@ func main() {
 	fastFlag := flag.Bool("fast", false, "Enable fast mode (only for Github)")
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
+	versionflag := flag.Bool("version", false, "Show version")
 
 	flag.Parse()
 
@@ -759,6 +762,11 @@ func main() {
 	if *languagesFlag {
 		displayLanguages()
 		os.Exit(0) // Exit after displaying languages
+	}
+
+	if *versionflag {
+		fmt.Printf("GoLC version: %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+		os.Exit(0)
 	}
 
 	if *devopsFlag == "" {

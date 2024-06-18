@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SonarSource-Demos/sonar-golc/assets"
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
 	"github.com/google/go-github/v62/github"
 )
 

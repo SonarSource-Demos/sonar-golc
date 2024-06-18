@@ -1,6 +1,6 @@
 package assets
 
-import "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc/language"
+import "github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
 
 var Languages = language.Languages{
 	"ActionScript": {

@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
 )
 
 type ProjectBranch struct {
