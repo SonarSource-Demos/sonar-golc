@@ -1,7 +1,6 @@
 package getbibucketdc
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +12,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	"github.com/colussim/GoLC/pkg/utils"
 )
 
 type ProjectBranch struct {
@@ -102,7 +101,7 @@ type ParamsReposDC struct {
 	APIVersion       string
 	AccessToken      string
 	BitbucketURLBase string
-	ExclusionList    *ExclusionList
+	ExclusionList    *utils.ExclusionList
 	Branch           string
 	Spin             *spinner.Spinner
 	DefaultB         bool
@@ -174,47 +173,28 @@ type ParamsReposProjectDC struct {
 	AccessToken      string
 	BitbucketURLBase string
 	NBRepos          int
-	ExclusionList    *ExclusionList
+	ExclusionList    *utils.ExclusionList
 	Spin             *spinner.Spinner
 	Branch           string
 	DefaultB         bool
 }
 
-var ErrEmptyRepo = errors.New("repository is empty")
-
-func loadExclusionList(filename string) (*ExclusionList, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	exclusionList := &ExclusionList{
-		Projects: make(map[string]bool),
-		Repos:    make(map[string]bool),
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "/")
-		if len(parts) == 1 {
-			// Get Projet
-			exclusionList.Projects[parts[0]] = true
-		} else if len(parts) == 2 {
-			// Get Repos
-			exclusionList.Repos[line] = true
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return exclusionList, nil
+type FetchParams struct {
+	ProjectKey       string
+	RepoSlug         string
+	BranchName       string
+	AccessToken      string
+	BitbucketURLBase string
+	ApiVer           string
+	Components       []string
 }
 
-func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketURLBase string, nbRepos int, exclusionList *ExclusionList) ([]ProjectBranch, int, int) {
+const tokenOpt = "Bearer "
+const Startopt = "%s?start=%d"
+
+var ErrEmptyRepo = errors.New("repository is empty")
+
+func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketURLBase string, nbRepos int, exclusionList *utils.ExclusionList) ([]ProjectBranch, int, int) {
 	var importantBranches []ProjectBranch
 	emptyRepo := 0
 	result := AnalysisResult{}
@@ -316,7 +296,7 @@ func getDefaultBranch(url1, accessToken string) (*Branch, error) {
 			return nil, err
 		}
 
-		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Authorization", tokenOpt+accessToken)
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -352,7 +332,7 @@ func getDefaultBranch(url1, accessToken string) (*Branch, error) {
 	return nil, fmt.Errorf("❌ default branch not found")
 }
 
-func GetRepos(project string, repos []Repo, parms ParamsReposDC, bitbucketURLBase string, exclusionList *ExclusionList) ([]ProjectBranch, int, int) {
+func GetRepos(project string, repos []Repo, parms ParamsReposDC, bitbucketURLBase string, exclusionList *utils.ExclusionList) ([]ProjectBranch, int, int) {
 	var largestRepoSize int
 	var largestRepoBranch string
 	var importantBranches []ProjectBranch
@@ -476,7 +456,16 @@ func findLargestBranch(project, repoSlug string, branches []Branch, parms Params
 		parms.Spin.Prefix = fmt.Sprintf("\t   Analysis branch <%s> size...", branch.Name)
 		parms.Spin.Start()
 
-		size, err := fetchBranchSize(project, repoSlug, branch.Name, parms.AccessToken, parms.URL, parms.APIVersion)
+		Fetchparams := FetchParams{
+			ProjectKey:       project,
+			RepoSlug:         repoSlug,
+			BranchName:       branch.Name,
+			AccessToken:      parms.AccessToken,
+			BitbucketURLBase: parms.URL,
+			ApiVer:           parms.APIVersion,
+		}
+
+		size, err := fetchBranchSize(Fetchparams)
 		parms.Spin.Stop()
 		if err != nil {
 			fmt.Println("❌ Error retrieving branch size:", err)
@@ -500,7 +489,16 @@ func findLargestBranch1(projectKey, repoSlug string, branches []Branch, parms Pa
 		spin1.Prefix = fmt.Sprintf("\t   Analysis branch <%s> size...", branch.Name)
 		spin1.Start()
 
-		size, err := fetchBranchSize(projectKey, repoSlug, branch.Name, parms.AccessToken, parms.URL, parms.APIVersion)
+		Fetchparams := FetchParams{
+			ProjectKey:       projectKey,
+			RepoSlug:         repoSlug,
+			BranchName:       branch.Name,
+			AccessToken:      parms.AccessToken,
+			BitbucketURLBase: parms.URL,
+			ApiVer:           parms.APIVersion,
+		}
+
+		size, err := fetchBranchSize(Fetchparams)
 		spin1.Stop()
 		if err != nil {
 			return 0, "", fmt.Errorf("retrieving branch size: %w", err)
@@ -539,7 +537,7 @@ func saveAnalysisResult1(filePath string, result AnalysisResult) error {
 
 func GetProjectBitbucketList(platformConfig map[string]interface{}, exclusionFile string) ([]ProjectBranch, error) {
 	var importantBranches []ProjectBranch
-	var exclusionList *ExclusionList
+	var exclusionList *utils.ExclusionList
 	var err error
 	var nbRepos int
 
@@ -600,17 +598,17 @@ func GetProjectBitbucketList(platformConfig map[string]interface{}, exclusionFil
 	return summarizeAnalysisResults(importantBranches, nbRepos), nil
 }
 
-func loadOrCreateExclusionList(exclusionFile string) (*ExclusionList, error) {
+func loadOrCreateExclusionList(exclusionFile string) (*utils.ExclusionList, error) {
 	if exclusionFile == "0" {
-		return &ExclusionList{
+		return &utils.ExclusionList{
 			Projects: make(map[string]bool),
 			Repos:    make(map[string]bool),
 		}, nil
 	}
-	return loadExclusionList(exclusionFile)
+	return utils.LoadExclusionList(exclusionFile)
 }
 
-func determineProjectsAndRepos(platformConfig map[string]interface{}, exclusionList *ExclusionList, bitbucketURL string, spin *spinner.Spinner) ([]Project, []Repo, error) {
+func determineProjectsAndRepos(platformConfig map[string]interface{}, exclusionList *utils.ExclusionList, bitbucketURL string, spin *spinner.Spinner) ([]Project, []Repo, error) {
 	var projects []Project
 	var repos []Repo
 	var err error
@@ -677,7 +675,7 @@ func ifExistBranches(repoURL, accessToken string) ([]Branch, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -711,7 +709,7 @@ func ifExistBranches(repoURL, accessToken string) ([]Branch, error) {
 	return branchesResp.Values, nil
 }
 
-func fetchAllProjects(url string, accessToken string, exclusionList *ExclusionList) ([]Project, error) {
+func fetchAllProjects(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Project, error) {
 	var allProjects []Project
 	for {
 		projectsResp, err := fetchProjects(url, accessToken, true)
@@ -734,12 +732,12 @@ func fetchAllProjects(url string, accessToken string, exclusionList *ExclusionLi
 		if projectResponse.IsLastPage {
 			break
 		}
-		url = fmt.Sprintf("%s?start=%d", url, projectResponse.NextPageStart)
+		url = fmt.Sprintf(Startopt, url, projectResponse.NextPageStart)
 	}
 	return allProjects, nil
 }
 
-func fetchOnelProjects(url string, accessToken string, exclusionList *ExclusionList) ([]Project, error) {
+func fetchOnelProjects(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Project, error) {
 	var allProjects []Project
 
 	projectsResp, err := fetchProjects(url, accessToken, false)
@@ -763,7 +761,7 @@ func fetchOnelProjects(url string, accessToken string, exclusionList *ExclusionL
 	return allProjects, nil
 }
 
-func fetchOneRepos(url string, accessToken string, exclusionList *ExclusionList) ([]Repo, error) {
+func fetchOneRepos(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Repo, error) {
 	var allRepos []Repo
 
 	reposResp, err := fetchRepos(url, accessToken, false)
@@ -797,7 +795,7 @@ func fetchProjects(url string, accessToken string, isProjectResponse bool) (inte
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -826,27 +824,27 @@ func fetchProjects(url string, accessToken string, isProjectResponse bool) (inte
 
 }
 
-func isProjectAndRepoExcluded(repoName string, exclusionList ExclusionList) bool {
+func isProjectAndRepoExcluded(repoName string, exclusionList utils.ExclusionList) bool {
 
 	excluded, repoExcluded := exclusionList.Repos[repoName]
 	return repoExcluded && excluded
 }
 
-func isProjectExcluded1(projectName string, exclusionList ExclusionList) bool {
+func isProjectExcluded1(projectName string, exclusionList utils.ExclusionList) bool {
 	_, found := exclusionList.Projects[projectName]
 	return found
 }
-func isProjectExcluded(exclusionList *ExclusionList, project string) bool {
+func isProjectExcluded(exclusionList *utils.ExclusionList, project string) bool {
 	_, excluded := exclusionList.Projects[project]
 	return excluded
 }
 
-func isRepoExcluded(exclusionList *ExclusionList, repo string) bool {
+func isRepoExcluded(exclusionList *utils.ExclusionList, repo string) bool {
 	_, excluded := exclusionList.Repos[repo]
 	return excluded
 }
 
-func fetchAllRepos(url string, accessToken string, exclusionList *ExclusionList) ([]Repo, error) {
+func fetchAllRepos(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Repo, error) {
 	var allRepos []Repo
 	for {
 		reposResp, err := fetchRepos(url, accessToken, true)
@@ -870,7 +868,7 @@ func fetchAllRepos(url string, accessToken string, exclusionList *ExclusionList)
 		if ReposResponse.IsLastPage {
 			break
 		}
-		url = fmt.Sprintf("%s?start=%d", url, ReposResponse.NextPageStart)
+		url = fmt.Sprintf(Startopt, url, ReposResponse.NextPageStart)
 	}
 	return allRepos, nil
 }
@@ -882,7 +880,7 @@ func fetchRepos(url string, accessToken string, isProjectResponse bool) (interfa
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -922,7 +920,7 @@ func fetchAllBranches(url string, accessToken string) ([]Branch, error) {
 		if branchesResp.IsLastPage {
 			break
 		}
-		url = fmt.Sprintf("%s?start=%d", url, branchesResp.NextPageStart)
+		url = fmt.Sprintf(Startopt, url, branchesResp.NextPageStart)
 	}
 	return allBranches, nil
 }
@@ -932,7 +930,7 @@ func fetchBranches(url string, accessToken string) (*BranchResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -960,7 +958,7 @@ func fetchFiles(url string, accessToken string) (*FileResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -983,48 +981,52 @@ func fetchFiles(url string, accessToken string) (*FileResponse, error) {
 	return &filesResp, nil
 }
 
-func fetchBranchSize(projectKey string, repoSlug string, branchName string, accessToken string, bitbucketURLBase string, apiver string) (int, error) {
-	url := fmt.Sprintf("%srest/api/%s/projects/%s/repos/%s/browse?at=refs/heads/%s", bitbucketURLBase, apiver, projectKey, repoSlug, branchName)
-
+func fetchFileResponse(url string, accessToken string) (FileResponse, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return 0, err
+		return FileResponse{}, err
 	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", tokenOpt+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, err
+		return FileResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return 0, err
+		return FileResponse{}, err
 	}
 
 	var filesResp FileResponse
 	err = json.Unmarshal(body, &filesResp)
 	if err != nil {
-		return 0, err
+		return FileResponse{}, err
 	}
 
+	return filesResp, nil
+}
+func calculateTotalSize(files []File, params FetchParams) (int, error) {
 	var wg sync.WaitGroup
-	wg.Add(len(filesResp.Children.Values))
+	wg.Add(len(files))
 
 	totalSize := 0
 	resultCh := make(chan int)
 
-	for _, file := range filesResp.Children.Values {
+	for _, file := range files {
 		go func(fileInfo File) {
 			defer wg.Done()
 			if fileInfo.Type == "FILE" {
 				resultCh <- fileInfo.Size
 			} else if fileInfo.Type == "DIRECTORY" {
-				dirSize, err := fetchDirectorySize(projectKey, repoSlug, branchName, fileInfo.Path.Components, accessToken, bitbucketURLBase, apiver)
+				dirComponents := append(params.Components, fileInfo.Path.Components...)
+				dirParams := params
+				dirParams.Components = dirComponents
+				dirSize, err := fetchDirectorySize(dirParams)
 				if err != nil {
-					fmt.Println("Error fetchDirectorySize:", err)
+					fmt.Printf("\r❌ Error fetchDirectorySize:%s - Decrease the number of repo workers (variable <NumberWorkerRepos> in config.json file)", err)
 					return
 				}
 				resultCh <- dirSize
@@ -1044,65 +1046,24 @@ func fetchBranchSize(projectKey string, repoSlug string, branchName string, acce
 	return totalSize, nil
 }
 
-func fetchDirectorySize(projectKey string, repoSlug string, branchName string, components []string, accessToken string, bitbucketURLBase string, apiver string) (int, error) {
-	url := fmt.Sprintf("%srest/api/%s/projects/%s/repos/%s/browse/%s?at=refs/heads/%s", bitbucketURLBase, apiver, projectKey, repoSlug, strings.Join(components, "/"), branchName)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+func fetchBranchSize(params FetchParams) (int, error) {
+	url := fmt.Sprintf("%srest/api/%s/projects/%s/repos/%s/browse?at=refs/heads/%s", params.BitbucketURLBase, params.ApiVer, params.ProjectKey, params.RepoSlug, params.BranchName)
+	filesResp, err := fetchFileResponse(url, params.AccessToken)
 	if err != nil {
 		return 0, err
 	}
 
-	var filesResp FileResponse
-	err = json.Unmarshal(body, &filesResp)
+	return calculateTotalSize(filesResp.Children.Values, params)
+}
+
+func fetchDirectorySize(params FetchParams) (int, error) {
+	url := fmt.Sprintf("%srest/api/%s/projects/%s/repos/%s/browse/%s?at=refs/heads/%s", params.BitbucketURLBase, params.ApiVer, params.ProjectKey, params.RepoSlug, strings.Join(params.Components, "/"), params.BranchName)
+	filesResp, err := fetchFileResponse(url, params.AccessToken)
 	if err != nil {
 		return 0, err
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(filesResp.Children.Values))
-
-	totalSize := 0
-	resultCh := make(chan int)
-
-	for _, file := range filesResp.Children.Values {
-		go func(fileInfo File) {
-			defer wg.Done()
-			if fileInfo.Type == "FILE" {
-				resultCh <- fileInfo.Size
-			} else if fileInfo.Type == "DIRECTORY" {
-				subdirSize, err := fetchDirectorySize(projectKey, repoSlug, branchName, append(components, fileInfo.Path.Components...), accessToken, bitbucketURLBase, apiver)
-				if err != nil {
-					//fmt.Println("Error fetchDirectorySize on subdirSize :", err)
-					return
-				}
-				resultCh <- subdirSize
-			}
-		}(file)
-	}
-
-	go func() {
-		wg.Wait()
-		close(resultCh)
-	}()
-
-	for size := range resultCh {
-		totalSize += size
-	}
-
-	return totalSize, nil
+	return calculateTotalSize(filesResp.Children.Values, params)
 }
 
 func isRepositoryEmpty(projectKey, repoSlug, accessToken, bitbucketURLBase, apiver string) (bool, error) {

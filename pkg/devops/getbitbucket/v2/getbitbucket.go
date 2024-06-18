@@ -1,7 +1,6 @@
 package getbibucketv2
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/colussim/GoLC/pkg/utils"
 	"github.com/ktrysmt/go-bitbucket"
 )
 
@@ -70,7 +70,7 @@ type ParamsProjectBitbucket struct {
 	AccessToken      string
 	BitbucketURLBase string
 	Organization     string
-	Exclusionlist    *ExclusionList
+	Exclusionlist    *utils.ExclusionList
 	Excludeproject   int
 	Spin             *spinner.Spinner
 	Period           int
@@ -114,45 +114,13 @@ type Reposize struct {
 
 const PrefixMsg = "Get Projects..."
 
-func loadExclusionList(filename string) (*ExclusionList, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	exclusionList := &ExclusionList{
-		Projects: make(map[string]bool),
-		Repos:    make(map[string]bool),
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "/")
-		if len(parts) == 1 {
-			// Exclusion de projet
-			exclusionList.Projects[parts[0]] = true
-		} else if len(parts) == 2 {
-			// Exclusion de répertoire
-			exclusionList.Repos[line] = true
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return exclusionList, nil
-}
-
-func isRepoExcluded(exclusionList *ExclusionList, projectKey, repoKey string) bool {
+func isRepoExcluded(exclusionList *utils.ExclusionList, projectKey, repoKey string) bool {
 	_, repoExcluded := exclusionList.Repos[projectKey+"/"+repoKey]
 	return repoExcluded
 }
 
 // Fonction pour vérifier si un projet est exclu
-func isProjectExcluded(exclusionList *ExclusionList, projectKey string) bool {
+func isProjectExcluded(exclusionList *utils.ExclusionList, projectKey string) bool {
 	_, projectExcluded := exclusionList.Projects[projectKey]
 	return projectExcluded
 }
@@ -165,7 +133,7 @@ func GetProjectBitbucketListCloud(platformConfig map[string]interface{}, exclusi
 	var largestRepoBranch, largesRepo string
 	var importantBranches []ProjectBranch
 	var projects []Projectc
-	var exclusionList *ExclusionList
+	var exclusionList *utils.ExclusionList
 	var err error
 	var totalSize int
 	//	result := AnalysisResult{}
@@ -263,14 +231,14 @@ func printSummary(Org string, stats SummaryStats) {
 	fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
 }
 
-func loadExclusionFileOrCreateNew(exclusionFile string) (*ExclusionList, error) {
+func loadExclusionFileOrCreateNew(exclusionFile string) (*utils.ExclusionList, error) {
 	if exclusionFile == "0" {
-		return &ExclusionList{
+		return &utils.ExclusionList{
 			Projects: make(map[string]bool),
 			Repos:    make(map[string]bool),
 		}, nil
 	}
-	return loadExclusionList(exclusionFile)
+	return utils.LoadExclusionList(exclusionFile)
 }
 
 func GetSize(parms ParamsProjectBitbucket, repo *bitbucket.Repository) (int, error) {
@@ -310,7 +278,7 @@ func GetSize(parms ParamsProjectBitbucket, repo *bitbucket.Repository) (int, err
 
 }
 
-func getCommonParams(client *bitbucket.Client, platformConfig map[string]interface{}, project []Projectc, exclusionList *ExclusionList, excludeproject int, spin *spinner.Spinner, bitbucketURLBase string) ParamsProjectBitbucket {
+func getCommonParams(client *bitbucket.Client, platformConfig map[string]interface{}, project []Projectc, exclusionList *utils.ExclusionList, excludeproject int, spin *spinner.Spinner, bitbucketURLBase string) ParamsProjectBitbucket {
 	return ParamsProjectBitbucket{
 		Client:           client,
 		Projects:         project,
@@ -332,7 +300,7 @@ func getCommonParams(client *bitbucket.Client, platformConfig map[string]interfa
 	}
 }
 
-func getAllProjects(client *bitbucket.Client, workspace string, exclusionList *ExclusionList) ([]Projectc, int, error) {
+func getAllProjects(client *bitbucket.Client, workspace string, exclusionList *utils.ExclusionList) ([]Projectc, int, error) {
 
 	var projects []Projectc
 	var excludedCount int
@@ -360,7 +328,7 @@ func getAllProjects(client *bitbucket.Client, workspace string, exclusionList *E
 	return projects, excludedCount, nil
 }
 
-func getSepecificProjects(client *bitbucket.Client, workspace, projectKeys string, exclusionList *ExclusionList) ([]Projectc, int, error) {
+func getSepecificProjects(client *bitbucket.Client, workspace, projectKeys string, exclusionList *utils.ExclusionList) ([]Projectc, int, error) {
 
 	var projects []Projectc
 	var excludedCount int

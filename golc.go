@@ -10,20 +10,21 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc"
+	"github.com/colussim/GoLC/assets"
+	"github.com/colussim/GoLC/pkg/goloc"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getazure"
-	getbibucket "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucket/v2"
-	getbibucketdc "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucketdc"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgithub"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgitlab"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	"github.com/colussim/GoLC/pkg/devops/getazure"
+	getbibucket "github.com/colussim/GoLC/pkg/devops/getbitbucket/v2"
+	getbibucketdc "github.com/colussim/GoLC/pkg/devops/getbitbucketdc"
+	"github.com/colussim/GoLC/pkg/devops/getgithub"
+	"github.com/colussim/GoLC/pkg/devops/getgitlab"
+	"github.com/colussim/GoLC/pkg/utils"
 )
 
 type OrganizationData struct {
@@ -101,6 +102,7 @@ type RepoParams struct {
 const errorMessageRepo = "\n❌ Error Analyse Repositories: "
 const errorMessageDi = "\r❌ Error deleting Repository Directory: %v\n"
 const errorMessageAnalyse = "\r❌ No Analysis performed...\n"
+const errorMessageRepos = "Error Get Info Repositories in organization '%s' : '%s'"
 
 var logFile *os.File
 
@@ -647,6 +649,7 @@ func main() {
 	var ListDirectory []string
 	var ListExclusion []string
 	var message3, message4, message5 string
+	var version = "1.0.3"
 
 	// Test command line Flags
 
@@ -654,6 +657,7 @@ func main() {
 	fastFlag := flag.Bool("fast", false, "Enable fast mode (only for Github)")
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
+	versionflag := flag.Bool("version", false, "Show version")
 
 	flag.Parse()
 
@@ -666,7 +670,12 @@ func main() {
 
 	if *languagesFlag {
 		displayLanguages()
-		os.Exit(0) // Exit after displaying languages
+		os.Exit(0)
+	}
+
+	if *versionflag {
+		fmt.Printf("GoLC version: %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+		os.Exit(0)
 	}
 
 	if *devopsFlag == "" {
@@ -779,7 +788,8 @@ func main() {
 
 		gitproject, err := getazure.GetRepoAzureList(platformConfig, fileexclusionEX)
 		if err != nil {
-			fmt.Printf("Error Get Info Repositories in organization '%s' : '%s'", platformConfig["Organization"].(string), err)
+			fmt.Printf(errorMessageRepos, platformConfig["Organization"].(string), err)
+
 			return
 		}
 
@@ -815,7 +825,7 @@ func main() {
 
 			repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
 			if err != nil {
-				fmt.Printf("Error Get Info Repositories in organization '%s' : '%s'", platformConfig["Organization"].(string), err)
+				fmt.Printf(errorMessageRepos, platformConfig["Organization"].(string), err)
 				return
 			}
 
@@ -839,7 +849,7 @@ func main() {
 
 		gitproject, err := getgitlab.GetRepoGitLabList(platformConfig, fileexclusionEX)
 		if err != nil {
-			fmt.Printf("Error Get Info Repositories in organization '%s' : '%s'", platformConfig["Organization"].(string), err)
+			fmt.Printf(errorMessageRepos, platformConfig["Organization"].(string), err)
 			return
 		}
 

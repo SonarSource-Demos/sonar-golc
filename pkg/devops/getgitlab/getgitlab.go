@@ -57,6 +57,33 @@ const (
 	perPage = 100
 )
 
+// Load repository ignore map from file
+func LoadExclusionRepos(filename string) (ExclusionRepos, error) {
+
+	ignoreMap := make(ExclusionRepos)
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		repoName := strings.TrimSpace(scanner.Text())
+		if repoName != "" {
+			ignoreMap[repoName] = true
+
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return ignoreMap, nil
+}
+
 // Function to Get Commit count
 func getCommitCount(client *gitlab.Client, projectID int, branchName string, since, until time.Time) (int, error) {
 	commits, _, err := client.Commits.ListCommits(projectID, &gitlab.ListCommitsOptions{
@@ -240,33 +267,6 @@ func isExcluded(projectName string, exclusionList map[string]bool) bool {
 
 }
 
-// Load repository ignore map from file
-func loadExclusionRepos(filename string) (ExclusionRepos, error) {
-
-	ignoreMap := make(ExclusionRepos)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		repoName := strings.TrimSpace(scanner.Text())
-		if repoName != "" {
-			ignoreMap[repoName] = true
-
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return ignoreMap, nil
-}
-
 func SaveResult(result AnalysisResult) error {
 	// Open or create the file
 	file, err := os.Create("Results/config/analysis_result_github.json")
@@ -404,7 +404,8 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 		exclusionList = make(map[string]bool)
 
 	} else {
-		exclusionList, err1 = loadExclusionRepos(exclusionfile)
+
+		exclusionList, err1 = LoadExclusionRepos(exclusionfile)
 		if err1 != nil {
 			fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exclusionfile, err1)
 			spin.Stop()
@@ -490,7 +491,7 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 		/* --------------------- Analysis all Project and All Branches if not if you do not specify a specific project or branch ---------------------  */
 		switch {
 		case platformConfig["Project"].(string) == "" && platformConfig["Branch"].(string) == "":
-			cpt := 1
+			/*cpt := 1
 
 			projects, err := getAllGroupProjects(gitlabClient, platformConfig["Organization"].(string))
 			if err != nil {
@@ -502,7 +503,12 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 			spin1.Color("green", "bold")
 
-			fmt.Printf(Message1, Message4, len(projects))
+			fmt.Printf(Message1, Message4, len(projects))*/
+
+			projects, cpt, spin1, err := getProjectsAndAnalyze(gitlabClient, platformConfig["Organization"].(string), spin)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
 
 			for _, project := range projects {
 				//	branches := make([]*gitlab.Branch, 0)
@@ -628,7 +634,7 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 		/* --------------------- Analysis all Project with a specific Branche  ---------------------  */
 		case platformConfig["Project"].(string) == "" && platformConfig["Branch"].(string) != "":
 
-			cpt := 1
+			/*cpt := 1
 
 			projects, err := getAllGroupProjects(gitlabClient, platformConfig["Organization"].(string))
 			if err != nil {
@@ -640,7 +646,12 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 			spin1.Color("green", "bold")
 
-			fmt.Printf(Message1, Message4, len(projects))
+			fmt.Printf(Message1, Message4, len(projects))*/
+
+			projects, cpt, spin1, err := getProjectsAndAnalyze(gitlabClient, platformConfig["Organization"].(string), spin)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
 
 			for _, project := range projects {
 				//largestSize := 0
@@ -705,9 +716,28 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 
 	}
 
-	fmt.Printf("\n✅ The largest Project is <%s> in the Organizationa <%s> with the branch <%s> \n", largesRepo, platformConfig["Organization"].(string), largestRepoBranch)
+	fmt.Printf("\n✅ The largest Repository is <%s> in the Organizationa <%s> with the branch <%s> \n", largesRepo, platformConfig["Organization"].(string), largestRepoBranch)
 	fmt.Printf("\r✅ TotalProject(s) that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", len(projectBranches), emptyRepos, excludedProjects, archivedRepos)
 	fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", TotalBranches)
 
 	return projectBranches, nil
+}
+
+func getProjectsAndAnalyze(gitlabClient *gitlab.Client, organization string, spin *spinner.Spinner) ([]*gitlab.Project, int, *spinner.Spinner, error) {
+
+	cpt := 1
+
+	projects, err := getAllGroupProjects(gitlabClient, organization)
+	if err != nil {
+		spin.Stop()
+		log.Fatalf(MessageErro1, organization, err)
+	}
+
+	spin.Stop()
+	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+	spin1.Color("green", "bold")
+
+	fmt.Printf(Message1, Message4, len(projects))
+
+	return projects, cpt, spin1, nil
 }

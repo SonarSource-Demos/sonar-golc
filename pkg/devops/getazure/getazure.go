@@ -1,7 +1,6 @@
 package getazure
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/colussim/GoLC/pkg/utils"
 	"github.com/microsoft/azure-devops-go-api/azuredevops"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/git"
@@ -24,6 +24,11 @@ type ProjectBranch struct {
 	LargestSize int64
 }
 
+type AzureConnect struct {
+	Ctx        context.Context
+	CoreClient core.Client
+}
+
 type AnalysisResult struct {
 	NumRepositories int
 	ProjectBranches []ProjectBranch
@@ -33,6 +38,7 @@ type ExclusionList struct {
 	Projects map[string]bool
 	Repos    map[string]bool
 }
+
 type SummaryStats struct {
 	LargestRepo       string
 	LargestRepoBranch string
@@ -60,7 +66,7 @@ type ParamsProjectAzure struct {
 	AccessToken    string
 	ApiURL         string
 	Organization   string
-	Exclusionlist  *ExclusionList
+	Exclusionlist  *utils.ExclusionList
 	Excludeproject int
 	Spin           *spinner.Spinner
 	Period         int
@@ -82,55 +88,23 @@ const Message3 = "\r\t\t✅ %d Project: %s - Number of branches: %d - largest Br
 const Message4 = "Project(s)"
 const REF = "refs/heads/"
 
-func loadExclusionList(filename string) (*ExclusionList, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	exclusionList := &ExclusionList{
-		Projects: make(map[string]bool),
-		Repos:    make(map[string]bool),
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "/")
-		if len(parts) == 1 {
-			// Exclusion de projet
-			exclusionList.Projects[parts[0]] = true
-		} else if len(parts) == 2 {
-			// Exclusion de répertoire
-			exclusionList.Repos[line] = true
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return exclusionList, nil
-}
-
-func loadExclusionFileOrCreateNew(exclusionFile string) (*ExclusionList, error) {
+func loadExclusionFileOrCreateNew(exclusionFile string) (*utils.ExclusionList, error) {
 	if exclusionFile == "0" {
-		return &ExclusionList{
+		return &utils.ExclusionList{
 			Projects: make(map[string]bool),
 			Repos:    make(map[string]bool),
 		}, nil
 	}
-	return loadExclusionList(exclusionFile)
+	return utils.LoadExclusionList(exclusionFile)
 }
 
-func isRepoExcluded(exclusionList *ExclusionList, projectKey, repoKey string) bool {
+func isRepoExcluded(exclusionList *utils.ExclusionList, projectKey, repoKey string) bool {
 	_, repoExcluded := exclusionList.Repos[projectKey+"/"+repoKey]
 	return repoExcluded
 }
 
 // Fonction pour vérifier si un projet est exclu
-func isProjectExcluded(exclusionList *ExclusionList, projectKey string) bool {
+func isProjectExcluded(exclusionList *utils.ExclusionList, projectKey string) bool {
 	_, projectExcluded := exclusionList.Projects[projectKey]
 	return projectExcluded
 }
@@ -150,7 +124,7 @@ func isRepoEmpty(ctx context.Context, gitClient git.Client, projectID string, re
 	return len(*items) == 0, nil
 }
 
-func getAllProjects(ctx context.Context, coreClient core.Client, exclusionList *ExclusionList) ([]core.TeamProjectReference, int, error) {
+func getAllProjects(ctx context.Context, coreClient core.Client, exclusionList *utils.ExclusionList) ([]core.TeamProjectReference, int, error) {
 	var allProjects []core.TeamProjectReference
 	var excludedCount int
 	var continuationToken string
@@ -186,7 +160,7 @@ func getAllProjects(ctx context.Context, coreClient core.Client, exclusionList *
 	return allProjects, excludedCount, nil
 }
 
-func getProjectByName(ctx context.Context, coreClient core.Client, projectName string, exclusionList *ExclusionList) ([]core.TeamProjectReference, int, error) {
+func getProjectByName(ctx context.Context, coreClient core.Client, projectName string, exclusionList *utils.ExclusionList) ([]core.TeamProjectReference, int, error) {
 
 	var excludedCount int
 
@@ -223,7 +197,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 	var totalExclude, totalArchiv, emptyRepo, TotalBranches, nbRepos int
 	var totalSize int64
 	var largestRepoBranch, largesRepo string
-	var exclusionList *ExclusionList
+	var exclusionList *utils.ExclusionList
 	var err error
 
 	ApiURL := platformConfig["Url"].(string) + platformConfig["Organization"].(string)
@@ -257,6 +231,11 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		log.Fatalf("Erreur lors de la création du client Git: %v", err)
 	}
 
+	azureConnect := AzureConnect{
+		Ctx:        ctx,
+		CoreClient: coreClient,
+	}
+
 	/* --------------------- Analysis all projects with a default branche  ---------------------  */
 	if platformConfig["Project"].(string) == "" {
 
@@ -274,7 +253,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		fmt.Printf(Message1, Message4, len(projects)+exludedprojects)
 
 		// Set Parmams
-		params := getCommonParams(ctx, coreClient, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
+		params := getCommonParams(azureConnect, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
 		// Analyse Get important Branch
 		importantBranches, emptyRepo, nbRepos, TotalBranches, totalExclude, totalArchiv, err = getRepoAnalyse(params, gitClient)
 		if err != nil {
@@ -296,7 +275,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		fmt.Printf(Message1, Message4, 1+exludedprojects)
 
 		// Set Parmams
-		params := getCommonParams(ctx, coreClient, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
+		params := getCommonParams(azureConnect, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
 		// Analyse Get important Branch
 		importantBranches, emptyRepo, nbRepos, TotalBranches, totalExclude, totalArchiv, err = getRepoAnalyse(params, gitClient)
 		if err != nil {
@@ -341,10 +320,10 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 	return importantBranches, nil
 }
 
-func getCommonParams(ctx context.Context, client core.Client, platformConfig map[string]interface{}, project []core.TeamProjectReference, exclusionList *ExclusionList, excludeproject int, spin *spinner.Spinner, apiURL string) ParamsProjectAzure {
+func getCommonParams(azureConnect AzureConnect, platformConfig map[string]interface{}, project []core.TeamProjectReference, exclusionList *utils.ExclusionList, excludeproject int, spin *spinner.Spinner, apiURL string) ParamsProjectAzure {
 	return ParamsProjectAzure{
-		Client:   client,
-		Context:  ctx,
+		Client:   azureConnect.CoreClient,
+		Context:  azureConnect.Ctx,
 		Projects: project,
 
 		URL:            platformConfig["Url"].(string),

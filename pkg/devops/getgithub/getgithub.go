@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
+	"github.com/colussim/GoLC/assets"
 	"github.com/google/go-github/v62/github"
 )
 
@@ -132,7 +132,7 @@ const ApiHeader1 = "application/vnd.github.v3+json"
 const ErrorMesssage1 = "❌ Error saving repositories in file Results/config/analysis_repos_github.json: %v\n"
 
 // Load repository ignore map from file
-func loadExclusionRepos(filename string) (ExclusionRepos, error) {
+func loadExclusionRepos1(filename string) (ExclusionRepos, error) {
 	ignoreMap := make(ExclusionRepos)
 
 	file, err := os.Open(filename)
@@ -164,7 +164,7 @@ func shouldIgnore(repoName string, ignoreMap ExclusionRepos) bool {
 
 func SaveResult(result AnalysisResult) error {
 	// Open or create the file
-	file, err := os.Create("Results/config/analysis_analysis_result.json")
+	file, err := os.Create("Results/config/analysis_result_github.json")
 	if err != nil {
 		fmt.Println("❌ Error creating Analysis file:", err)
 		return err
@@ -636,7 +636,7 @@ func loadExclusionFile(exclusionfile string, spin *spinner.Spinner) (ExclusionRe
 	if exclusionfile == "0" {
 		exclusionList = make(map[string]bool)
 	} else {
-		exclusionList, err = loadExclusionRepos(exclusionfile)
+		exclusionList, err = loadExclusionRepos1(exclusionfile)
 		if err != nil {
 			fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exclusionfile, err)
 			spin.Stop()
@@ -744,7 +744,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 		exclusionList = make(map[string]bool)
 
 	} else {
-		exclusionList, err1 = loadExclusionRepos(exlusionfile)
+		exclusionList, err1 = loadExclusionRepos1(exlusionfile)
 		if err1 != nil {
 			fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exlusionfile, err1)
 			spin.Stop()
