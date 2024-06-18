@@ -1,4 +1,4 @@
-module github.com/emmanuel-colussi-sonarsource/sonar-golc
+module github.com/SonarSource-Demos/sonar-golc
 
 go 1.21
 

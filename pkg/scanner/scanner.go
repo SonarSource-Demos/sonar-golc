@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/analyzer"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc/language"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
 	"github.com/schollz/progressbar/v3"
 )
 

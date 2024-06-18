@@ -3,16 +3,16 @@ package goloc
 import (
 	"fmt"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/analyzer"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/filesystem"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/gogit"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc/language"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter/json"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/reporter/prompt"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/scanner"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/sorter"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/filesystem"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/gogit"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter/json"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter/prompt"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/scanner"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/sorter"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
 type Params struct {

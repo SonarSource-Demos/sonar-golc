@@ -14,14 +14,14 @@ import (
 
 	"github.com/briandowns/spinner"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/assets"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/goloc"
+	"github.com/SonarSource-Demos/sonar-golc/assets"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 
-	getbibucket "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucket"
-	getbibucketdc "github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getbitbucketdc"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgithub"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/devops/getgitlab"
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/utils"
+	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket"
+	getbibucketdc "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucketdc"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgithub"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgitlab"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
 type OrganizationData struct {
