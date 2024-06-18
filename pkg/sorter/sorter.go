@@ -3,7 +3,7 @@ package sorter
 import (
 	"sort"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/scanner"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/scanner"
 )
 
 type Result struct {

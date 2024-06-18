@@ -15,16 +15,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SonarSource-Demos/sonar-golc/assets"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 	"github.com/briandowns/spinner"
-	"github.com/colussim/GoLC/assets"
-	"github.com/colussim/GoLC/pkg/goloc"
 
-	"github.com/colussim/GoLC/pkg/devops/getazure"
-	getbibucket "github.com/colussim/GoLC/pkg/devops/getbitbucket/v2"
-	getbibucketdc "github.com/colussim/GoLC/pkg/devops/getbitbucketdc"
-	"github.com/colussim/GoLC/pkg/devops/getgithub"
-	"github.com/colussim/GoLC/pkg/devops/getgitlab"
-	"github.com/colussim/GoLC/pkg/utils"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getazure"
+	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket/v2"
+	getbibucketdc "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucketdc"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgithub"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgitlab"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
 type OrganizationData struct {

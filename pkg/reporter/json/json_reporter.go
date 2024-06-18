@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/emmanuel-colussi-sonarsource/sonar-golc/pkg/sorter"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/sorter"
 )
 
 type JsonReporter struct {
