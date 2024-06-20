@@ -4,14 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	//"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func Getrepos(src, branch string) (string, error) {
+func Getrepos(src, branch, token string) (string, error) {
 
 	suffix, err := randomSuffix()
 	if err != nil {
@@ -23,17 +27,24 @@ func Getrepos(src, branch string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	log.SetOutput(os.Stderr)
+
+	transport.UnsupportedCapabilities = []capability.Capability{
+		capability.ThinPack,
+	}
 
 	_, err = git.PlainClone(dst, false, &git.CloneOptions{
 		URL: src,
-		// if you want the progress bar
-		//Progress:      os.Stdout,
+
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
-		SingleBranch:  true,
+		//ReferenceName: plumbing.ReferenceName(branch),
+
+		SingleBranch: true,
+		Depth:        1,
 	})
 
 	if err != nil {
-		fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s %s-- Source: %s", plumbing.NewBranchReferenceName(branch), err, src)
+		fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s - %s-- Source: %s -", plumbing.Main, err, src)
 	}
 
 	symLink, err := isSymLink(dst)

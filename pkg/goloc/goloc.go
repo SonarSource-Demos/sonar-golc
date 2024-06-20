@@ -2,9 +2,14 @@ package goloc
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/filesystem"
+<<<<<<< HEAD
+=======
+	"github.com/SonarSource-Demos/sonar-golc/pkg/getter"
+>>>>>>> ver1.0.3
 	"github.com/SonarSource-Demos/sonar-golc/pkg/gogit"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter"
@@ -32,6 +37,7 @@ type Params struct {
 	OutputPath        string
 	ReportFormats     []string
 	Branch            string
+	Token             string
 }
 
 type GCloc struct {
@@ -44,11 +50,29 @@ type GCloc struct {
 }
 
 func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
-	path, err := gogit.Getrepos(params.Path, params.Branch)
-	if err != nil {
-		return nil, err
-	}
+	var path string
+	var err error
 
+	if len(params.Branch) != 0 {
+		path, err = gogit.Getrepos(params.Path, params.Branch, params.Token)
+		if err != nil {
+			//return nil, err
+			fmt.Println(err)
+		}
+	} else {
+		path, err = getter.Getter(params.Path)
+		if err != nil {
+			return nil, err
+		}
+		lastSlashIndex := strings.LastIndex(path, "/")
+		if lastSlashIndex != -1 {
+			lastPart := path[lastSlashIndex+1:]
+			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
+		} else {
+			return nil, fmt.Errorf("\n❌ Failed to created OutputName")
+
+		}
+	}
 	excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
 	if err != nil {
 		return nil, err

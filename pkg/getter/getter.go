@@ -21,8 +21,10 @@ func extractLastString(url string) string {
 func Getter(src string) (string, error) {
 	RepoString := extractLastString(src)
 
-	spinner := newSpinner(fmt.Sprintf(" Extracting files from %s \n", RepoString))
+	spinner := newSpinner(fmt.Sprintf("\r Extracting files from %s \n", RepoString))
 	spinner.Color("green", "bold")
+	messageF := ""
+	spinner.FinalMSG = messageF
 	spinner.Start()
 	defer spinner.Stop()
 
