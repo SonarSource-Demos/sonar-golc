@@ -275,7 +275,7 @@ PROJECT_KEY
 
  ✅  Config.json File Settings
 
-❗️ For the **File** mode, if you want to have a list of directories to analyze, you create a **.cloc_file_load** file and add the directories or files to be analyzed line by line.If the **.cloc_file_load**. file is provided, its contents will override the **Directory** parameter."
+❗️ For the **File** mode, if you want to have a list of directories to analyze, you create a **.cloc_file_load** file and add the directories to be analyzed line by line.If the **.cloc_file_load**. file is provided, its contents will override the **Directory** parameter."
 
 ❗️ The parameters **'Period'**, **'Factor'**, and **'Stats'** should not be modified as they will be used in a future version.
 
