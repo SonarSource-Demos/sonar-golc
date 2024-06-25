@@ -103,6 +103,7 @@ const errorMessageRepo = "\n❌ Error Analyse Repositories: "
 const errorMessageDi = "\r❌ Error deleting Repository Directory: %v\n"
 const errorMessageAnalyse = "\r❌ No Analysis performed...\n"
 const errorMessageRepos = "Error Get Info Repositories in organization '%s' : '%s'"
+const directoryconf = "/config"
 
 var logFile *os.File
 
@@ -658,6 +659,7 @@ func main() {
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
 	versionflag := flag.Bool("version", false, "Show version")
+	docker := flag.Bool("docker", false, "Run in Docker mode")
 
 	flag.Parse()
 
@@ -707,53 +709,63 @@ func main() {
 	}
 	DestinationResult := pwd + "/Results"
 
-	_, err = os.Stat(DestinationResult)
-	if err == nil {
-
-		fmt.Printf("❗️ Directory <'%s'> already exists. Do you want to delete it? (y/n): ", DestinationResult)
-		var response string
-		fmt.Scanln(&response)
-
-		if response == "y" || response == "Y" {
-
-			fmt.Printf("❗️ Do you want to create a backup of the directory before deleting? (y/n): ")
-			var backupResponse string
-			fmt.Scanln(&backupResponse)
-
-			if backupResponse == "y" || backupResponse == "Y" {
-				// Créer la sauvegarde ZIP
-				err := createBackup(DestinationResult, pwd)
-				if err != nil {
-					fmt.Printf("❌ Error creating backup: %s\n", err)
-					os.Exit(1)
-				}
-			}
-
-			err := os.RemoveAll(DestinationResult)
-			if err != nil {
-				fmt.Printf("❌ Error deleting directory: %s\n", err)
-				os.Exit(1)
-			}
-			if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
-				panic(err)
-			}
-			ConfigDirectory := DestinationResult + "/config"
-			if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
-				panic(err)
-			}
-		} else {
-			os.Exit(1)
-		}
-
-	} else if os.IsNotExist(err) {
-		if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
-			panic(err)
-		}
-		ConfigDirectory := DestinationResult + "/config"
+	if *docker {
+		fmt.Println("Running in Docker mode")
+		ConfigDirectory := DestinationResult + directoryconf
 		if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
 			panic(err)
 		}
 
+	} else {
+
+		_, err = os.Stat(DestinationResult)
+		if err == nil {
+
+			fmt.Printf("❗️ Directory <'%s'> already exists. Do you want to delete it? (y/n): ", DestinationResult)
+			var response string
+			fmt.Scanln(&response)
+
+			if response == "y" || response == "Y" {
+
+				fmt.Printf("❗️ Do you want to create a backup of the directory before deleting? (y/n): ")
+				var backupResponse string
+				fmt.Scanln(&backupResponse)
+
+				if backupResponse == "y" || backupResponse == "Y" {
+					// Créer la sauvegarde ZIP
+					err := createBackup(DestinationResult, pwd)
+					if err != nil {
+						fmt.Printf("❌ Error creating backup: %s\n", err)
+						os.Exit(1)
+					}
+				}
+
+				err := os.RemoveAll(DestinationResult)
+				if err != nil {
+					fmt.Printf("❌ Error deleting directory: %s\n", err)
+					os.Exit(1)
+				}
+				if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ConfigDirectory := DestinationResult + directoryconf
+				if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
+					panic(err)
+				}
+			} else {
+				os.Exit(1)
+			}
+
+		} else if os.IsNotExist(err) {
+			if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
+				panic(err)
+			}
+			ConfigDirectory := DestinationResult + directoryconf
+			if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
+				panic(err)
+			}
+
+		}
 	}
 	fmt.Printf("\n")
 
@@ -937,6 +949,7 @@ func main() {
 				fmt.Println("❌ No analysis possible, no directory, specified file or specified loading file")
 				os.Exit(1)
 			} else {
+
 				ListDirectory = append(ListDirectory, platformConfig["Directory"].(string))
 			}
 		}
