@@ -2,7 +2,7 @@ package goloc
 
 import (
 	"fmt"
-	"strings"
+	"path/filepath"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/filesystem"
@@ -61,14 +61,24 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		if err != nil {
 			return nil, err
 		}
-		lastSlashIndex := strings.LastIndex(path, "/")
-		if lastSlashIndex != -1 {
-			lastPart := path[lastSlashIndex+1:]
-			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
-		} else {
-			return nil, fmt.Errorf("\n❌ Failed to created OutputName")
 
+		lastPart := filepath.Base(path)
+		if lastPart != "" {
+			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
+			fmt.Println("OutputName:", params.OutputName)
+		} else {
+			fmt.Println("OutputName:", path)
+			fmt.Println("\n❌ Failed to create OutputName")
 		}
+
+		/*	lastSlashIndex := strings.LastIndex(path, "/")
+			if lastSlashIndex != -1 {
+				lastPart := path[lastSlashIndex+1:]
+				params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
+			} else {
+				return nil, fmt.Errorf("\n❌ Failed to created OutputName")
+
+			}*/
 	}
 	excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
 	if err != nil {
