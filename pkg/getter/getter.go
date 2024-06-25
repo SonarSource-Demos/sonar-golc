@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -14,8 +13,10 @@ import (
 )
 
 func extractLastString(url string) string {
-	parts := strings.Split(url, "/")
-	return parts[len(parts)-1]
+	/*parts := strings.Split(url, "/")
+	return parts[len(parts)-1]*/
+
+	return filepath.Base(url)
 }
 
 func Getter(src string) (string, error) {
