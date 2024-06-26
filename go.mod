@@ -4,12 +4,11 @@ go 1.21
 
 require (
 	github.com/briandowns/spinner v1.23.0
-	github.com/colussim/GoLC v1.0.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v39 v39.2.0
 	github.com/google/go-github/v62 v62.0.0
-	github.com/hashicorp/go-getter v1.7.4
+	github.com/hashicorp/go-getter v1.7.5
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/ktrysmt/go-bitbucket v0.9.80
 	github.com/microsoft/azure-devops-go-api/azuredevops v1.0.0-b5

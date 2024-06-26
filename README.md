@@ -12,7 +12,7 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This version ver1.0.3 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab , Azure DevOps and Files.A Docker version will be planned.
+> This version ver1.0.3 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab , Azure DevOps and Files.A Docker version is available.
 
 ---
 ## Installation
@@ -430,3 +430,78 @@ $:>
 
 ![report](imgs/report.png)
 
+
+## Usage with Docker image
+
+**GoLC** docker images support running both on the amd64 architecture and on arm64-based Apple Silicon.
+
+✅ Pull Images
+
+There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.3** and **amd64-1.0.3** .
+
+ ```bash
+:> docker pull https://ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.3
+:> docker pull https://ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.3
+```
+
+✅ Create volumes to persist data or map a local directory
+
+You need a persistent volume or to map a local directory to store the analysis results.You need to configure your environment by initializing the various values in the config.json file
+
+      - Results: contains the analysis files
+
+✅ Running the container: 
+ ```bash
+:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.3 -devops Github -docker
+
+✅ Using configuration for DevOps platform 'Github'
+Running in Docker mode
+
+
+🔎 Analysis of devops platform objects ...
+ Repos saved successfully!
+          ✅ The number of Repo(s) found is: 1
+                ✅ 1 Repo: sonar-golc - Number of branches: 4 - largest Branch: ver1.0.3 
+✅ Result saved successfully!
+
+✅ The largest Repository is <sonar-golc> in the organization <SonarSource-Demos> with the branch <ver1.0.3> 
+✅ Total Repositories that will be analyzed: 1 - Find empty : 0 - Excluded : 0 - Archived : 0
+✅ Total Branches that will be analyzed: 4
+
+🔎 Analysis of Repos ...
+ Waiting for workers...
+                                                                                                 
+        ✅ json report exported to /app/Results/Result_SonarSource-Demos_sonar-golc_ver1.0.3.json
+✅ 2 The repository <sonar-golc> has been analyzed
+
+🔎 Analyse Report ...
+
+✅ Number of Repository analyzed in Organization <SonarSource-Demos> is 1 
+✅ The repository with the largest line of code is in project <SonarSource-Demos> the repo name is <sonar-golc> with <41.48K> lines of code
+✅ The total sum of lines of code in Organization <SonarSource-Demos> is : 41.48K Lines of Code
+
+
+✅ Reports are located in the <'Results'> directory
+
+✅ Time elapsed : 00:00:06
+
+
+ℹ️  To generate and visualize results on a web interface, follow these steps: 
+        ✅ run : ResultsAll
+ ```
+
+ ✅ Run Report
+
+ Now we can start generating the report with the **resultsall** container.
+ You need to map the volume previously used for the analysis and map an available port for web access.
+
+```
+:> docker run --rm -p 8090:8090 -v /custom/Results_volume:/app/Results resultsall:arm64-1.0.3
+
+
+✅ Results analysis recorded in Results/code_lines_by_language.json
+✅ PDF generated successfully!
+✅ Launching web visualization...
+✅ Server started on http://localhost:8090
+✅ please type < Ctrl+C> to stop the server
+```
