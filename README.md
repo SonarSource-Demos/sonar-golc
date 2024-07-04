@@ -146,7 +146,7 @@ Scala              | .scala                                   | //              
         "DefaultBranch": false,
         "Url": "https://api.github.com/",
         "Apiver": "",
-        "Baseapi": "api.github.com/",
+        "Baseapi": "github.com/",
         "Protocol": "https",
         "FileExclusion":".cloc_github_ignore",
         "Period":-1,
