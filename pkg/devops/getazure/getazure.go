@@ -84,7 +84,7 @@ const MessageErro1 = "/\n❌ Failed to list projects for organization %s: %v\n"
 const MessageErro2 = "/\n❌ Failed to list project for organization %s: %v\n"
 const Message1 = "\t✅ The number of %s found is: %d\n"
 const Message2 = "\t   Analysis top branch(es) in project <%s> ..."
-const Message3 = "\r\t\t✅ %d Project: %s - Number of branches: %d - largest Branch: %s \n"
+const Message3 = "\r\t\t✅ %d Project: %s - Number of branches: %d - largest Branch: %s "
 const Message4 = "Project(s)"
 const REF = "refs/heads/"
 
@@ -199,10 +199,11 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 	var largestRepoBranch, largesRepo string
 	var exclusionList *utils.ExclusionList
 	var err error
+	loggers := utils.NewLogger()
 
 	ApiURL := platformConfig["Url"].(string) + platformConfig["Organization"].(string)
 
-	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	loggers.Infof("🔎 Analysis of devops platform objects ...\n")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin.Prefix = PrefixMsg
@@ -211,7 +212,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 
 	exclusionList, err = loadExclusionFileOrCreateNew(exclusionFile)
 	if err != nil {
-		fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exclusionFile, err)
+		loggers.Errorf("\n❌ Error Read Exclusion File <%s>: %v", exclusionFile, err)
 		spin.Stop()
 		return nil, err
 	}
@@ -228,7 +229,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 
 	gitClient, err := git.NewClient(ctx, connection)
 	if err != nil {
-		log.Fatalf("Erreur lors de la création du client Git: %v", err)
+		loggers.Fatalf("Error creating Git client: %v", err)
 	}
 
 	azureConnect := AzureConnect{
@@ -244,13 +245,13 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 
 		if err != nil {
 			spin.Stop()
-			log.Fatalf(MessageErro1, platformConfig["Organization"].(string), err)
+			loggers.Fatalf(MessageErro1, platformConfig["Organization"].(string), err)
 		}
 		spin.Stop()
 		spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 		spin1.Color("green", "bold")
 
-		fmt.Printf(Message1, Message4, len(projects)+exludedprojects)
+		loggers.Infof(Message1, Message4, len(projects)+exludedprojects)
 
 		// Set Parmams
 		params := getCommonParams(azureConnect, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
@@ -272,7 +273,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 		spin1.Color("green", "bold")
 
-		fmt.Printf(Message1, Message4, 1+exludedprojects)
+		loggers.Infof(Message1, Message4, 1+exludedprojects)
 
 		// Set Parmams
 		params := getCommonParams(azureConnect, platformConfig, projects, exclusionList, exludedprojects, spin, ApiURL)
@@ -301,7 +302,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		ProjectBranches: importantBranches,
 	}
 	if err := SaveResult(result); err != nil {
-		fmt.Println("❌ Error Save Result of Analysis :", err)
+		loggers.Errorf("❌ Error Save Result of Analysis :", err)
 		os.Exit(1)
 	}
 
@@ -359,9 +360,12 @@ func findLargestRepository(importantBranches []ProjectBranch, totalSize *int64) 
 }
 
 func printSummary(Org string, stats SummaryStats) {
-	fmt.Printf("\n✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> \n", stats.LargestRepo, Org, stats.LargestRepoBranch)
-	fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
-	fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
+
+	loggers := utils.NewLogger()
+
+	loggers.Infof("✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> ", stats.LargestRepo, Org, stats.LargestRepoBranch)
+	loggers.Infof("✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
+	loggers.Infof("✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
 }
 
 func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectBranch, int, int, int, int, int, error) {
@@ -371,6 +375,8 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 	var importantBranches []ProjectBranch
 	var NBRrepo, TotalBranches int
 	var messageF = ""
+	loggers := utils.NewLogger()
+
 	NBRrepos := 0
 	cptarchiv := 0
 
@@ -384,9 +390,9 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 
 	params.Spin.Start()
 	if params.Excludeproject > 0 {
-		messageF = fmt.Sprintf("\t✅ The number of project(s) to analyze is %d - Excluded : %d\n", len(params.Projects), params.Excludeproject)
+		messageF = fmt.Sprintf("\t✅ The number of project(s) to analyze is %d - Excluded : %d\n\n", len(params.Projects), params.Excludeproject)
 	} else {
-		messageF = fmt.Sprintf("\t✅ The number of project(s) to analyze is %d\n", len(params.Projects))
+		messageF = fmt.Sprintf("\t✅ The number of project(s) to analyze is %d\n\n", len(params.Projects))
 	}
 	params.Spin.FinalMSG = messageF
 	params.Spin.Stop()
@@ -394,13 +400,13 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 	// Get Repository in each Project
 	for _, project := range params.Projects {
 
-		fmt.Printf("\n\t🟢  Analyse Projet: %s \n", *project.Name)
+		loggers.Infof("\t🟢  Analyse Projet: %s \n", *project.Name)
 
 		emptyOrArchivedCount, emptyRepos, excludedCount, repos, err := listReposForProject(params, *project.Name, gitClient)
 
 		if err != nil {
 			if len(params.SingleRepos) == 0 {
-				fmt.Println("\r❌ Get Repos for each Project:", err)
+				loggers.Errorf("\r❌ Get Repos for each Project:", err)
 				spin1.Stop()
 				continue
 			} else {
@@ -415,10 +421,10 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 		spin1.Stop()
 		if emptyOrArchivedCount > 0 {
 			NBRrepo = len(repos) + emptyOrArchivedCount
-			fmt.Printf("\t  ✅ The number of %s found is: %d - Find empty %d:\n", message4, NBRrepo, emptyOrArchivedCount)
+			loggers.Infof("\t  ✅ The number of %s found is: %d - Find empty %d:\n", message4, NBRrepo, emptyOrArchivedCount)
 		} else {
 			NBRrepo = len(repos)
-			fmt.Printf("\t  ✅ The number of %s found is: %d\n", message4, NBRrepo)
+			loggers.Infof("\t  ✅ The number of %s found is: %d\n", message4, NBRrepo)
 		}
 
 		for _, repo := range repos {
@@ -462,6 +468,7 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 func listReposForProject(parms ParamsProjectAzure, projectKey string, gitClient git.Client) (int, int, int, []git.GitRepository, error) {
 	var allRepos []git.GitRepository
 	var archivedCount, emptyCount, excludedCount int
+	loggers := utils.NewLogger()
 
 	// Convert SingleRepos to a slice if it's not empty
 	var singleReposList []string
@@ -474,7 +481,7 @@ func listReposForProject(parms ParamsProjectAzure, projectKey string, gitClient 
 		Project: &projectKey,
 	})
 	if err != nil {
-		fmt.Println("Error get GetRepositories ")
+		loggers.Errorf("Error get GetRepositories ")
 		return 0, 0, 0, nil, err
 	}
 
@@ -524,6 +531,7 @@ func analyzeRepoBranches(parms ParamsProjectAzure, projectKey string, repo strin
 	var nbrbranch int
 	var err error
 	var brsize int64
+	loggers := utils.NewLogger()
 
 	largestRepoBranch, brsize, nbrbranch, err = getMostImportantBranch(parms.Context, gitClient, projectKey, repo, parms.Period, parms.DefaultB, parms.SingleBranch)
 	if err != nil {
@@ -534,7 +542,7 @@ func analyzeRepoBranches(parms ParamsProjectAzure, projectKey string, repo strin
 	spin1.Stop()
 
 	// Print analysis summary
-	fmt.Printf("\t\t✅ Repo %d: %s - Number of branches: %d - Largest Branch: %s\n", cpt, repo, nbrbranch, largestRepoBranch)
+	loggers.Infof("\t\t✅ Repo %d: %s - Number of branches: %d - Largest Branch: %s\n", cpt, repo, nbrbranch, largestRepoBranch)
 
 	return largestRepoBranch, nbrbranch, brsize, nil
 
@@ -695,10 +703,12 @@ func getCommitCount(ctx context.Context, gitClient git.Client, projectID string,
 	return totalCommits, nil
 }
 func SaveResult(result AnalysisResult) error {
+
+	loggers := utils.NewLogger()
 	// Open or create the file
 	file, err := os.Create("Results/config/analysis_result_azure.json")
 	if err != nil {
-		fmt.Println("❌ Error creating Analysis file:", err)
+		loggers.Errorf("❌ Error creating Analysis file:", err)
 		return err
 	}
 	defer file.Close()
@@ -708,10 +718,11 @@ func SaveResult(result AnalysisResult) error {
 
 	// Encode the result and write it to the file
 	if err := encoder.Encode(result); err != nil {
-		fmt.Println("❌ Error encoding JSON file <Results/config/analysis_result_azure.json> :", err)
+		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_azure.json> :", err)
 		return err
 	}
 
-	fmt.Println("✅ Result saved successfully!")
+	fmt.Print("\n")
+	loggers.Infof("✅ Result saved successfully!\n")
 	return nil
 }

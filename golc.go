@@ -419,7 +419,7 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 		}
 
 		spin.Stop()
-		logger.Infof("\r✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
+		logger.Infof("\r\t\t\t\t✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
 		// Send result through channel
 		results <- 1
 	}
