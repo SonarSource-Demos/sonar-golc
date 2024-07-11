@@ -40,7 +40,7 @@ func NewLogger() *logrus.Logger {
 
 	logger.SetLevel(logrus.DebugLevel)
 
-	logFile, err := os.OpenFile("Logs.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("Logs/Logs.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		logrus.Fatalf("❌ Failed to log to file: %v", err)
 	}

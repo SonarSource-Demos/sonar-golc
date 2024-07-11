@@ -513,7 +513,7 @@ Running in Docker mode
 The application generates a log file named `Logs.log` in the current directory. This log file records all the steps of the GoLC execution process, providing detailed information about the application's runtime behavior.
 
 ### Location
-The log file is created in the same directory where the application is executed.
+The log file is created in directory `Logs`, is placed in the following path:  `<GoLCHome/Logs>`.
 
 ### Usage
 You can refer to this log file to troubleshoot issues, monitor the application's execution, and understand its internal processes.
