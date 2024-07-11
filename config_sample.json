@@ -116,6 +116,9 @@
         "FileLoad":".cloc_file_load"
 
       }
+    },
+    "Logging": {
+      "Level": "debug"
     }
   }
   
