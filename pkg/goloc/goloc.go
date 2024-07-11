@@ -52,12 +52,13 @@ type GCloc struct {
 func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 	var path string
 	var err error
+	loggers := utils.NewLogger()
 
 	if len(params.Branch) != 0 {
 		path, err = gogit.Getrepos(params.Path, params.Branch, params.Token)
 		if err != nil {
-			//return nil, err
-			fmt.Println(err)
+			return nil, err
+			//fmt.Println(err)
 		}
 	} else {
 		path, err = getter.Getter(params.Path)
@@ -68,10 +69,11 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		lastPart := filepath.Base(path)
 		if lastPart != "" {
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
-			fmt.Println("OutputName:", params.OutputName)
+			//	fmt.Println("OutputName:", params.OutputName)
 		} else {
-			fmt.Println("OutputName:", path)
-			fmt.Println("\n❌ Failed to create OutputName")
+			//fmt.Println("OutputName:", path)
+			//fmt.Println("\n❌ Failed to create OutputName")
+			loggers.Errorf("❌ Failed to create OutputName")
 		}
 
 		/*	lastSlashIndex := strings.LastIndex(path, "/")
@@ -219,6 +221,7 @@ func getReporters(reportFormats []string, outputName, outputPath string) []repor
 				OutputName: outputName,
 				OutputPath: outputPath,
 			})
+
 		default:
 			fmt.Printf("%s report format not supported\n", format)
 		}

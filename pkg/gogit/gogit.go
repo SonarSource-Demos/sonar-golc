@@ -7,6 +7,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -17,6 +20,7 @@ import (
 
 func Getrepos(src, branch, token string) (string, error) {
 
+	loggers := utils.NewLogger()
 	suffix, err := randomSuffix()
 	if err != nil {
 		return "", err
@@ -44,7 +48,11 @@ func Getrepos(src, branch, token string) (string, error) {
 	})
 
 	if err != nil {
-		fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s - %s-- Source: %s -", plumbing.Main, err, src)
+		re := regexp.MustCompile(`(https?:\/\/)[^@]+(@)`)
+		maskedSrc := re.ReplaceAllString(src, "${1}*****${2}")
+		//fmt.Printf("\n--❌ Stack: gogit.Getrepos Git Branch %s - %s-- Source: %s -", plumbing.Main, err, maskedSrc)
+		loggers.Errorf("\r\t\t\t\t❌ Stack: gogit.Getrepos Git Branch %s - %s-- Source: %s -", plumbing.Main, err, maskedSrc)
+
 	}
 
 	symLink, err := isSymLink(dst)

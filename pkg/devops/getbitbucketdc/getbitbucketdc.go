@@ -198,34 +198,36 @@ func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketUR
 	var importantBranches []ProjectBranch
 	emptyRepo := 0
 	result := AnalysisResult{}
+	loggers := utils.NewLogger()
 
 	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin1.Prefix = "Get Projects... "
 	spin1.Color("green", "bold")
 
 	parms.Spin.Start()
-	parms.Spin.FinalMSG = fmt.Sprintf("✅ The number of project(s) to analyze is %d\n", len(projects))
+	parms.Spin.FinalMSG = fmt.Sprintf("\n✅ The number of project(s) to analyze is %d\n\n", len(projects))
 	parms.Spin.Stop()
 
 	for _, project := range projects {
-		fmt.Printf("\n\t🟢  Analyse Projet: %s \n", project.Name)
+		fmt.Print("\n")
+		loggers.Infof("\t🟢  Analyse Projet: %s ", project.Name)
 		urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos", parms.URL, parms.BaseAPI, parms.APIVersion, project.Key)
 
 		repos, err := fetchAllRepos(urlrepos, parms.AccessToken, exclusionList)
 		if err != nil {
-			fmt.Println("\r❌ Get Repos for each Project:", err)
+			loggers.Errorf("\r❌ Get Repos for each Project:%v", err)
 			continue
 		}
 
 		nbRepos += len(repos)
-		fmt.Printf("\t  ✅ The number of Repo(s) found is: %d\n", len(repos))
+		loggers.Infof("\t  ✅ The number of Repo(s) found is: %d", len(repos))
 
 		for _, repo := range repos {
 			if err := processRepo(project.Key, repo, parms, bitbucketURLBase, spin1, &importantBranches); err != nil {
 				if err == ErrEmptyRepo {
 					emptyRepo++
 				} else {
-					fmt.Printf("❌ Error processing repo %s: %v\n", repo.Name, err)
+					loggers.Errorf("❌ Error processing repo %s: %v\n", repo.Name, err)
 				}
 			}
 		}
@@ -236,7 +238,7 @@ func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketUR
 	result.ProjectBranches = importantBranches
 
 	if err := saveAnalysisResult1("Results/config/analysis_repos.json", result); err != nil {
-		fmt.Println("❌ Error creating Analysis file:", err)
+		loggers.Errorf("❌ Error creating Analysis file:%v", err)
 		return importantBranches, nbRepos, emptyRepo
 	}
 
@@ -244,13 +246,15 @@ func GetReposProject(projects []Project, parms ParamsReposProjectDC, bitbucketUR
 }
 
 func processRepo(projectKey string, repo Repo, parms ParamsReposProjectDC, bitbucketURLBase string, spin1 *spinner.Spinner, importantBranches *[]ProjectBranch) error {
+
+	loggers := utils.NewLogger()
 	isEmpty, err := isRepositoryEmpty(projectKey, repo.Slug, parms.AccessToken, bitbucketURLBase, parms.APIVersion)
 	if err != nil {
 		return fmt.Errorf("testing if repo is empty %s: %w", repo.Name, err)
 	}
 
 	if isEmpty {
-		fmt.Println("❌ Repo is empty:", repo.Name)
+		loggers.Warningf("❌ Repo is empty:%s", repo.Name)
 		return ErrEmptyRepo
 	}
 
@@ -260,18 +264,18 @@ func processRepo(projectKey string, repo Repo, parms ParamsReposProjectDC, bitbu
 	}
 
 	if len(branches) == 0 {
-		fmt.Printf("❗️ No branches found for repository %s\n", repo.Slug)
+		loggers.Warningf("❗️ No branches found for repository %s\n", repo.Slug)
 		return nil
 	}
 
-	fmt.Printf("\n\t   ✅ Repo: <%s> - Number of branches: %d\n", repo.Name, len(branches))
+	loggers.Infof("\t   ✅ Repo: <%s> - Number of branches: %d", repo.Name, len(branches))
 
 	largestRepoSize, largestRepoBranch, err := findLargestBranch1(projectKey, repo.Slug, branches, parms, spin1)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\t     ✅ The largest branch of the repo is <%s> of size : %s\n", largestRepoBranch, utils.FormatSize(int64(largestRepoSize)))
+	loggers.Infof("\t     ✅ The largest branch of the repo is <%s> of size : %s", largestRepoBranch, utils.FormatSize(int64(largestRepoSize)))
 
 	*importantBranches = append(*importantBranches, ProjectBranch{
 		ProjectKey:  projectKey,
@@ -337,11 +341,13 @@ func GetRepos(project string, repos []Repo, parms ParamsReposDC, bitbucketURLBas
 	var largestRepoBranch string
 	var importantBranches []ProjectBranch
 	var branches []Branch
+	loggers := utils.NewLogger()
 	emptyRepo := 0
 	nbRepos := 1
 	result := AnalysisResult{}
 
-	fmt.Printf("\n🟢 Analyse Projet: %s \n", project)
+	fmt.Printf("\n")
+	loggers.Infof("🟢 Analyse Projet: %s ", project)
 
 	for _, repo := range repos {
 		isEmpty, err := isRepositoryEmpty(project, repo.Slug, parms.AccessToken, bitbucketURLBase, parms.APIVersion)
@@ -393,7 +399,8 @@ func GetRepos(project string, repos []Repo, parms ParamsReposDC, bitbucketURLBas
 }
 
 func logAndExit(message string, spin *spinner.Spinner) {
-	fmt.Println(message)
+	loggers := utils.NewLogger()
+	loggers.Errorln(message)
 	if spin != nil {
 		spin.Stop()
 	}
@@ -425,6 +432,7 @@ func getBranches(project, repoSlug string, parms ParamsReposDC) ([]Branch, error
 func getBranches1(projectKey string, repo Repo, parms ParamsReposProjectDC) ([]Branch, error) {
 	var branches []Branch
 	var err error
+	loggers := utils.NewLogger()
 
 	if parms.DefaultB {
 		urlbr := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?limit=100&start=", parms.URL, parms.BaseAPI, parms.APIVersion, projectKey, repo.Slug)
@@ -440,7 +448,7 @@ func getBranches1(projectKey string, repo Repo, parms ParamsReposProjectDC) ([]B
 		urlrepos := fmt.Sprintf("%s%s%s/projects/%s/repos/%s/branches?filterText=%s", parms.URL, parms.BaseAPI, parms.APIVersion, projectKey, repo.Slug, parms.Branch)
 		branches, err = ifExistBranches(urlrepos, parms.AccessToken)
 		if err != nil || len(branches) == 0 {
-			fmt.Printf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file\n", parms.Branch, repo.Slug)
+			loggers.Warnf("❗️ The branch <%s> for repository %s not exist - check your <config.json> file\n", parms.Branch, repo.Slug)
 			return nil, nil
 		}
 	}
@@ -451,6 +459,7 @@ func getBranches1(projectKey string, repo Repo, parms ParamsReposProjectDC) ([]B
 func findLargestBranch(project, repoSlug string, branches []Branch, parms ParamsReposDC) (int, string, error) {
 	var largestRepoSize int
 	var largestRepoBranch string
+	loggers := utils.NewLogger()
 
 	for _, branch := range branches {
 		parms.Spin.Prefix = fmt.Sprintf("\t   Analysis branch <%s> size...", branch.Name)
@@ -468,7 +477,7 @@ func findLargestBranch(project, repoSlug string, branches []Branch, parms Params
 		size, err := fetchBranchSize(Fetchparams)
 		parms.Spin.Stop()
 		if err != nil {
-			fmt.Println("❌ Error retrieving branch size:", err)
+			loggers.Errorf("❌ Error retrieving branch size:%v", err)
 			continue
 		}
 
@@ -540,11 +549,12 @@ func GetProjectBitbucketList(platformConfig map[string]interface{}, exclusionFil
 	var exclusionList *utils.ExclusionList
 	var err error
 	var nbRepos int
+	loggers := utils.NewLogger()
 
 	bitbucketURLBase := platformConfig["Url"].(string)
 	bitbucketURL := fmt.Sprintf("%s%s%s/projects", platformConfig["Url"].(string), platformConfig["Baseapi"].(string), platformConfig["Apiver"].(string))
 
-	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	loggers.Infof("🔎 Analysis of devops platform objects ...")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin.Prefix = "Get Projects... "
@@ -553,7 +563,7 @@ func GetProjectBitbucketList(platformConfig map[string]interface{}, exclusionFil
 	// Load Exclusion List
 	exclusionList, err = loadOrCreateExclusionList(exclusionFile)
 	if err != nil {
-		fmt.Printf("\n❌ Error Reading Exclusion File <%s>: %v\n", exclusionFile, err)
+		loggers.Errorf("\n❌ Error Reading Exclusion File <%s>: %v\n", exclusionFile, err)
 		return nil, err
 	}
 
@@ -648,6 +658,7 @@ func determineProjectsAndRepos(platformConfig map[string]interface{}, exclusionL
 func summarizeAnalysisResults(importantBranches []ProjectBranch, nbRepos int) []ProjectBranch {
 	var totalSize, largestRepoSize int
 	var largestRepoProject, largestRepoBranch, largestRepo string
+	loggers := utils.NewLogger()
 
 	for _, branch := range importantBranches {
 		if branch.LargestSize > largestRepoSize {
@@ -662,9 +673,10 @@ func summarizeAnalysisResults(importantBranches []ProjectBranch, nbRepos int) []
 	totalSizeMB := utils.FormatSize(int64(totalSize))
 	largestRepoSizeMB := utils.FormatSize(int64(largestRepoSize))
 
-	fmt.Printf("\n✅ The largest repo is <%s> in the project <%s> with the branch <%s> and a size of %s\n", largestRepo, largestRepoProject, largestRepoBranch, largestRepoSizeMB)
-	fmt.Printf("\r✅ Total size of your organization's repositories: %s\n", totalSizeMB)
-	fmt.Printf("\r✅ Total repositories analyzed: %d - Find empty : %d\n", nbRepos, len(importantBranches)-nbRepos)
+	fmt.Print("\n")
+	loggers.Infof("✅ The largest repo is <%s> in the project <%s> with the branch <%s> and a size of %s", largestRepo, largestRepoProject, largestRepoBranch, largestRepoSizeMB)
+	loggers.Infof("✅ Total size of your organization's repositories: %s", totalSizeMB)
+	loggers.Infof("✅ Total repositories analyzed: %d - Find empty : %d\n", nbRepos, len(importantBranches)-nbRepos)
 
 	return importantBranches
 }
@@ -739,6 +751,7 @@ func fetchAllProjects(url string, accessToken string, exclusionList *utils.Exclu
 
 func fetchOnelProjects(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Project, error) {
 	var allProjects []Project
+	loggers := utils.NewLogger()
 
 	projectsResp, err := fetchProjects(url, accessToken, false)
 	if err != nil {
@@ -747,7 +760,7 @@ func fetchOnelProjects(url string, accessToken string, exclusionList *utils.Excl
 	project := projectsResp.(*Project)
 
 	if len(project.Key) == 0 {
-		fmt.Println("\n❌ Error Project not exist")
+		loggers.Errorf("❌ Error Project not exist")
 		os.Exit(1)
 	}
 	if len(exclusionList.Projects) == 0 && len(exclusionList.Repos) == 0 {
@@ -763,6 +776,7 @@ func fetchOnelProjects(url string, accessToken string, exclusionList *utils.Excl
 
 func fetchOneRepos(url string, accessToken string, exclusionList *utils.ExclusionList) ([]Repo, error) {
 	var allRepos []Repo
+	loggers := utils.NewLogger()
 
 	reposResp, err := fetchRepos(url, accessToken, false)
 	if err != nil {
@@ -771,7 +785,7 @@ func fetchOneRepos(url string, accessToken string, exclusionList *utils.Exclusio
 	repo := reposResp.(*Repo)
 
 	if len(repo.Name) == 0 {
-		fmt.Println("\n❌ Error Repo or Project not exist")
+		loggers.Errorf("❌ Error Repo or Project not exist")
 		os.Exit(1)
 	}
 
@@ -1010,6 +1024,7 @@ func fetchFileResponse(url string, accessToken string) (FileResponse, error) {
 }
 func calculateTotalSize(files []File, params FetchParams) (int, error) {
 	var wg sync.WaitGroup
+	loggers := utils.NewLogger()
 	wg.Add(len(files))
 
 	totalSize := 0
@@ -1026,7 +1041,7 @@ func calculateTotalSize(files []File, params FetchParams) (int, error) {
 				dirParams.Components = dirComponents
 				dirSize, err := fetchDirectorySize(dirParams)
 				if err != nil {
-					fmt.Printf("\r❌ Error fetchDirectorySize:%s - Decrease the number of repo workers (variable <NumberWorkerRepos> in config.json file)", err)
+					loggers.Errorf("\r❌ Error fetchDirectorySize:%s - Decrease the number of repo workers (variable <NumberWorkerRepos> in config.json file)", err)
 					return
 				}
 				resultCh <- dirSize

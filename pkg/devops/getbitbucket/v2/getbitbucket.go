@@ -136,9 +136,11 @@ func GetProjectBitbucketListCloud(platformConfig map[string]interface{}, exclusi
 	var exclusionList *utils.ExclusionList
 	var err error
 	var totalSize int
+	loggers := utils.NewLogger()
+
 	//	result := AnalysisResult{}
 
-	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	loggers.Infof("🔎 Analysis of devops platform objects ...\n")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin.Prefix = "Processing"
@@ -146,7 +148,7 @@ func GetProjectBitbucketListCloud(platformConfig map[string]interface{}, exclusi
 
 	exclusionList, err = loadExclusionFileOrCreateNew(exclusionFile)
 	if err != nil {
-		fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exclusionFile, err)
+		loggers.Errorf("❌ Error Read Exclusion File <%s>: %v", exclusionFile, err)
 		spin.Stop()
 		return nil, err
 	}
@@ -161,7 +163,7 @@ func GetProjectBitbucketListCloud(platformConfig map[string]interface{}, exclusi
 		// Get All Project
 		projects, exludedprojects, err = getAllProjects(client, platformConfig["Workspace"].(string), exclusionList)
 		if err != nil {
-			fmt.Println("\r❌ Error Get All Projects:", err)
+			loggers.Errorf("\r❌ Error Get All Projects:%v", err)
 			spin.Stop()
 			return nil, err
 		}
@@ -226,9 +228,12 @@ func findLargestRepository(importantBranches []ProjectBranch, totalSize *int) (s
 }
 
 func printSummary(Org string, stats SummaryStats) {
-	fmt.Printf("\n✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> \n", stats.LargestRepo, Org, stats.LargestRepoBranch)
-	fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
-	fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
+
+	loggers := utils.NewLogger()
+
+	loggers.Infof("✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> ", stats.LargestRepo, Org, stats.LargestRepoBranch)
+	loggers.Infof("✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
+	loggers.Infof("✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
 }
 
 func loadExclusionFileOrCreateNew(exclusionFile string) (*utils.ExclusionList, error) {
@@ -370,6 +375,7 @@ func getRepoAnalyse(params ParamsProjectBitbucket) ([]ProjectBranch, int, int, i
 	var importantBranches []ProjectBranch
 	var NBRrepo, TotalBranches int
 	var messageF = ""
+	loggers := utils.NewLogger()
 	NBRrepos := 0
 	cptarchiv := 0
 
@@ -383,9 +389,9 @@ func getRepoAnalyse(params ParamsProjectBitbucket) ([]ProjectBranch, int, int, i
 
 	params.Spin.Start()
 	if params.Excludeproject > 0 {
-		messageF = fmt.Sprintf("✅ The number of project(s) to analyze is %d - Excluded : %d\n", len(params.Projects), params.Excludeproject)
+		messageF = fmt.Sprintf("✅ The number of project(s) to analyze is %d - Excluded : %d\n\n", len(params.Projects), params.Excludeproject)
 	} else {
-		messageF = fmt.Sprintf("✅ The number of project(s) to analyze is %d\n", len(params.Projects))
+		messageF = fmt.Sprintf("✅ The number of project(s) to analyze is %d\n\n", len(params.Projects))
 	}
 	params.Spin.FinalMSG = messageF
 	params.Spin.Stop()
@@ -393,12 +399,13 @@ func getRepoAnalyse(params ParamsProjectBitbucket) ([]ProjectBranch, int, int, i
 	// Get Repository in each Project
 	for _, project := range params.Projects {
 
-		fmt.Printf("\n\t🟢  Analyse Projet: %s \n", project.Name)
+		fmt.Print("\n")
+		loggers.Infof("\t🟢  Analyse Projet: %s ", project.Name)
 
 		emptyOrArchivedCount, excludedCount, repos, err := listReposForProject(params, project.Key)
 		if err != nil {
 			if len(params.SingleRepos) == 0 {
-				fmt.Println("\r❌ Get Repos for each Project:", err)
+				loggers.Errorf("❌ Get Repos for each Project:%v", err)
 				spin1.Stop()
 				continue
 			} else {
@@ -413,10 +420,10 @@ func getRepoAnalyse(params ParamsProjectBitbucket) ([]ProjectBranch, int, int, i
 		spin1.Stop()
 		if emptyOrArchivedCount > 0 {
 			NBRrepo = len(repos) + emptyOrArchivedCount
-			fmt.Printf("\t  ✅ The number of %s found is: %d - Find empty %d:\n", message4, NBRrepo, emptyOrArchivedCount)
+			loggers.Infof("\t  ✅ The number of %s found is: %d - Find empty %d:", message4, NBRrepo, emptyOrArchivedCount)
 		} else {
 			NBRrepo = len(repos)
-			fmt.Printf("\t  ✅ The number of %s found is: %d\n", message4, NBRrepo)
+			loggers.Infof("\t  ✅ The number of %s found is: %d", message4, NBRrepo)
 		}
 
 		for _, repo := range repos {
@@ -482,6 +489,7 @@ func listReposForProject(parms ParamsProjectBitbucket, projectKey string) (int, 
 func listRepos(parms ParamsProjectBitbucket, projectKey string, reposRes *bitbucket.RepositoriesRes) (int, int, []*bitbucket.Repository, error) {
 	var allRepos []*bitbucket.Repository
 	var excludedCount, emptyOrArchivedCount int
+	loggers := utils.NewLogger()
 
 	if len(parms.SingleRepos) == 0 {
 
@@ -494,7 +502,7 @@ func listRepos(parms ParamsProjectBitbucket, projectKey string, reposRes *bitbuc
 
 			isEmpty, err := isRepositoryEmpty(parms.Workspace, repo.Slug, repo.Mainbranch.Name, parms.AccessToken, parms.BitbucketURLBase)
 			if err != nil {
-				fmt.Printf("❌ Error when Testing if repo is empty %s: %v\n", repo.Slug, err)
+				loggers.Errorf("❌ Error when Testing if repo is empty %s: %v\n", repo.Slug, err)
 			}
 			if isEmpty {
 				emptyOrArchivedCount++
@@ -520,7 +528,7 @@ func listRepos(parms ParamsProjectBitbucket, projectKey string, reposRes *bitbuc
 
 				isEmpty, err := isRepositoryEmpty(parms.Workspace, repo.Slug, repo.Mainbranch.Name, parms.AccessToken, parms.BitbucketURLBase)
 				if err != nil {
-					fmt.Printf("❌ Error when Testing if repo is empty %s: %v\n", repo.Slug, err)
+					loggers.Errorf("❌ Error when Testing if repo is empty %s: %v\n", repo.Slug, err)
 				}
 				if isEmpty {
 					emptyOrArchivedCount++
@@ -605,6 +613,7 @@ func analyzeRepoBranches(parms ParamsProjectBitbucket, repo *bitbucket.Repositor
 	var largestRepoBranch string
 	var err error
 	var brsize, nbrbranche int
+	loggers := utils.NewLogger()
 
 	spin1.Prefix = "\r Analyzing branches"
 	spin1.Start()
@@ -643,7 +652,7 @@ func analyzeRepoBranches(parms ParamsProjectBitbucket, repo *bitbucket.Repositor
 	spin1.Stop()
 
 	// Print analysis summary
-	fmt.Printf("\t\t✅ Repo %d: %s - Number of branches: %d - Largest Branch: %s\n", cpt, repo.Slug, nbrbranche, largestRepoBranch)
+	loggers.Infof("\t\t✅ Repo %d: %s - Number of branches: %d - Largest Branch: %s", cpt, repo.Slug, nbrbranche, largestRepoBranch)
 
 	return largestRepoBranch, repoBranches, brsize, nil
 }
@@ -708,11 +717,12 @@ func getAllBranches(client *bitbucket.Client, workspace, repoSlug string) ([]*bi
 func determineLargestBranch(parms ParamsProjectBitbucket, repo *bitbucket.Repository, branches []*bitbucket.RepositoryBranch) (string, int) {
 	var largestRepoBranch string
 	var maxCommits, branchSize int
+	loggers := utils.NewLogger()
 
 	for _, branch := range branches {
 		commits, err := getCommitsForLastMonth(parms.Client, parms.Workspace, repo.Slug, branch.Name, parms.Period)
 		if err != nil {
-			fmt.Printf("❌ Error getting commits for branch %s: %v\n", branch.Name, err)
+			loggers.Errorf("❌ Error getting commits for branch %s: %v\n", branch.Name, err)
 			continue
 		}
 		if len(commits) == 0 {
@@ -738,6 +748,7 @@ func determineLargestBranch(parms ParamsProjectBitbucket, repo *bitbucket.Reposi
 func getCommitsForLastMonth(client *bitbucket.Client, workspace, repoSlug, branchName string, periode int) ([]interface{}, error) {
 	now := time.Now()
 	lastMonth := now.AddDate(0, -periode, 0)
+	loggers := utils.NewLogger()
 
 	commits, err := client.Repositories.Commits.GetCommits(&bitbucket.CommitsOptions{
 		Owner:       workspace,
@@ -753,7 +764,7 @@ func getCommitsForLastMonth(client *bitbucket.Client, workspace, repoSlug, branc
 		dateStr := commit.(map[string]interface{})["date"].(string)
 		commitDate, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			fmt.Printf("Error parsing commit date: %v\n", err)
+			loggers.Errorf("❌ Error parsing commit date: %v\n", err)
 			continue
 		}
 
@@ -766,10 +777,12 @@ func getCommitsForLastMonth(client *bitbucket.Client, workspace, repoSlug, branc
 }
 
 func SaveResult(result AnalysisResult) error {
+
+	loggers := utils.NewLogger()
 	// Open or create the file
 	file, err := os.Create("Results/config/analysis_result_bitbucket.json")
 	if err != nil {
-		fmt.Println("❌ Error creating Analysis file:", err)
+		loggers.Errorf("❌ Error creating Analysis file:%v", err)
 		return err
 	}
 	defer file.Close()
@@ -779,10 +792,10 @@ func SaveResult(result AnalysisResult) error {
 
 	// Encode the result and write it to the file
 	if err := encoder.Encode(result); err != nil {
-		fmt.Println("❌ Error encoding JSON file <Results/config/analysis_result_bitbucket.json> :", err)
+		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_bitbucket.json> :%v", err)
 		return err
 	}
-
-	fmt.Println("✅ Result saved successfully!")
+	fmt.Print("\n")
+	loggers.Infof("✅ Result saved successfully!\n")
 	return nil
 }
