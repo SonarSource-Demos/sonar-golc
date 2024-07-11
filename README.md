@@ -17,7 +17,7 @@ GoLC The tool analyzes your repositories and identifies the largest branch of ea
 ---
 ## Installation
 
-You can install from the stable release by clicking [here](https://github.com/emmanuel-colussi-sonarsource/sonar-golc/releases/tag/V1.0.2)
+You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.2)
 
 ## Prerequisites 
 
