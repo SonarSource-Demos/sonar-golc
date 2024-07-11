@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/SonarSource-Demos/sonar-golc/assets"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 	"github.com/briandowns/spinner"
 	"github.com/google/go-github/v62/github"
 )
@@ -130,6 +131,8 @@ const PrefixMsg = "Get Repo(s)..."
 const MessageApiRate = "❗️ Rate limit exceeded. Waiting for rate limit reset..."
 const ApiHeader1 = "application/vnd.github.v3+json"
 const ErrorMesssage1 = "❌ Error saving repositories in file Results/config/analysis_repos_github.json: %v\n"
+
+//var loggers = utils.NewLogger()
 
 // Load repository ignore map from file
 func loadExclusionRepos1(filename string) (ExclusionRepos, error) {
@@ -275,12 +278,14 @@ func GetReposGithub(parms ParamsReposGithub, ctx context.Context, client *github
 	var TotalBranches, notAnalyzedCount, emptyRepo, cpt, cptarchiv int
 	var importantBranches []ProjectBranch
 	cpt = 1
+	loggers := utils.NewLogger()
 
 	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin1.Color("green", "bold")
 
 	message4 := "Repo(s)"
-	fmt.Printf("\t  ✅ The number of %s found is: %d\n", message4, parms.NBRepos)
+	//fmt.Printf("\t  ✅ The number of %s found is: %d\n", message4, parms.NBRepos)
+	loggers.Infof("\t  ✅ The number of %s found is: %d\n", message4, parms.NBRepos)
 
 	for _, repo := range parms.Repos {
 		repoName := *repo.Name
@@ -289,7 +294,8 @@ func GetReposGithub(parms ParamsReposGithub, ctx context.Context, client *github
 			continue
 		}
 		if len(parms.ExclusionList) != 0 && shouldIgnore(repoName, parms.ExclusionList) {
-			fmt.Printf("\t   ✅ Skipping analysis for repository '%s' as per ignore list.\n", repoName)
+			//fmt.Printf("\t   ✅ Skipping analysis for repository '%s' as per ignore list.\n", repoName)
+			loggers.Infof("\t   ✅ Skipping analysis for repository '%s' as per ignore list.\n", repoName)
 			notAnalyzedCount++
 			continue
 		}
@@ -318,7 +324,8 @@ func GetReposGithub(parms ParamsReposGithub, ctx context.Context, client *github
 		ProjectBranches: importantBranches,
 	}
 	if err := SaveResult(result); err != nil {
-		fmt.Println("❌ Error Save Result of Analysis :", err)
+		//fmt.Println("❌ Error Save Result of Analysis :", err)
+		loggers.Errorf("❌ Error Save Result of Analysis :", err)
 		os.Exit(1)
 	}
 
@@ -329,6 +336,7 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 	var branches []*github.Branch
 	var allEvents []*github.Event
 	var branchPushes map[string]*BranchInfoEvents
+	loggers := utils.NewLogger()
 
 	opt := &github.BranchListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -361,7 +369,8 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 			// If branch does not exist, use default branch
 			branches, err = getAllBranches(ctx, client, *repo.Name, parms.Organization, opt)
 			if err != nil {
-				fmt.Printf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
+				//fmt.Printf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
+				loggers.Errorf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
 				spin1.Stop()
 				return "", nil
 			}
@@ -372,7 +381,8 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 		// If DefaultBranch is false and branch name is not provided, get all branches
 		branches, err = getAllBranches(ctx, client, *repo.Name, parms.Organization, opt)
 		if err != nil {
-			fmt.Printf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
+			//fmt.Printf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
+			loggers.Errorf("❌ Error when retrieving branches for repo %v: %v\n", *repo.Name, err)
 			spin1.Stop()
 			return "", nil
 		}
@@ -382,7 +392,8 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 
 	allEvents, err = getAllEvents(ctx, client, *repo.Name, parms.Organization)
 	if err != nil {
-		fmt.Println("❌ Error fetching repository events:", err)
+		//	fmt.Println("❌ Error fetching repository events:", err)
+		loggers.Errorf("❌ Error fetching repository events:", err)
 		spin1.Stop()
 		return "", nil
 	}
@@ -392,7 +403,8 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 
 	spin1.Stop()
 
-	fmt.Printf("\r\t\t✅ %d Repo: %s - Number of branches: %d - largest Branch: %s \n", cpt, *repo.Name, nbrbranche, largestRepoBranch)
+	//fmt.Printf("\r\t\t✅ %d Repo: %s - Number of branches: %d - largest Branch: %s \n", cpt, *repo.Name, nbrbranche, largestRepoBranch)
+	loggers.Infof("\r\t\t\t\t✅ %d Repo: %s - Number of branches: %d - largest Branch: %s ", cpt, *repo.Name, nbrbranche, largestRepoBranch)
 
 	return largestRepoBranch, branches
 }
@@ -443,13 +455,15 @@ func getAllEvents(ctx context.Context, client *github.Client, repoName, organiza
 func countBranchPushes(events []*github.Event, period int) map[string]*BranchInfoEvents {
 	branchPushes := make(map[string]*BranchInfoEvents)
 	oneMonthAgo := time.Now().AddDate(0, period, 0)
+	loggers := utils.NewLogger()
+
 	for _, event := range events {
 		if event.CreatedAt != nil && event.CreatedAt.After(oneMonthAgo) {
 			switch event.GetType() {
 			case "PushEvent":
 				payload, err := event.ParsePayload()
 				if err != nil {
-					fmt.Println("❌ Error parsing payload:", err)
+					loggers.Errorf("❌ Error parsing payload:", err)
 					continue
 				}
 				pushEvent, ok := payload.(*github.PushEvent)
@@ -482,6 +496,7 @@ func analyzeBranches(ctx context.Context, client *github.Client, parms ParamsRep
 
 func analyzeWithStats(ctx context.Context, client *github.Client, organization, repoName string, oneMonthAgo time.Time, info *BranchInfoEvents) {
 	contributorsStats, _, err := client.Repositories.ListContributorsStats(ctx, organization, repoName)
+	loggers := utils.NewLogger()
 	if err != nil {
 		if rateLimitErr, ok := err.(*github.AbuseRateLimitError); ok {
 			fmt.Println(MessageApiRate)
@@ -489,7 +504,7 @@ func analyzeWithStats(ctx context.Context, client *github.Client, organization, 
 			contributorsStats, _, err = client.Repositories.ListContributorsStats(ctx, organization, repoName)
 		}
 		if err != nil {
-			fmt.Printf("❌ Error fetching contributors stats: %v\n", err)
+			loggers.Errorf("❌ Error fetching contributors stats: %v\n", err)
 			return
 		}
 	}
@@ -512,6 +527,7 @@ func analyzeWithoutStats(ctx context.Context, client *github.Client, organizatio
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
 	var allCommits []*github.RepositoryCommit
+	loggers := utils.NewLogger()
 	for {
 		commits, resp, err := client.Repositories.ListCommits(ctx, organization, repoName, opt)
 		if err != nil {
@@ -521,7 +537,7 @@ func analyzeWithoutStats(ctx context.Context, client *github.Client, organizatio
 				commits, resp, err = client.Repositories.ListCommits(ctx, organization, repoName, opt)
 			}
 			if err != nil {
-				fmt.Printf("Error fetching commits for branch %s: %v\n", info.Name, err)
+				loggers.Errorf("Error fetching commits for branch %s: %v\n", info.Name, err)
 				break
 			}
 		}
@@ -569,12 +585,14 @@ func GetRepoGithubList(platformConfig map[string]interface{}, exclusionfile stri
 	var repositories []*github.Repository
 	var exclusionList ExclusionRepos
 	var err1 error
+	loggers := utils.NewLogger()
 
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
 
-	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	//fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	loggers.Infof("🔎 Analysis of devops platform objects ...\n")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin.Prefix = PrefixMsg
@@ -602,7 +620,7 @@ func GetRepoGithubList(platformConfig map[string]interface{}, exclusionfile stri
 	sortRepositoriesByUpdatedAt(repositories)
 
 	if err := SaveRepos(repositories); err != nil {
-		fmt.Printf(ErrorMesssage1, err)
+		loggers.Errorf(ErrorMesssage1, err)
 	}
 
 	importantBranches, emptyRepo, nbRepos, TotalBranches, totalExclude, totalArchiv = GetReposGithub(params, ctx, client)
@@ -632,13 +650,14 @@ func GetRepoGithubList(platformConfig map[string]interface{}, exclusionfile stri
 func loadExclusionFile(exclusionfile string, spin *spinner.Spinner) (ExclusionRepos, error) {
 	var exclusionList ExclusionRepos
 	var err error
+	loggers := utils.NewLogger()
 
 	if exclusionfile == "0" {
 		exclusionList = make(map[string]bool)
 	} else {
 		exclusionList, err = loadExclusionRepos1(exclusionfile)
 		if err != nil {
-			fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exclusionfile, err)
+			loggers.Errorf("\n❌ Error Read Exclusion File <%s>: %v", exclusionfile, err)
 			spin.Stop()
 			return nil, err
 		}
@@ -654,10 +673,11 @@ func initializeGithubClient(platformConfig map[string]interface{}) (context.Cont
 
 func fetchAllRepositories(ctx context.Context, client *github.Client, organization string, opt *github.RepositoryListByOrgOptions) ([]*github.Repository, error) {
 	var repositories []*github.Repository
+	loggers := utils.NewLogger()
 	for {
 		repos, resp, err := client.Repositories.ListByOrg(ctx, organization, opt)
 		if err != nil {
-			fmt.Printf("❌ Error fetching repositories: %v\n", err)
+			loggers.Errorf("❌ Error fetching repositories: %v\n", err)
 			return nil, err
 		}
 		repositories = append(repositories, repos...)
@@ -671,8 +691,9 @@ func fetchAllRepositories(ctx context.Context, client *github.Client, organizati
 
 func fetchSingleRepository(ctx context.Context, client *github.Client, platformConfig map[string]interface{}) ([]*github.Repository, error) {
 	repos, _, err := client.Repositories.Get(ctx, platformConfig["Organization"].(string), platformConfig["Repos"].(string))
+	loggers := utils.NewLogger()
 	if err != nil {
-		fmt.Printf("❌ Error fetching repository: %v\n", err)
+		loggers.Errorf("❌ Error fetching repository: %v\n", err)
 		return nil, err
 	}
 	return []*github.Repository{repos}, nil
@@ -713,9 +734,15 @@ func findLargestRepository(importantBranches []ProjectBranch, totalSize *int64) 
 }
 
 func printSummary(config PlatformConfig, stats SummaryStats) {
-	fmt.Printf("\n✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> \n", stats.LargestRepo, config.Organization, stats.LargestRepoBranch)
-	fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
-	fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
+	loggers := utils.NewLogger()
+	//fmt.Printf("\n✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> \n", stats.LargestRepo, config.Organization, stats.LargestRepoBranch)
+	//fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
+	//fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
+
+	fmt.Printf("\n")
+	loggers.Infof("✅ The largest Repository is <%s> in the organization <%s> with the branch <%s> ", stats.LargestRepo, config.Organization, stats.LargestRepoBranch)
+	loggers.Infof("✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d", stats.NbRepos-stats.EmptyRepo-stats.TotalExclude-stats.TotalArchiv, stats.EmptyRepo, stats.TotalExclude, stats.TotalArchiv)
+	loggers.Infof("✅ Total Branches that will be analyzed: %d\n", stats.TotalBranches)
 }
 
 // func FastAnalys(url, baseapi, apiver, accessToken, organization, exlusionfile, repos, branchmain string, period int) error {
@@ -728,11 +755,13 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 	var err1 error
 	var emptyRepo int
 	nbRepos := 0
+	loggers := utils.NewLogger()
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	} // Number Object by page in API Request
 
-	fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	//fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
+	loggers.Infof("🔎 Analysis of devops platform objects ...\n")
 
 	spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin.Prefix = PrefixMsg
@@ -746,7 +775,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 	} else {
 		exclusionList, err1 = loadExclusionRepos1(exlusionfile)
 		if err1 != nil {
-			fmt.Printf("\n❌ Error Read Exclusion File <%s>: %v", exlusionfile, err1)
+			loggers.Errorf("❌ Error Read Exclusion File <%s>: %v", exlusionfile, err1)
 			spin.Stop()
 			//return nil, err1
 		}
@@ -763,7 +792,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 			repos, resp, err := client.Repositories.ListByOrg(ctx, platformConfig["Organization"].(string), opt)
 
 			if err != nil {
-				fmt.Printf("❌ Error fetching repositories: %v\n", err)
+				loggers.Errorf("❌ Error fetching repositories: %v\n", err)
 				//return importantBranches, nil
 			}
 
@@ -796,7 +825,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 		// Save List of Repos
 		err := SaveRepos(repositories)
 		if err != nil {
-			fmt.Printf(ErrorMesssage1, err)
+			loggers.Errorf(ErrorMesssage1, err)
 		}
 
 		nbRepos, emptyRepo, totalExclude, totalArchiv, err = GetGithubLanguages(parms, ctx, client, int(platformConfig["Factor"].(float64)))
@@ -812,7 +841,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 
 		repos1, _, err := client.Repositories.Get(ctx, platformConfig["Organization"].(string), platformConfig["Repos"].(string))
 		if err != nil {
-			fmt.Printf("❌ Error fetching repository: %v\n", err)
+			loggers.Errorf("❌ Error fetching repository: %v\n", err)
 
 		}
 
@@ -838,7 +867,8 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 
 	}
 
-	fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", nbRepos-emptyRepo-totalExclude-totalArchiv, emptyRepo, totalExclude, totalArchiv)
+	//fmt.Printf("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", nbRepos-emptyRepo-totalExclude-totalArchiv, emptyRepo, totalExclude, totalArchiv)
+	loggers.Infof("\r✅ Total Repositories that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d\n", nbRepos-emptyRepo-totalExclude-totalArchiv, emptyRepo, totalExclude, totalArchiv)
 	return nil
 }
 

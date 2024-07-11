@@ -1,0 +1,15 @@
+FROM arm64v8/alpine:3.20.1
+
+WORKDIR /app
+
+COPY resultsall/dist /app/dist
+COPY resultsall/imgs /app/imgs
+
+COPY resultsall/ResultsAll_arm64 /app/ResultsAll
+
+RUN chmod +x /app/ResultsAll
+
+EXPOSE 8090
+
+CMD ["/app/ResultsAll"]
+

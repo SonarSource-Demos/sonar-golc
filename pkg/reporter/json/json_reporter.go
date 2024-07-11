@@ -2,12 +2,12 @@ package json
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/sorter"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
 type JsonReporter struct {
@@ -88,6 +88,7 @@ func (j JsonReporter) GenerateReportByFile(summary *sorter.SortedSummary) error 
 }
 
 func (j JsonReporter) writeJson(jsonReport *report) error {
+	loggers := utils.NewLogger()
 	file, err := json.MarshalIndent(jsonReport, "", "  ")
 	if err != nil {
 		return err
@@ -103,7 +104,8 @@ func (j JsonReporter) writeJson(jsonReport *report) error {
 		return err
 	}
 
-	fmt.Printf("\n\t✅ json report exported to %s\n", path)
+	//fmt.Printf("\n\t✅ json report exported to %s\n", path)
+	loggers.Infof("\t✅ json report exported to %s", path)
 
 	return nil
 }
