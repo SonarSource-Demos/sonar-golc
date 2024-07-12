@@ -20,4 +20,4 @@ dockerbuild.sh
 coverage.out
 test/*
 Docker/*
-Logs.log
+Logs/*
