@@ -21,15 +21,14 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 	"github.com/briandowns/spinner"
 
-<<<<<<< HEAD
 	"github.com/SonarSource-Demos/sonar-golc/assets"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 
 	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket"
-=======
+
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getazure"
 	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket/v2"
->>>>>>> ver1.0.3
+
 	getbibucketdc "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucketdc"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgithub"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgitlab"
@@ -660,6 +659,14 @@ func init() {
 	if err != nil {
 		log.Fatalf("\n❌ Failed to load config: %s", err)
 		os.Exit(1)
+	}
+	// Create Logs Directory
+	logDir := "Logs"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		err = os.MkdirAll(logDir, 0755)
+		if err != nil {
+			logrus.Fatalf("❌ Failed to create log directory: %v", err)
+		}
 	}
 	// Remove Log file
 	if err := os.Remove("Logs.log"); err != nil && !os.IsNotExist(err) {

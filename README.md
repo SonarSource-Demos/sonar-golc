@@ -444,8 +444,8 @@ $:>
 There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.3** and **amd64-1.0.3** .
 
  ```bash
-:> docker pull https://ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.3
-:> docker pull https://ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.3
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.4
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.4
 ```
 
 ✅ Create volumes to persist data or map a local directory
@@ -456,7 +456,7 @@ You need a persistent volume or to map a local directory to store the analysis r
 
 ✅ Running the container: 
  ```bash
-:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.3 -devops Github -docker
+:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.4 -devops Github -docker
 
 ✅ Using configuration for DevOps platform 'Github'
 Running in Docker mode
@@ -500,7 +500,7 @@ Running in Docker mode
  You need to map the volume previously used for the analysis and map an available port for web access.
 
 ```
-:> docker run --rm -p 8090:8090 -v /custom/Results_volume:/app/Results resultsall:arm64-1.0.3
+:> docker run --rm -p 8090:8090 -v /custom/Results_volume:/app/Results resultsall:arm64-1.0.4
 
 
 ✅ Results analysis recorded in Results/code_lines_by_language.json
@@ -509,8 +509,7 @@ Running in Docker mode
 ✅ Server started on http://localhost:8090
 ✅ please type < Ctrl+C> to stop the server
 ```
-<<<<<<< HEAD
-=======
+
 
 ## Execution Log
 
@@ -574,4 +573,17 @@ You can refer to this log file to troubleshoot issues, monitor the application's
 [2024-07-11 17:27:20] INFO      ✅ run : ResultsAll
 
   ```
->>>>>>> ver1.0.4
+
+
+## Future Features
+
+We are continuously working to enhance and expand the functionality of our application. Here are some of the upcoming features you can look forward to:
+
+- **GitLab On-Premise Support**: We plan to add support for GitLab on-premise instances, allowing users to seamlessly integrate their self-hosted GitLab repositories with our application.
+- **Improved Exclusion Patterns**: Enhancements to the exclusion patterns to provide more precise and flexible control over what is included or excluded in various operations.
+- **Additional Integrations**: Beyond GitLab, we are exploring support for other platforms and services to broaden the scope of our integrations and offer more flexibility to our users.
+- **Improved User Interface**: Enhancements to the user interface to provide a more intuitive and user-friendly experience.
+- **Performance Optimizations**: Ongoing efforts to optimize the performance and scalability of the application to handle larger workloads more efficiently.
+- **Security Enhancements**: Continued focus on strengthening the security of the application to protect user data and ensure privacy.
+
+Stay tuned for updates as we roll out these new features and improvements!
