@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -744,7 +743,8 @@ func getProjectsAndAnalyze(gitlabClient *gitlab.Client, organization string, spi
 	projects, err := getAllGroupProjects(gitlabClient, organization)
 	if err != nil {
 		spin.Stop()
-		log.Fatalf(MessageErro1, organization, err)
+		fmt.Println("AAAAAA")
+		loggers.Fatalf(MessageErro1, organization, err)
 	}
 
 	spin.Stop()
