@@ -654,6 +654,14 @@ func init() {
 		log.Fatalf("\n❌ Failed to load config: %s", err)
 		os.Exit(1)
 	}
+	// Create Logs Directory
+	logDir := "Logs"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		err = os.MkdirAll(logDir, 0755)
+		if err != nil {
+			logrus.Fatalf("❌ Failed to create log directory: %v", err)
+		}
+	}
 	// Remove Log file
 	if err := os.Remove("Logs.log"); err != nil && !os.IsNotExist(err) {
 		logrus.Fatalf("❌ Failed to delete old log file: %v", err)

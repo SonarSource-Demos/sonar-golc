@@ -572,3 +572,15 @@ You can refer to this log file to troubleshoot issues, monitor the application's
 [2024-07-11 17:27:20] INFO      ✅ run : ResultsAll
 
   ```
+
+## Future Features
+
+We are continuously working to enhance and expand the functionality of our application. Here are some of the upcoming features you can look forward to:
+
+- **GitLab On-Premise Support**: We plan to add support for GitLab on-premise instances, allowing users to seamlessly integrate their self-hosted GitLab repositories with our application.
+- **Additional Integrations**: Beyond GitLab, we are exploring support for other platforms and services to broaden the scope of our integrations and offer more flexibility to our users.
+- **Improved User Interface**: Enhancements to the user interface to provide a more intuitive and user-friendly experience.
+- **Performance Optimizations**: Ongoing efforts to optimize the performance and scalability of the application to handle larger workloads more efficiently.
+- **Security Enhancements**: Continued focus on strengthening the security of the application to protect user data and ensure privacy.
+
+Stay tuned for updates as we roll out these new features and improvements!
