@@ -669,7 +669,7 @@ func init() {
 		}
 	}
 	// Remove Log file
-	if err := os.Remove("Logs.log"); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove("Logs/Logs.log"); err != nil && !os.IsNotExist(err) {
 		logrus.Fatalf("❌ Failed to delete old log file: %v", err)
 	}
 
