@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -353,12 +354,17 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 // Analysis functions for GitLab
 func analyseGitlabRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
 	p := project.(getgitlab.ProjectBranch)
+	var baseUrl = "gitlab.com"
+	platformUrl, err := url.Parse(platformConfig["Url"].(string))
+	if err == nil {
+		baseUrl = platformUrl.Host
+	}
 	params := RepoParams{
 		ProjectKey: p.Org,
 		Namespace:  p.Namespace,
 		RepoSlug:   p.RepoSlug,
 		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "gitlab.com", p.Namespace),
+		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), baseUrl, p.Namespace),
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count)
 }
