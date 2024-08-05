@@ -73,8 +73,8 @@ func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
 	defer f.Close()
 
 	fileScanner := bufio.NewScanner(f)
-	buffer := make([]byte, 128*1024)
-	fileScanner.Buffer(buffer, 4096*1024)
+	buffer := make([]byte, 1024*1024)
+	fileScanner.Buffer(buffer, 4096*4096)
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
 
