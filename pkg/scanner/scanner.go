@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"strings"
 
@@ -61,7 +62,9 @@ func (sc *Scanner) createProgressbar(max int) *progressbar.ProgressBar {
 	)
 }
 
-func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
+// Old Function using bufio.Scanner Now use bufio.Reader which does not limit the line size.
+
+/*func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
 	result := scanResult{Metadata: file}
 	isInBlockComment := false
 	var closeBlockCommentToken string
@@ -73,8 +76,11 @@ func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
 	defer f.Close()
 
 	fileScanner := bufio.NewScanner(f)
-	buffer := make([]byte, 128*1024)
+	//buffer := make([]byte, 128*1024)
+	//fileScanner.Buffer(buffer, 4096*1024)
+	buffer := make([]byte, 2048*2048)
 	fileScanner.Buffer(buffer, 4096*1024)
+	fmt.Println("Hello Scan Buff")
 	for fileScanner.Scan() {
 		line := strings.TrimSpace(fileScanner.Text())
 
@@ -112,6 +118,64 @@ func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
 	result.Lines = result.CodeLines + result.BlankLines + result.Comments
 
 	return result, fileScanner.Err()
+}*/
+
+func (sc *Scanner) scanFile(file analyzer.FileMetadata) (scanResult, error) {
+	result := scanResult{Metadata: file}
+	isInBlockComment := false
+	var closeBlockCommentToken string
+
+	f, err := os.Open(file.FilePath)
+	if err != nil {
+		return result, err
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return result, err
+		}
+		line = strings.TrimSpace(line)
+
+		if isInBlockComment {
+			result.Comments++
+			if sc.hasSecondMultiLineComment(line, closeBlockCommentToken) {
+				isInBlockComment = false
+			}
+			continue
+		}
+
+		if sc.isBlankLine(line) {
+			result.BlankLines++
+			continue
+		}
+
+		if ok, secondCommentToken := sc.hasFirstMultiLineComment(file, line); ok {
+			isInBlockComment = true
+			closeBlockCommentToken = secondCommentToken
+			result.Comments++
+			if sc.hasSecondMultiLineComment(line, closeBlockCommentToken) {
+				isInBlockComment = false
+			}
+			continue
+		}
+
+		if sc.hasSingleLineComment(file, line) {
+			result.Comments++
+			continue
+		}
+
+		result.CodeLines++
+	}
+
+	result.Lines = result.CodeLines + result.BlankLines + result.Comments
+
+	return result, nil
 }
 
 func (sc *Scanner) hasFirstMultiLineComment(file analyzer.FileMetadata, line string) (bool, string) {
