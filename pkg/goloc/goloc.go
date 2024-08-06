@@ -6,10 +6,7 @@ import (
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/filesystem"
-<<<<<<< HEAD
-=======
 	"github.com/SonarSource-Demos/sonar-golc/pkg/getter"
->>>>>>> ver1.0.3
 	"github.com/SonarSource-Demos/sonar-golc/pkg/gogit"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter"

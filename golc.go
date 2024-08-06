@@ -21,14 +21,8 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 	"github.com/briandowns/spinner"
 
-	"github.com/SonarSource-Demos/sonar-golc/assets"
-	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
-
-	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket"
-
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getazure"
 	getbibucket "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucket/v2"
-
 	getbibucketdc "github.com/SonarSource-Demos/sonar-golc/pkg/devops/getbitbucketdc"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgithub"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/devops/getgitlab"
@@ -189,9 +183,9 @@ func convertToSliceString(in []interface{}) []string {
 	return out
 }
 
-// Extract Domain 
+// Extract url domain
 func extractDomain(url string) string {
-	//Remove the "http://" or "https://" prefix
+	// Remove the "http://" or "https://" prefix
 	url = strings.TrimPrefix(url, "https://")
 	url = strings.TrimPrefix(url, "http://")
 
@@ -203,7 +197,7 @@ func extractDomain(url string) string {
 		return url[:index]
 	}
 
-	Otherwise, return the entire url (in case there is no "/")
+	// Otherwise, return the entire url (in case there is no "/")
 	return url
 }
 
@@ -353,7 +347,7 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions)
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
 }
 
 // Analysis functions for Bitbucket DC
@@ -369,7 +363,7 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions)
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
 }
 
 // Analysis functions for GitHub
@@ -385,7 +379,7 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions)
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
 }
 
 // Analysis functions for GitLab
@@ -402,7 +396,7 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions)
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
 }
 
 func analyseAzurebRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
@@ -417,11 +411,11 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions)
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
 }
 
 // Perform repository analysis (common logic)
-func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string) {
+func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, ResultByFile bool) {
 	var outputFileName = ""
 	if len(params.Namespace) > 0 {
 		outputFileName = fmt.Sprintf("Result_%s_%s", params.Namespace, params.MainBranch)
@@ -430,7 +424,7 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 	}
 	golocParams := goloc.Params{
 		Path:              params.PathToScan,
-		ByFile:            false,
+		ByFile:            ResultByFile,
 		ExcludePaths:      []string{},
 		ExcludeExtensions: excludeExtension,
 		IncludeExtensions: []string{},

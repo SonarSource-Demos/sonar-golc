@@ -12,7 +12,7 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This last version is ver1.0.5 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab , Azure DevOps and Files.A Docker version is available.
+> This last version is ver1.0.5 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
 
 ---
 ## Installation
@@ -588,9 +588,8 @@ You can refer to this log file to troubleshoot issues, monitor the application's
 
 We are continuously working to enhance and expand the functionality of our application. Here are some of the upcoming features you can look forward to:
 
-- **GitLab On-Premise Support**: We plan to add support for GitLab on-premise instances, allowing users to seamlessly integrate their self-hosted GitLab repositories with our application.
 - **Improved Exclusion Patterns**: Enhancements to the exclusion patterns to provide more precise and flexible control over what is included or excluded in various operations.
-- **Additional Integrations**: Beyond GitLab, we are exploring support for other platforms and services to broaden the scope of our integrations and offer more flexibility to our users.
+- **Additional Integrations**: We are exploring support for other platforms and services to broaden the scope of our integrations and offer more flexibility to our users.
 - **Improved User Interface**: Enhancements to the user interface to provide a more intuitive and user-friendly experience.
 - **Performance Optimizations**: Ongoing efforts to optimize the performance and scalability of the application to handle larger workloads more efficiently.
 - **Security Enhancements**: Continued focus on strengthening the security of the application to protect user data and ensure privacy.
