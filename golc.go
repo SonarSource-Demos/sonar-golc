@@ -529,7 +529,7 @@ func AnalyseReposListAzure(DestinationResult string, platformConfig map[string]i
 
 /* ---------------- Analyse Directory ---------------- */
 
-func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string) {
+func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, ResultByFile bool) {
 
 	type Configuration struct {
 		ExcludeExtensions []string
@@ -557,7 +557,7 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 
 			params := goloc.Params{
 				Path:              dir,
-				ByFile:            false,
+				ByFile:            ResultByFile,
 				ExcludePaths:      fileexclusionEX,
 				ExcludeExtensions: extexclusion,
 				IncludeExtensions: []string{},
@@ -1022,7 +1022,7 @@ func main() {
 			}
 		}
 		startTime = time.Now()
-		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions)
+		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions,platformConfig["ResultByFile"].(bool))
 	}
 
 	/*---------------------------------- End Select type of DevOps Platform ----------------------------------------------------*/
@@ -1169,9 +1169,15 @@ func main() {
 		return
 	}
 
+	if platformConfig["ResultByFile"].(bool) {
+		logger.Infof(" ℹ️  To generate and visualize results on a web interface, follow these steps: ")
+	     logger.Infof("\t✅ run : ResultByfiles")
+	} else {
+		
+	
 	logger.Infof(" ℹ️  To generate and visualize results on a web interface, follow these steps: ")
 	logger.Infof("\t✅ run : ResultsAll")
-
+	}
 	//fmt.Println("\nℹ️  To generate and visualize results on a web interface, follow these steps: ")
 	//fmt.Println("\t✅ run : ResultsAll")
 

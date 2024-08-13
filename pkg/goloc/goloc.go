@@ -65,7 +65,9 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 
 		lastPart := filepath.Base(path)
 		if lastPart != "" {
+			
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
+			
 			//fmt.Println("OutputName:", params.OutputName)
 		} else {
 			//fmt.Println("OutputName:", path)

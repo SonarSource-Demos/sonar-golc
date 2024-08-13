@@ -113,7 +113,8 @@ Scala              | .scala                                   | //              
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "BitBucket": {
         "Users": "xxxxxxxxxxxxxx",
@@ -136,7 +137,8 @@ Scala              | .scala                                   | //              
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       
       "Github": {
@@ -159,7 +161,8 @@ Scala              | .scala                                   | //              
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "Gitlab": {
         "Users": "xxxxxxxxxxxxxx",
@@ -181,7 +184,8 @@ Scala              | .scala                                   | //              
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
 
       },
       "Azure": {
@@ -204,7 +208,8 @@ Scala              | .scala                                   | //              
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "File": {
         "Organization": "xxxxxxxxx",
@@ -212,7 +217,8 @@ Scala              | .scala                                   | //              
         "Directory":"",
         "FileExclusion":".cloc_file_ignore",
         "ExtExclusion":[""],
-        "FileLoad":".cloc_file_load"
+        "FileLoad":".cloc_file_load",
+        "ResultByFile": false
 
       }
     }
@@ -295,6 +301,9 @@ PROJECT_KEY
 
 ❗️ Exclude extensions
 If you want to exclude files by their extensions, use the parameter **'ExtExclusion'**. For example, if you want to exclude all CSS or JS files : 'ExtExclusion':[".css",".js"],
+
+❗️ Results By File
+If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
 
  ✅ Run GoLC
 
@@ -415,7 +424,8 @@ PS C:\Users\ecadmin\sonar-golc>
 
 ✅ Run Report
 
-To generate a comprehensive PDF report and view the results on a web interface, you need to launch the '**ResultsAll**' program.
+To generate a comprehensive PDF report and view the results on a web interface, you need to launch the '**ResultsAll**' program.If you want a global PDF report by file, you need to run the '**ResultByfiles**' program.
+
 
 The '**ResultsAll**' program generates a 'GlobalReport.pdf' file in the 'Results' directory. It prompts you if you want to view the results on a web interface; it starts an HTTP service on the default port 8080. If this port is in use, you can choose another port.
 To stop the local HTTP service, press the Ctrl+C keys
@@ -435,6 +445,15 @@ Would you like to launch web visualization? (Y/N)
 $:> 
 ```
 
+```bash
+$:> ./ResultsByfiles
+
+✅ Results analysis recorded in : Results/reports
+
+✅ Result analysis recorded in : Results/reports/complete_report.pdf & Results/reports/complete_report.html 
+$:> 
+```
+
 ✅  Web UI
 
 ![webui](imgs/webui.png)
@@ -442,6 +461,11 @@ $:>
 ✅  Report example
 
 ![report](imgs/report.png)
+
+Report By file :
+
+![report](imgs/reportbyfiles.png)
+
 
 
 ## Usage with Docker image

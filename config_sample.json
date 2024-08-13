@@ -20,7 +20,8 @@
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "BitBucket": {
         "Users": "XXXXX",
@@ -43,7 +44,8 @@
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       
       "Github": {
@@ -66,7 +68,8 @@
         "Multithreading":true,
         "Stats": false,
         "Workers": 50 ,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
 
       "Gitlab": {
@@ -89,7 +92,8 @@
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "Azure": {
         "Users": "XXXXX",
@@ -111,7 +115,8 @@
         "Multithreading":true,
         "Stats": false,
         "Workers": 50,
-        "NumberWorkerRepos":50
+        "NumberWorkerRepos":50,
+        "ResultByFile": false
       },
       "File": {
         "Organization": "XXXXX",
@@ -119,7 +124,8 @@
         "Directory":"../gcloc_m/.",
         "FileExclusion":".cloc_file_ignore",
         "ExtExclusion":[""],
-        "FileLoad":".cloc_file_load"
+        "FileLoad":".cloc_file_load",
+        "ResultByFile": false
 
       }
     },
