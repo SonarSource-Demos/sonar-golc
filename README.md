@@ -17,7 +17,7 @@ GoLC The tool analyzes your repositories and identifies the largest branch of ea
 ---
 ## Installation
 
-You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.5)
+You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.6)
 
 
 
@@ -429,6 +429,8 @@ To generate a comprehensive PDF report and view the results on a web interface, 
 
 The '**ResultsAll**' program generates a 'GlobalReport.pdf' file in the 'Results' directory. It prompts you if you want to view the results on a web interface; it starts an HTTP service on the default port 8080. If this port is in use, you can choose another port.
 To stop the local HTTP service, press the Ctrl+C keys
+
+❗️For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the Tools directory.
 
 
 ```bash
