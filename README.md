@@ -12,7 +12,9 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This last version is ver1.0.5 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
+> This last version is ver1.0.6 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
+> For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the [**Tools**](https://github.com/SonarSource-Demos/sonar-golc/tree/ver1.0.6/Tools) directory.
+
 
 ---
 ## Installation
