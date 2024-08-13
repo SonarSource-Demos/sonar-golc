@@ -430,7 +430,7 @@ To generate a comprehensive PDF report and view the results on a web interface, 
 The '**ResultsAll**' program generates a 'GlobalReport.pdf' file in the 'Results' directory. It prompts you if you want to view the results on a web interface; it starts an HTTP service on the default port 8080. If this port is in use, you can choose another port.
 To stop the local HTTP service, press the Ctrl+C keys
 
-❗️For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the Tools directory.
+❗️For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the [**Tools**](https://github.com/SonarSource-Demos/sonar-golc/tree/ver1.0.6/Tools) directory.
 
 
 ```bash
