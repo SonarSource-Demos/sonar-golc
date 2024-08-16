@@ -478,11 +478,12 @@ Report By file :
 
 ✅ Pull Images
 
-There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.3** and **amd64-1.0.3** .
+There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.6** and **amd64-1.0.6** .
 
  ```bash
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.4
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.4
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.6
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.6
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultbyfile:arm64-1.0.6
 ```
 
 ✅ Create volumes to persist data or map a local directory
@@ -493,7 +494,7 @@ You need a persistent volume or to map a local directory to store the analysis r
 
 ✅ Running the container: 
  ```bash
-:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.4 -devops Github -docker
+:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.6 -devops Github -docker
 
 ✅ Using configuration for DevOps platform 'Github'
 Running in Docker mode
@@ -537,7 +538,7 @@ Running in Docker mode
  You need to map the volume previously used for the analysis and map an available port for web access.
 
 ```
-:> docker run --rm -p 8090:8090 -v /custom/Results_volume:/app/Results resultsall:arm64-1.0.4
+:> docker run --rm -p 8090:8090 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.6
 
 
 ✅ Results analysis recorded in Results/code_lines_by_language.json
@@ -546,6 +547,19 @@ Running in Docker mode
 ✅ Server started on http://localhost:8090
 ✅ please type < Ctrl+C> to stop the server
 ```
+
+For the by file report, you need to use the **resultbyfile** container.
+You need to map the volume previously used for the analysis
+
+```
+:> docker  run --rm -v /custom_Results_volume::/app/Results resultbyfile:arm64-1.0.6
+
+✅ Results analysis recorded in : Results/reports
+
+✅ Result analysis recorded in /custom_Results_volume/reports/complete_report.pdf & /custom_Results_volume/reports/complete_report.html
+```
+
+
 
 
 ## Execution Log
