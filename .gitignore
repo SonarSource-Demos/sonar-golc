@@ -12,10 +12,13 @@ generate_test.sh
 pkglist.txt
 cover.sh
 ResultsAll/*
+ResultsAll/reports/*
 createreportdocker.sh
 Docker/docker_test/*
 Docker/dockerbuid.sh
 dockerbuild.sh
+dockerarms.sh
+createreportdocker.sh 
 *.sh
 coverage.out
 test/*
