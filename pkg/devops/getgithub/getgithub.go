@@ -590,6 +590,10 @@ func GetRepoGithubList(platformConfig map[string]interface{}, exclusionfile stri
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
+	opt1 := &github.RepositoryListByAuthenticatedUserOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+		Affiliation: "owner",
+	}
 
 	//fmt.Print("\n🔎 Analysis of devops platform objects ...\n")
 	loggers.Infof("🔎 Analysis of devops platform objects ...\n")
@@ -607,7 +611,12 @@ func GetRepoGithubList(platformConfig map[string]interface{}, exclusionfile stri
 	ctx, client := initializeGithubClient(platformConfig)
 
 	if len(platformConfig["Repos"].(string)) == 0 {
-		repositories, err1 = fetchAllRepositories(ctx, client, platformConfig["Organization"].(string), opt)
+		if platformConfig["Org"].(bool) {
+
+			repositories, err1 = fetchAllRepositories(ctx, client, platformConfig["Organization"].(string), opt)
+		} else {
+			repositories, err1 = fetchUserRepositories(ctx, client, opt1)
+		}
 	} else {
 		repositories, err1 = fetchSingleRepository(ctx, client, platformConfig)
 	}
@@ -669,6 +678,23 @@ func initializeGithubClient(platformConfig map[string]interface{}) (context.Cont
 	ctx := context.Background()
 	client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
 	return ctx, client
+}
+
+func fetchUserRepositories(ctx context.Context, client *github.Client, opt *github.RepositoryListByAuthenticatedUserOptions) ([]*github.Repository, error) {
+	var repositories []*github.Repository
+
+	for {
+		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
+		if err != nil {
+			return nil, err
+		}
+		repositories = append(repositories, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return repositories, nil
 }
 
 func fetchAllRepositories(ctx context.Context, client *github.Client, organization string, opt *github.RepositoryListByOrgOptions) ([]*github.Repository, error) {

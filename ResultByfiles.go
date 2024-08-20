@@ -55,7 +55,6 @@ func main() {
 	spin.Color("green", "bold")
 	spin.Start()
 
-
 	// Browse files and process those that start with "Result_"
 	for _, file := range files {
 		if !file.IsDir() && strings.HasPrefix(file.Name(), "Result_") {
@@ -98,7 +97,6 @@ func main() {
 	spin.Suffix = " Created Global report File..."
 	spin.Color("green", "bold")
 	spin.Start()
-	
 
 	// Generate the full HTML report
 	completeReportHTML := generateCompleteReportHTML(allReportsHTML)
@@ -220,25 +218,23 @@ func convertHTMLToPDF(inputPath, outputPath string) error {
 			wkhtmlPath = "Tools/linux/amd64/wkhtmltopdf"
 		} else if archType == "arm64" {
 			wkhtmlPath = "Tools/linux/arm64/wkhtmltopdf"
-			
-			libPath := filepath.Join("Tools", "linux", "arm64", "lib")
 
+			libPath := filepath.Join("Tools", "linux", "arm64", "lib")
 
 			// Get the old LD_LIBRARY_PATH
 			oldLDLibraryPath := os.Getenv("LD_LIBRARY_PATH")
 
 			newLDLibraryPath := libPath
-    		if oldLDLibraryPath != "" {
-       			 newLDLibraryPath = libPath + ":" + oldLDLibraryPath
-   			 }
+			if oldLDLibraryPath != "" {
+				newLDLibraryPath = libPath + ":" + oldLDLibraryPath
+			}
 
-			 fmt.Println("LD_LIBRARY_PATH", newLDLibraryPath)
 			// Sets LD_LIBRARY_PATH
 			err := os.Setenv("LD_LIBRARY_PATH", newLDLibraryPath)
 			if err != nil {
 				return fmt.Errorf("❌ could not set LD_LIBRARY_PATH: %v", err)
 			}
-		
+
 			// Sets LD_PRELOAD to load specific libraries first (optional)
 			err = os.Setenv("LD_PRELOAD", filepath.Join(libPath, "libssl.so.1.1")+":"+filepath.Join(libPath, "libcrypto.so.1.1"))
 			if err != nil {
@@ -271,8 +267,6 @@ func convertHTMLToPDF(inputPath, outputPath string) error {
 	if _, err := os.Stat(absWkhtmlPath); os.IsNotExist(err) {
 		return fmt.Errorf("❌ wkhtmltopdf binary not found at %s", absWkhtmlPath)
 	}
-
-	
 
 	// Set Path for wkhtmltopdf binary
 	err = os.Setenv("WKHTMLTOPDF_PATH", absWkhtmlPath)

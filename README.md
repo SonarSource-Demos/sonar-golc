@@ -116,7 +116,8 @@ Scala              | .scala                                   | //              
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       "BitBucket": {
         "Users": "xxxxxxxxxxxxxx",
@@ -140,7 +141,8 @@ Scala              | .scala                                   | //              
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       
       "Github": {
@@ -187,7 +189,8 @@ Scala              | .scala                                   | //              
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
 
       },
       "Azure": {
@@ -211,7 +214,8 @@ Scala              | .scala                                   | //              
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       "File": {
         "Organization": "xxxxxxxxx",
@@ -299,13 +303,15 @@ PROJECT_KEY
 
 ❗️ The parameters **'Multithreading'** and **'Workers'** initialize whether multithreading is enabled or not, allowing parallel analysis. You can disable it by setting **'Multithreading'** to **false**. **'Workers'** corresponds to the number of concurrent analyses.These parameters can be adjusted according to the performance of the compute running GoLC.
 
-❗️ The boolean parameters **DefaultBranch**, if set to true, specifies that only the default branch of each repository should be analyzed. If set to false, it will analyze all branches of each repository to determine the most important one.
+❗️ The boolean parameter **DefaultBranch**, if set to true, specifies that only the default branch of each repository should be analyzed. If set to false, it will analyze all branches of each repository to determine the most important one.
 
 ❗️ Exclude extensions
 If you want to exclude files by their extensions, use the parameter **'ExtExclusion'**. For example, if you want to exclude all CSS or JS files : 'ExtExclusion':[".css",".js"],
 
 ❗️ Results By File
 If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
+
+❗️ The boolean parameter **Org**, if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The **Organization** parameter should be set to your personal account. This functionality is available for GitHub.
 
  ✅ Run GoLC
 

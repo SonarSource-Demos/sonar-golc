@@ -21,7 +21,8 @@
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       "BitBucket": {
         "Users": "XXXXX",
@@ -45,7 +46,8 @@
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       
       "Github": {
@@ -69,7 +71,8 @@
         "Stats": false,
         "Workers": 50 ,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
 
       "Gitlab": {
@@ -93,7 +96,8 @@
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       "Azure": {
         "Users": "XXXXX",
@@ -116,7 +120,8 @@
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "Org":true
       },
       "File": {
         "Organization": "XXXXX",
