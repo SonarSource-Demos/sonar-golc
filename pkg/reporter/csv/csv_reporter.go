@@ -76,7 +76,7 @@ func (c CsvReporter) GenerateReportByFile(summary *sorter.SortedSummary) error {
 	}
 
 	for _, r := range summary.Results {
-		cleanedName := utils.cleanFileName(r.Name)
+		cleanedName := utils.CleanFileName(r.Name)
 		csvReport.Results = append(csvReport.Results.([]fileResult), fileResult{
 			File:       cleanedName,
 			Lines:      r.Lines,

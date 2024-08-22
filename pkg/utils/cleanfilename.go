@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func cleanFileName(originalName string) string {
+func CleanFileName(originalName string) string {
 	index := strings.Index(originalName, "gcloc-extract")
 	if index != -1 {
 
