@@ -10,6 +10,7 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/gogit"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc/language"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter/csv"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter/json"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/reporter/prompt"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/scanner"
@@ -65,9 +66,9 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 
 		lastPart := filepath.Base(path)
 		if lastPart != "" {
-			
+
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
-			
+
 			//fmt.Println("OutputName:", params.OutputName)
 		} else {
 			//fmt.Println("OutputName:", path)
@@ -217,6 +218,10 @@ func getReporters(reportFormats []string, outputName, outputPath string) []repor
 			reporters = append(reporters, prompt.PromptReporter{})
 		case "json":
 			reporters = append(reporters, json.JsonReporter{
+				OutputName: outputName,
+				OutputPath: outputPath,
+			})
+			reporters = append(reporters, csv.CsvReporter{
 				OutputName: outputName,
 				OutputPath: outputPath,
 			})
