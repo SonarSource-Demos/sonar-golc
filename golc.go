@@ -210,22 +210,61 @@ func createBackup(sourceDir, pwd string) error {
 		return err
 	}
 
-	backupFile, err := os.Create(backupFilePath)
-	if err != nil {
-		return fmt.Errorf("error creating backup file: %s", err)
-	}
-	defer backupFile.Close()
-
-	zipWriter := zip.NewWriter(backupFile)
-	defer zipWriter.Close()
-
-	if err := addFilesToBackup(sourceDir, zipWriter); err != nil {
+	if err := ZipDirectory(sourceDir, backupFilePath); err != nil {
 		return err
 	}
 
-	//fmt.Println("✅ Backup created successfully:", backupFilePath)
-	logger.Infof("✅ Backup created successfully:", backupFilePath)
+	logger.Infof("✅ Backup created successfully:%s", backupFilePath)
 	return nil
+}
+
+func ZipDirectory(source string, target string) error {
+	// Création du fichier zip
+	zipFile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	// Création d'un nouvel archive zip
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	// Parcours du répertoire source
+	return filepath.Walk(source, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// On construit le chemin relatif pour le zip
+		relativePath, err := filepath.Rel(filepath.Dir(source), file)
+		if err != nil {
+			return err
+		}
+
+		if fi.IsDir() {
+			// Ajouter le répertoire au zip
+			_, err := zipWriter.Create(relativePath + "/")
+			return err
+		}
+
+		// Ouvrir le fichier à zipper
+		fileToZip, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer fileToZip.Close()
+
+		// Créer une entrée dans le zip
+		writer, err := zipWriter.Create(relativePath)
+		if err != nil {
+			return err
+		}
+
+		// Copier le contenu du fichier dans l'entrée zip
+		_, err = io.Copy(writer, fileToZip)
+		return err
+	})
 }
 
 // Generate Backup File Name
@@ -347,7 +386,7 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for Bitbucket DC
@@ -363,7 +402,7 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for GitHub
@@ -379,7 +418,7 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for GitLab
@@ -396,7 +435,7 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 func analyseAzurebRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
@@ -411,11 +450,11 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Perform repository analysis (common logic)
-func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, ResultByFile bool) {
+func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, ResultByFile bool, ResultAll bool) {
 	var outputFileName = ""
 	if len(params.Namespace) > 0 {
 		outputFileName = fmt.Sprintf("Result_%s_%s", params.Namespace, params.MainBranch)
@@ -425,6 +464,7 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 	golocParams := goloc.Params{
 		Path:              params.PathToScan,
 		ByFile:            ResultByFile,
+		ByAll:             ResultAll,
 		ExcludePaths:      []string{},
 		ExcludeExtensions: excludeExtension,
 		IncludeExtensions: []string{},
@@ -439,6 +479,11 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 		OutputPath:        DestinationResult,
 		ReportFormats:     []string{"json"},
 		Branch:            params.MainBranch,
+		Cloned:            false,
+		Repopath:          "",
+	}
+	if ResultAll {
+		golocParams.ByFile = true
 	}
 	MessB := fmt.Sprintf("   Extracting files from repo : %s ", params.RepoSlug)
 	spin.Suffix = MessB
@@ -452,15 +497,57 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 		return
 	} else {
 
-		gc.Run()
-		*count++
+		//gc.Run()
+		//*count++
+
+		if ResultAll {
+
+			if err := gc.Run(); err != nil {
+				fmt.Print("\n")
+				logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
+				*count++
+				results <- 1
+				return
+			}
+
+			// Second call to Run with ByFile = false
+			golocParams.ByFile = false
+			golocParams.Cloned = true
+			golocParams.Repopath = gc.Repopath
+
+			gc, err = goloc.NewGCloc(golocParams, assets.Languages)
+			if err != nil {
+				fmt.Print("\n")
+				logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
+				*count++
+				results <- 1
+				return
+			}
+
+			if err := gc.Run(); err != nil {
+				fmt.Print("\n")
+				logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
+				*count++
+				results <- 1
+				return
+			}
+		} else {
+			// If ByAll = false, just run normally
+			if err := gc.Run(); err != nil {
+				fmt.Print("\n")
+				logger.Errorf("❌ Error during analysis: %v", err)
+				*count++
+				results <- 1
+				return
+			}
+		}
 
 		// Remove Repository Directory
 		err1 := os.RemoveAll(gc.Repopath)
 		if err1 != nil {
 			logger.Errorf(errorMessageDi, err1)
 		}
-
+		golocParams.Cloned = false
 		spin.Stop()
 		logger.Infof("\r\t\t\t\t✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
 		// Send result through channel
@@ -529,7 +616,7 @@ func AnalyseReposListAzure(DestinationResult string, platformConfig map[string]i
 
 /* ---------------- Analyse Directory ---------------- */
 
-func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, ResultByFile bool) {
+func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, ResultByFile bool, ResultAll bool) {
 
 	type Configuration struct {
 		ExcludeExtensions []string
@@ -558,6 +645,7 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 			params := goloc.Params{
 				Path:              dir,
 				ByFile:            ResultByFile,
+				ByAll:             ResultAll,
 				ExcludePaths:      fileexclusionEX,
 				ExcludeExtensions: extexclusion,
 				IncludeExtensions: []string{},
@@ -573,18 +661,56 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 				ReportFormats:     []string{"json"},
 				Branch:            "",
 				Token:             "",
+				Cloned:            false,
+				Repopath:          "",
 			}
 
 			gc, err := goloc.NewGCloc(params, assets.Languages)
 			if err != nil {
-				//fmt.Println(errorMessageRepo, err)
 				logger.Errorf(errorMessageRepo, err)
 				return
+			} else {
+
+				if ResultAll {
+
+					if err := gc.Run(); err != nil {
+						fmt.Print("\n")
+						logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
+
+						return
+					}
+
+					// Second call to Run with ByFile = false
+					params.ByFile = true
+
+					params.Cloned = false
+					params.Repopath = gc.Repopath
+
+					gc, err = goloc.NewGCloc(params, assets.Languages)
+					if err != nil {
+						fmt.Print("\n")
+						logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
+						return
+					}
+
+					if err := gc.Run(); err != nil {
+						fmt.Print("\n")
+						logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
+						return
+					}
+				} else {
+					// If ByAll = false, just run normally
+					if err := gc.Run(); err != nil {
+						fmt.Print("\n")
+						logger.Errorf("❌ Error during analysis: %v", err)
+						return
+					}
+				}
+
 			}
 
-			gc.Run()
+			//gc.Run()
 			spin.Stop()
-			//	fmt.Printf("\r\t✅ %d The directory <%s> has been analyzed\n", count, dir)
 			logger.Infof("\t✅ %d The directory <%s> has been analyzed\n", count, dir)
 			count++
 		}(Listdirectories)
@@ -615,6 +741,7 @@ func AnalyseRepo(DestinationResult string, Users string, AccessToken string, Dev
 	params := goloc.Params{
 		Path:              pathToScan,
 		ByFile:            false,
+		ByAll:             false,
 		ExcludePaths:      []string{},
 		ExcludeExtensions: []string{},
 		IncludeExtensions: []string{},
@@ -628,6 +755,10 @@ func AnalyseRepo(DestinationResult string, Users string, AccessToken string, Dev
 		OutputName:        outputFileName,
 		OutputPath:        DestinationResult,
 		ReportFormats:     []string{"json"},
+		Branch:            "",
+		Token:             "",
+		Cloned:            true,
+		Repopath:          "",
 	}
 	gc, err := goloc.NewGCloc(params, assets.Languages)
 	if err != nil {
@@ -730,7 +861,7 @@ func main() {
 	var ListDirectory []string
 	var ListExclusion []string
 	var message0, message1, message2, message3, message4, message5 string
-	var version = "1.0.3"
+	var version = "1.0.6"
 
 	// Test command line Flags
 
@@ -825,6 +956,30 @@ func main() {
 				}
 				ConfigDirectory := DestinationResult + directoryconf
 				if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportByFile := DestinationResult + "/byfile-report"
+				if err := os.MkdirAll(ReportByFile, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportByLG := DestinationResult + "/bylanguage-report"
+				if err := os.MkdirAll(ReportByLG, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportCSV := DestinationResult + "/byfile-report/csv-report"
+				if err := os.MkdirAll(ReportCSV, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportPDF := DestinationResult + "/byfile-report/pdf-report"
+				if err := os.MkdirAll(ReportPDF, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportCSV1 := DestinationResult + "/bylanguage-report/csv-report"
+				if err := os.MkdirAll(ReportCSV1, os.ModePerm); err != nil {
+					panic(err)
+				}
+				ReportPDF2 := DestinationResult + "/bylanguage-report/pdf-report"
+				if err := os.MkdirAll(ReportPDF2, os.ModePerm); err != nil {
 					panic(err)
 				}
 			} else {
@@ -1022,7 +1177,7 @@ func main() {
 			}
 		}
 		startTime = time.Now()
-		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions,platformConfig["ResultByFile"].(bool))
+		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 	}
 
 	/*---------------------------------- End Select type of DevOps Platform ----------------------------------------------------*/
@@ -1036,6 +1191,17 @@ func main() {
 	spin.Suffix = " Analyse Report..."
 	spin.Color("green", "bold")
 	spin.Start()
+
+	if platformConfig["ResultAll"].(bool) {
+
+		DestinationResult = DestinationResult + "/bylanguage-report/"
+	} else if platformConfig["ResultByFile"].(bool) {
+
+		DestinationResult = DestinationResult + "/byfile-report/"
+	} else {
+
+		DestinationResult = DestinationResult + "/bylanguage-report/"
+	}
 
 	// List files in the directory
 	files, err := os.ReadDir(DestinationResult)
@@ -1125,8 +1291,15 @@ func main() {
 		logger.Errorf("❌ Error writing to file:%v", err)
 		return
 	}
-
 	spin.Stop()
+
+	// Denerated Global Report
+	err = utils.CreateGlobalReport(DestinationResult)
+	if err != nil {
+		log.Fatalf("❌ Error creating global report: %v", err)
+	}
+
+	fmt.Printf("\n")
 
 	endTime := time.Now()
 	duration := endTime.Sub(startTime)
@@ -1165,19 +1338,18 @@ func main() {
 	// Write message in Gobal Report File
 	_, err = file.WriteString(message5)
 	if err != nil {
-		logger.Errorf("❌ Error writing to file:", err)
+		logger.Errorf("❌ Error writing to file:%v", err)
 		return
 	}
 
-	if platformConfig["ResultByFile"].(bool) {
+	/*if platformConfig["ResultByFile"].(bool) {
 		logger.Infof(" ℹ️  To generate and visualize results on a web interface, follow these steps: ")
-	     logger.Infof("\t✅ run : ResultByfiles")
-	} else {
-		
-	
+		logger.Infof("\t✅ run : ResultByfiles")
+	} else {*/
+
 	logger.Infof(" ℹ️  To generate and visualize results on a web interface, follow these steps: ")
 	logger.Infof("\t✅ run : ResultsAll")
-	}
+	//}
 	//fmt.Println("\nℹ️  To generate and visualize results on a web interface, follow these steps: ")
 	//fmt.Println("\t✅ run : ResultsAll")
 

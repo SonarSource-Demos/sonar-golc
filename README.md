@@ -13,7 +13,6 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
 > This last version is ver1.0.6 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
-> For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the [**Tools**](https://github.com/SonarSource-Demos/sonar-golc/tree/ver1.0.6/Tools) directory.
 
 
 ---
@@ -117,6 +116,7 @@ Scala              | .scala                                   | //              
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       "BitBucket": {
@@ -142,6 +142,7 @@ Scala              | .scala                                   | //              
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       
@@ -166,7 +167,9 @@ Scala              | .scala                                   | //              
         "Stats": false,
         "Workers": 50,
         "NumberWorkerRepos":50,
-        "ResultByFile": false
+        "ResultByFile": false,
+        "ResultAll": true,
+        "Org":true
       },
       "Gitlab": {
         "Users": "xxxxxxxxxxxxxx",
@@ -190,6 +193,7 @@ Scala              | .scala                                   | //              
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
 
       },
@@ -215,6 +219,7 @@ Scala              | .scala                                   | //              
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       "File": {
@@ -224,7 +229,8 @@ Scala              | .scala                                   | //              
         "FileExclusion":".cloc_file_ignore",
         "ExtExclusion":[""],
         "FileLoad":".cloc_file_load",
-        "ResultByFile": false
+        "ResultByFile": false,
+        "ResultAll": true
 
       }
     }
@@ -310,6 +316,9 @@ If you want to exclude files by their extensions, use the parameter **'ExtExclus
 
 ❗️ Results By File
 If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
+
+❗️ Results All
+Results ALL is the default report format.It generates a report for by language and a report for by file. The variable to initialize this mode is **'ResultAll'**, which is set to true in the configuration file **config.json.**"
 
 ❗️ The boolean parameter **Org**, if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The **Organization** parameter should be set to your personal account. This functionality is available for GitHub.
 
@@ -430,22 +439,37 @@ PS C:\Users\ecadmin\sonar-golc>
 ```
 
 
-✅ Run Report
+✅ Reports
 
-To generate a comprehensive PDF report and view the results on a web interface, you need to launch the '**ResultsAll**' program.If you want a global PDF report by file, you need to run the '**ResultByfiles**' program.
+The report files are created in PDF, JSON, and CSV formats for the report by files.
+
+```bash
+Results
+├── Byfile-report
+│   ├── csv-report
+│   │   └── Result……_byfile.csv
+│   ├── pdf-report
+│   │   └── Result……_byfile.pdf
+│   └── Result……_byfile.json
+└── Bylanguage-report
+│   ├── csv-report
+│   ├── pdf-report
+│   └── Result……_.json
+├── GlobalReport.json
+├── GlobalReport.pdf
+├── GlobalReport.txt
+```
 
 
-The '**ResultsAll**' program generates a 'GlobalReport.pdf' file in the 'Results' directory. It prompts you if you want to view the results on a web interface; it starts an HTTP service on the default port 8080. If this port is in use, you can choose another port.
+To view the results on a web interface, you need to launch the '**ResultsAll**' program.
+
+The '**ResultsAll**' program prompts you if you want to view the results on a web interface.It starts an HTTP service on the default port 8080. If this port is in use, you can choose another port.
 To stop the local HTTP service, press the Ctrl+C keys
-
-❗️For generating global PDF reports file by file, we will use the [wkhtmltopdf](https://wkhtmltopdf.org/index.html) tool, which will be embedded in the application. The binaries for each platform and operating system can be found in the [**Tools**](https://github.com/SonarSource-Demos/sonar-golc/tree/ver1.0.6/Tools) directory.
 
 
 ```bash
 $:> ./ResultsAll
 
-✅ Results analysis recorded in Results/code_lines_by_language.json
-✅ PDF generated successfully!
 Would you like to launch web visualization? (Y/N)
 ✅ Launching web visualization...
 ❗️ Port 8080 is already in use.
@@ -455,14 +479,7 @@ Would you like to launch web visualization? (Y/N)
 $:> 
 ```
 
-```bash
-$:> ./ResultsByfiles
-
-✅ Results analysis recorded in : Results/reports
-
-✅ Result analysis recorded in : Results/reports/complete_report.pdf & Results/reports/complete_report.html 
-$:> 
-```
+From the web interface, you have the option to download the report files in ZIP format.
 
 ✅  Web UI
 
@@ -489,7 +506,6 @@ There are two types of docker images: one for amd64 and one for arm64.The tags a
  ```bash
 :> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.6
 :> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.6
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultbyfile:arm64-1.0.6
 ```
 
 ✅ Create volumes to persist data or map a local directory
@@ -547,25 +563,10 @@ Running in Docker mode
 :> docker run --rm -p 8090:8090 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.6
 
 
-✅ Results analysis recorded in Results/code_lines_by_language.json
-✅ PDF generated successfully!
 ✅ Launching web visualization...
 ✅ Server started on http://localhost:8090
 ✅ please type < Ctrl+C> to stop the server
 ```
-
-For the by file report, you need to use the **resultbyfile** container.
-You need to map the volume previously used for the analysis
-
-```
-:> docker  run --rm -v /custom_Results_volume::/app/Results resultbyfile:arm64-1.0.6
-
-✅ Results analysis recorded in : Results/reports
-
-✅ Result analysis recorded in /custom_Results_volume/reports/complete_report.pdf & /custom_Results_volume/reports/complete_report.html
-```
-
-
 
 
 ## Execution Log

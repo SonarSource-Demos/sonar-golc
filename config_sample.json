@@ -22,6 +22,7 @@
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       "BitBucket": {
@@ -47,6 +48,7 @@
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       
@@ -72,6 +74,7 @@
         "Workers": 50 ,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
 
@@ -97,6 +100,7 @@
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       "Azure": {
@@ -121,6 +125,7 @@
         "Workers": 50,
         "NumberWorkerRepos":50,
         "ResultByFile": false,
+        "ResultAll": true,
         "Org":true
       },
       "File": {
@@ -130,7 +135,8 @@
         "FileExclusion":".cloc_file_ignore",
         "ExtExclusion":[""],
         "FileLoad":".cloc_file_load",
-        "ResultByFile": false
+        "ResultByFile": false,
+        "ResultAll": true
 
       }
     },

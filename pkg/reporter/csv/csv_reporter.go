@@ -96,7 +96,7 @@ func (c CsvReporter) writeCsv(csvReport *report) error {
 		outputName += ".csv"
 	}
 
-	path := filepath.Join(c.OutputPath, outputName)
+	path := filepath.Join(c.OutputPath+"/", outputName)
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -108,14 +108,6 @@ func (c CsvReporter) writeCsv(csvReport *report) error {
 
 	// Write header
 	writer.Write([]string{"File", "Lines", "Blank Lines", "Comments", "Code Lines"})
-	/*	writer.Write([]string{"Total Files", "Total Lines", "Total Blank Lines", "Total Comments", "Total Code Lines"})
-		writer.Write([]string{
-			strconv.Itoa(csvReport.TotalFiles),
-			strconv.Itoa(csvReport.TotalLines),
-			strconv.Itoa(csvReport.TotalBlankLines),
-			strconv.Itoa(csvReport.TotalComments),
-			strconv.Itoa(csvReport.TotalCodeLines),
-		})*/
 
 	// Write results
 	switch results := csvReport.Results.(type) {
@@ -146,6 +138,6 @@ func (c CsvReporter) writeCsv(csvReport *report) error {
 		return nil
 	}
 
-	loggers.Infof("\r\t✅ CSV report exported to %s", path)
+	loggers.Infof("\t✅ CSV report exported to %s", path)
 	return nil
 }

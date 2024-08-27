@@ -1,10 +1,12 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -13,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
-	"github.com/jung-kurt/gofpdf"
 )
 
 type Globalinfo struct {
@@ -37,33 +38,10 @@ type PageData struct {
 	GlobalReport Globalinfo
 }
 
-type FileData struct {
-	Results []LanguageData1 `json:"Results"`
-}
-
-type LanguageData1 struct {
-	Language  string `json:"Language"`
-	CodeLines int    `json:"CodeLines"`
-}
-
 func startServer(port int) {
 	fmt.Printf("✅ Server started on http://localhost:%d\n", port)
 	fmt.Println("✅ please type < Ctrl+C> to stop the server")
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-}
-
-func formatCodeLines(numLines float64) string {
-	if numLines >= 1000000 {
-		return fmt.Sprintf("%.2fM", numLines/1000000)
-	} else if numLines >= 1000 {
-		return fmt.Sprintf("%.2fK", numLines/1000)
-	} else {
-		return fmt.Sprintf("%.0f", numLines)
-	}
-}
-
-func (l *LanguageData) FormatCodeLines() {
-	l.CodeLinesF = utils.FormatCodeLines(float64(l.CodeLines))
 }
 
 func isPortOpen(port int) bool {
@@ -76,181 +54,140 @@ func isPortOpen(port int) bool {
 	return true
 }
 
-func main() {
-	var pageData PageData
-	directory := "Results"
-	var unit string = "%"
+func ZipDirectory(source string, target string) error {
+	// Création du fichier zip
+	zipFile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
 
-	ligneDeCodeParLangage := make(map[string]int)
+	// Création d'un nouvel archive zip
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
 
-	/*--------------------------------------------------------------------------------*/
-	// Results/code_lines_by_language.json file generation
-
-	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+	// Parcours du répertoire source
+	return filepath.Walk(source, func(file string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// If the file is not a directory and its name starts with "Result_", then
-		if !info.IsDir() && strings.HasPrefix(info.Name(), "Result_") {
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			if filepath.Ext(path) == ".json" {
-				// Reading the JSON file
-				fileData, err := os.ReadFile(path)
-				if err != nil {
-					return err
-				}
-
-				// JSON data decoding
-				var data FileData
-				err = json.Unmarshal(fileData, &data)
-				if err != nil {
-					return err
-				}
-
-				// Browse results for each file
-				for _, result := range data.Results {
-					language := result.Language
-					codeLines := result.CodeLines
-					ligneDeCodeParLangage[language] += codeLines
-				}
-			}
+		// On construit le chemin relatif pour le zip
+		relativePath, err := filepath.Rel(filepath.Dir(source), file)
+		if err != nil {
+			return err
 		}
-		return nil
+
+		if fi.IsDir() {
+			// Ajouter le répertoire au zip
+			_, err := zipWriter.Create(relativePath + "/")
+			return err
+		}
+
+		// Ouvrir le fichier à zipper
+		fileToZip, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer fileToZip.Close()
+
+		// Créer une entrée dans le zip
+		writer, err := zipWriter.Create(relativePath)
+		if err != nil {
+			return err
+		}
+
+		// Copier le contenu du fichier dans l'entrée zip
+		_, err = io.Copy(writer, fileToZip)
+		return err
 	})
+}
+
+func zipResults(w http.ResponseWriter, r *http.Request) {
+	resultsDir := "./Results"
+	target := "Results.zip"
+
+	err := ZipDirectory(resultsDir, target)
 	if err != nil {
-		fmt.Println("❌ Error reading files :", err)
+		http.Error(w, "error creating zip file", http.StatusInternalServerError)
+	}
+
+	// Configurer les en-têtes pour le téléchargement
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=Results.zip")
+
+	http.ServeFile(w, r, "Results.zip")
+}
+
+func main() {
+	var pageData PageData
+	//var unit string = "%"
+
+	// Map to hold lines of code by language
+	ligneDeCodeParLangage := make(map[string]int)
+
+	// Reading data from the code_lines_by_language.json file
+	inputFileData, err := os.ReadFile("Results/code_lines_by_language.json")
+	if err != nil {
+		fmt.Println("❌ Error reading code_lines_by_language.json file", err)
 		return
 	}
 
-	// Create output structure
-	var resultats []LanguageData1
+	var results []LanguageData
+	err = json.Unmarshal(inputFileData, &results)
+	if err != nil {
+		fmt.Println("❌ Error decoding JSON code_lines_by_language.json file", err)
+		return
+	}
+
+	// Summarize results by language
+	for _, result := range results {
+		language := result.Language
+		codeLines := result.CodeLines
+		ligneDeCodeParLangage[language] += codeLines
+	}
+
+	// Prepare the data for the HTML template
+	var languages []LanguageData
+	totalLines := 0
 	for lang, total := range ligneDeCodeParLangage {
-		resultats = append(resultats, LanguageData1{
-			Language:  lang,
-			CodeLines: total,
+		totalLines += total
+		languages = append(languages, LanguageData{
+			Language:   lang,
+			CodeLines:  total,
+			CodeLinesF: utils.FormatCodeLines(float64(total)),
 		})
 	}
-	// Writing results to a JSON file
-	outputData, err := json.MarshalIndent(resultats, "", "  ")
-	if err != nil {
-		fmt.Println("❌ Error creating output JSON file :", err)
-		return
-	}
-	outputFile := "Results/code_lines_by_language.json"
-	err = os.WriteFile(outputFile, outputData, 0644)
-	if err != nil {
-		fmt.Println("❌ Error writing to output JSON file :", err)
-		return
-	}
 
-	fmt.Println("✅ Results analysis recorded in", outputFile)
-
-	/*--------------------------------------------------------------------------------*/
+	// Calculate percentages
+	for i := range languages {
+		languages[i].Percentage = float64(languages[i].CodeLines) / float64(totalLines) * 100
+	}
 
 	// Reading data from the GlobalReport JSON file
 	data0, err := os.ReadFile("Results/GlobalReport.json")
 	if err != nil {
-		fmt.Println("❌ Error reading GlobalReport.json file", http.StatusInternalServerError)
+		fmt.Println("❌ Error reading GlobalReport.json file", err)
 		return
 	}
 
 	// JSON data decoding
 	var Ginfo Globalinfo
-
 	err = json.Unmarshal(data0, &Ginfo)
 	if err != nil {
-		fmt.Println("❌ Error decoding JSON GlobalReport.json file", http.StatusInternalServerError)
+		fmt.Println("❌ Error decoding JSON GlobalReport.json file", err)
 		return
 	}
-	Org := "Organization : " + Ginfo.Organization
-	Tloc := "Total lines Of code : " + Ginfo.TotalLinesOfCode
-	Lrepos := "Largest Repository : " + Ginfo.LargestRepository
-	Lrepoloc := "Lines of code largest Repository : " + Ginfo.LinesOfCodeLargestRepo
-	NBrepos := fmt.Sprintf("Number of Repositories analyzed : %d", Ginfo.NumberRepos)
-
-	// JSON data decoding
-	var languages []LanguageData
-	err = json.Unmarshal(outputData, &languages)
-	if err != nil {
-		fmt.Println("❌ Error decoding JSON data", http.StatusInternalServerError)
-		return
-	}
-
-	// Create a PDF
-
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.AddPage()
-
-	pdf.Image("imgs/bg2.jpg", 0, 0, 210, 297, false, "", 0, "")
-	logoPath := "imgs/Logo.png"
-	hasMoreContent := true
-
-	pdf.Image(logoPath, 10, 10, 50, 0, false, "", 0, "")
-	pdf.Ln(10)
-	pdf.Ln(10)
-	pdf.Ln(10)
-
-	pdf.SetFont("Arial", "B", 16)
-	pdf.SetTextColor(255, 255, 255)
-	pdf.Cell(0, 10, "Results")
-	pdf.Ln(10)
-
-	pdf.SetFont("Arial", "B", 12)
-	pdf.SetFillColor(51, 153, 255)
-	pdf.CellFormat(100, 10, Org, "0", 1, "", true, 0, "")
-	pdf.SetFont("Arial", "", 10)
-	pdf.SetFillColor(102, 178, 255)
-	pdf.CellFormat(100, 10, Tloc, "0", 1, "", true, 0, "")
-	pdf.CellFormat(100, 10, Lrepos, "0", 1, "", true, 0, "")
-	pdf.CellFormat(100, 10, Lrepoloc, "0", 1, "", true, 0, "")
-	pdf.CellFormat(100, 10, NBrepos, "0", 1, "", true, 0, "")
-	pdf.Ln(10)
-
-	for hasMoreContent {
-
-		pdf.AddPage()
-		pdf.ImageOptions("imgs/bg2.jpg", 0, 0, 210, 297, false, gofpdf.ImageOptions{ReadDpi: true}, 0, "")
-		logoPath := "imgs/Logo.png"
-		pdf.Image(logoPath, 10, 10, 50, 0, false, "", 0, "")
-		pdf.Ln(10)
-		pdf.Ln(10)
-
-		pdf.SetFont("Arial", "B", 12)
-		pdf.SetFillColor(51, 153, 255)
-		pdf.CellFormat(100, 10, "Languages :", "0", 1, "", true, 0, "")
-		pdf.SetFont("Arial", "", 10)
-		pdf.SetFillColor(102, 178, 255)
-
-		hasMoreContent = false
-	}
-	// Calculating percentages
-	total := 0
-	for _, lang := range languages {
-		total += lang.CodeLines
-	}
-	for i := range languages {
-		languages[i].Percentage = float64(languages[i].CodeLines) / float64(total) * 100
-		languages[i].FormatCodeLines()
-		pdflang := fmt.Sprintf("%s : %.2f %s - %s LOC", languages[i].Language, languages[i].Percentage, unit, languages[i].CodeLinesF)
-		pdf.CellFormat(100, 10, pdflang, "0", 1, "", true, 0, "")
-	}
-
-	// Load HTML template
-	tmpl := template.Must(template.New("index").Parse(htmlTemplate))
 
 	pageData = PageData{
 		Languages:    languages,
 		GlobalReport: Ginfo,
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// Load HTML template
+	tmpl := template.Must(template.New("index").Parse(htmlTemplate))
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Run Template
 		err = tmpl.Execute(w, pageData)
 		if err != nil {
@@ -258,16 +195,13 @@ func main() {
 			return
 		}
 	})
-
-	// Create a PDF
-
-	err = pdf.OutputFileAndClose("Results/GlobalReport.pdf")
-	if err != nil {
-		fmt.Println("❌ Error saving PDF file:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("✅ PDF generated successfully!")
+	http.HandleFunc("/download", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			zipResults(w, r)
+			return
+		}
+		http.Error(w, "❌ Method not allowed", http.StatusMethodNotAllowed)
+	})
 
 	fmt.Println("Would you like to launch web visualization? (Y/N)")
 	var launchWeb string
@@ -275,11 +209,9 @@ func main() {
 
 	if launchWeb == "Y" || launchWeb == "y" {
 		fmt.Println("✅ Launching web visualization...")
-
-		// Start HTTP server
-
 		http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("dist"))))
 
+		// Start the server
 		if isPortOpen(8080) {
 			fmt.Println("❗️ Port 8080 is already in use.")
 			reader := bufio.NewReader(os.Stdin)
@@ -296,50 +228,15 @@ func main() {
 				fmt.Printf("❌ Port %d is already in use...\n", port)
 				os.Exit(1)
 			} else {
-
 				startServer(port)
 			}
-
 		} else {
-
-			fmt.Print("❗️ Do you want to use the default port 8080? (Y/n):")
-			reader := bufio.NewReader(os.Stdin)
-			answer, _ := reader.ReadString('\n')
-			answer = strings.TrimSpace(answer)
-
-			if strings.ToLower(answer) == "n" {
-
-				fmt.Print("✅ Please enter the port you wish to use : ")
-				portStr, _ := reader.ReadString('\n')
-				portStr = strings.TrimSpace(portStr)
-				port, err := strconv.Atoi(portStr)
-				if err != nil {
-					fmt.Println("❌ Invalid port. Use of default port 8080...")
-					port = 8080
-					startServer(port)
-				} else {
-					if isPortOpen(port) {
-						fmt.Printf("❌ Port %d is already in use...\n", port)
-						os.Exit(1)
-					} else {
-
-						startServer(port)
-					}
-				}
-
-			} else {
-
-				startServer(8080)
-			}
+			startServer(8080)
 		}
-
 	} else {
-
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
-	//select {}
-
 }
 
 // HTML template
@@ -356,8 +253,9 @@ const htmlTemplate = `
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&amp;display=swap" rel="stylesheet">
     <link href="/dist/css/theme.min.css" rel="stylesheet" type="text/css" />
     <link href="/dist/vendors/fontawesome/css/all.min.css" rel="stylesheet" type="text/css" />
+   
     
-  </head>
+  
     <style>
        
         .chart-container {
@@ -369,17 +267,24 @@ const htmlTemplate = `
         }
       
     </style>
+   
     <script src="/dist/vendors/chartjs/chart.js"></script>
 </head>
 <body>
 <main class="main" id="top">
       <nav class="navbar navbar-expand-lg fixed-top navbar-dark" data-navbar-on-scroll="data-navbar-on-scroll">
-        <div class="container"><a class="navbar-brand" href="index.html"><img src="dist/img/Logo.png" alt="" /></a>
-         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
-            </ul>
-          </div>
-        </div>
+       <div class="container">
+                <a class="navbar-brand" href="index.html"><img src="dist/img/Logo.png" alt="" /></a>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link btn-primary" onclick="window.location.href='/download'" target="downloads" title="Download Results Files">Download Results</button>
+                        </li>
+                       
+                    </ul>
+                </div>
+            </div>
+       
       </nav>
       <div class="bg-dark"><img class="img-fluid position-absolute end-0" src="dist/img/bg.png" alt="" />
   
