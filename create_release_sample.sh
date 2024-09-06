@@ -16,7 +16,9 @@ Added the ability to generate both reports (by language and by file) at the same
 Added REST API, available when web report start.\n\
 Added support for analyzing user (non-organization) repositories for GitHub. The boolean parameter Org (in config.json), if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The Organization parameter should be set to your personal account.\n\
 Correction for extracting the package from the command line into the golc_version_os_platform directory.\n\
-Correct issue Docker ReportsAll."
+Correct issue Docker ReportsAll.\n\
+Added Exclude directories\n\
+Added Test Release version"
 
 CMD=`PWD`
 
@@ -72,6 +74,22 @@ upload_asset() {
     -H "Content-Type: application/zip" \
     --data-binary @"$file_path"
   echo "File uploaded to release successfully."
+}
+
+
+# Function update description
+update_release_description() {
+  local release_id="$1"
+  local new_body="$2"
+
+  echo "Updated release description..."
+  curl -s -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Content-Type: application/json" \
+    "https://api.github.com/repos/$GITHUB_ORG/$GITHUB_REPO/releases/$release_id" -d "{
+      \"body\": \"$new_body\"
+    }"
+  
+  echo "Description updated."
 }
 
 #----------------------- Begin Build --------------------------------#
@@ -207,6 +225,9 @@ fi
 # Retrieve the upload URL and release ID
 UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | jq -r '.upload_url' | sed "s/{?name,label}//")
 RELEASE_ID=$(echo "$RELEASE_RESPONSE" | jq -r '.id')
+
+# Description update
+update_release_description "$RELEASE_ID" "$RELEASE_DESCRIPTION"
 
 # Retrieve the list of files from the release
 ASSETS_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
