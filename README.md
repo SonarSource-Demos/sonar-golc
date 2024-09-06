@@ -108,7 +108,8 @@ Scala              | .scala                                   | //              
         "Baseapi": "rest/api/",
         "Protocol": "http",
         "FileExclusion":".cloc_bitbucketdc_ignore",
-        "ExtExclusion":[""],
+       "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -134,7 +135,8 @@ Scala              | .scala                                   | //              
         "Baseapi": "bitbucket.org",
         "Protocol": "http",
         "FileExclusion":".cloc_bitbucket_ignore",
-        "ExtExclusion":[""],
+        "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -160,7 +162,8 @@ Scala              | .scala                                   | //              
         "Baseapi": "github.com",
         "Protocol": "https",
         "FileExclusion":".cloc_github_ignore",
-        "ExtExclusion":[""],
+        "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -185,7 +188,8 @@ Scala              | .scala                                   | //              
         "Baseapi": "api/",
         "Protocol": "https",
         "FileExclusion":".cloc_gitlab_ignore",
-        "ExtExclusion":[""],
+        "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -211,7 +215,8 @@ Scala              | .scala                                   | //              
         "Baseapi": "_apis/git/",
         "Protocol": "https",
         "FileExclusion":".cloc_azure_ignore",
-        "ExtExclusion":[""],
+        "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -311,16 +316,20 @@ PROJECT_KEY
 
 ❗️ The boolean parameter **DefaultBranch**, if set to true, specifies that only the default branch of each repository should be analyzed. If set to false, it will analyze all branches of each repository to determine the most important one.
 
-❗️ Exclude extensions
+❗️ Exclude extensions.
 If you want to exclude files by their extensions, use the parameter **'ExtExclusion'**. For example, if you want to exclude all CSS or JS files : 'ExtExclusion':[".css",".js"],
 
-❗️ Results By File
+❗️ Results By File.
 If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
 
-❗️ Results All
+❗️ Results All.
 Results ALL is the default report format.It generates a report for by language and a report for by file. The variable to initialize this mode is **'ResultAll'**, which is set to true in the configuration file **config.json.**"
 
 ❗️ The boolean parameter **Org**, if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The **Organization** parameter should be set to your personal account. This functionality is available for GitHub.
+
+❗️ Exclude directories.
+To exclude directories from your repository from the analysis, initialize the variable **'ExcludePaths': ['']**. For example, to exclude two directories: **'ExcludePaths': ['test1', 'pkg/test2']**.
+
 
  ✅ Run GoLC
 

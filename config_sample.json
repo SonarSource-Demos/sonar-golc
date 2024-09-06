@@ -14,7 +14,8 @@
         "Baseapi": "rest/api/",
         "Protocol": "http",
         "FileExclusion":".cloc_bitbucketdc_ignore",
-        "ExtExclusion":[""],
+       "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-5,
         "Factor":33,
         "Multithreading":true,
@@ -40,7 +41,8 @@
         "Baseapi": "bitbucket.org",
         "Protocol": "https",
         "FileExclusion":".cloc_bitbucket_ignore",
-        "ExtExclusion":[""],
+        "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -66,7 +68,8 @@
         "Baseapi": "github.com",
         "Protocol": "https",
         "FileExclusion":".cloc_github_ignore",
-        "ExtExclusion":[""],
+       "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -92,7 +95,8 @@
         "Baseapi": "api/",
         "Protocol": "https",
         "FileExclusion":".cloc_gitlab_ignore",
-        "ExtExclusion":[""],
+       "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -117,7 +121,8 @@
         "Baseapi": "_apis/git/",
         "Protocol": "https",
         "FileExclusion":".cloc_azure_ignore",
-        "ExtExclusion":[""],
+       "ExtExclusion":[],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -142,6 +147,9 @@
     },
     "Logging": {
       "Level": "debug"
+    },
+    "Release":  {
+      "Version": "1.0.6"
     }
   }
   
