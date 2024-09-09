@@ -125,7 +125,7 @@ const directoryconf = "/config"
 var logFile *os.File
 var AppConfig Config
 var logger *logrus.Logger
-var version = "1.0.6"
+var version1 = "1.0.6"
 
 // Check Exclusion File Exist
 func getFileNameIfExists(filePath string) string {
@@ -861,8 +861,8 @@ func init() {
 		os.Exit(1)
 	}
 
-	if AppConfig.Release.Version != version {
-		logrus.Fatalf("\n❌ Version mismatch: expected %s but got %s - Use the correct config.json file !", version, AppConfig.Release.Version)
+	if AppConfig.Release.Version != version1 {
+		logrus.Fatalf("\n❌ Version mismatch: expected %s but got %s - Use the correct config.json file !", version1, AppConfig.Release.Version)
 		os.Exit(1)
 	}
 
@@ -922,7 +922,7 @@ func main() {
 	}
 
 	if *versionflag {
-		fmt.Printf("GoLC version: %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
+		fmt.Printf("GoLC version: %s %s/%s\n", version1, runtime.GOOS, runtime.GOARCH)
 		os.Exit(0)
 	}
 
