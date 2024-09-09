@@ -1,0 +1,17 @@
+FROM alpine:3.12 AS platform_linux_arm64
+
+
+RUN apk add --no-cache unzip && \
+apk add --no-cache curl && \
+apk add --no-cache bash && \
+apk add --no-cache git && \
+apk add --no-cache jq
+
+WORKDIR /usr/src/
+
+COPY test-linux.sh /usr/src/
+
+# Comment out the below line to keep the container running for debug purposes
+CMD [ "/bin/bash", "/usr/src/test-linux.sh" ] 
+# Uncomment the below line to keep the container running for debug purposes
+# CMD [ "tail", "-f", "/dev/null" ] 
