@@ -126,6 +126,19 @@ var logFile *os.File
 var AppConfig Config
 var logger *logrus.Logger
 var version1 = "1.0.6"
+<<<<<<< HEAD
+=======
+
+var directoriesToCreate = []string{
+	directoryconf,
+	"/byfile-report",
+	"/bylanguage-report",
+	"/byfile-report/csv-report",
+	"/byfile-report/pdf-report",
+	"/bylanguage-report/csv-report",
+	"/bylanguage-report/pdf-report",
+}
+>>>>>>> ver1.0.6
 
 // Check Exclusion File Exist
 func getFileNameIfExists(filePath string) string {
@@ -851,6 +864,15 @@ func displayLanguages() {
 	}
 }
 
+func createDirectories(basePath string, paths []string) {
+	for _, path := range paths {
+		fullPath := basePath + path
+		if err := os.MkdirAll(fullPath, os.ModePerm); err != nil {
+			panic(err)
+		}
+	}
+}
+
 func init() {
 
 	// Load Config file
@@ -951,11 +973,8 @@ func main() {
 
 	if *docker {
 		fmt.Println("Running in Docker mode")
-		ConfigDirectory := DestinationResult + directoryconf
-		if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
-			logger.Panic(err)
 
-		}
+		createDirectories(DestinationResult, directoriesToCreate)
 
 	} else {
 
@@ -973,7 +992,7 @@ func main() {
 				fmt.Scanln(&backupResponse)
 
 				if backupResponse == "y" || backupResponse == "Y" {
-					// Créer la sauvegarde ZIP
+					// Create ZIP backup
 					err := createBackup(DestinationResult, pwd)
 					if err != nil {
 						fmt.Printf("❌ Error creating backup: %s\n", err)
@@ -989,34 +1008,8 @@ func main() {
 				if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
 					panic(err)
 				}
-				ConfigDirectory := DestinationResult + directoryconf
-				if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportByFile := DestinationResult + "/byfile-report"
-				if err := os.MkdirAll(ReportByFile, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportByLG := DestinationResult + "/bylanguage-report"
-				if err := os.MkdirAll(ReportByLG, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportCSV := DestinationResult + "/byfile-report/csv-report"
-				if err := os.MkdirAll(ReportCSV, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportPDF := DestinationResult + "/byfile-report/pdf-report"
-				if err := os.MkdirAll(ReportPDF, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportCSV1 := DestinationResult + "/bylanguage-report/csv-report"
-				if err := os.MkdirAll(ReportCSV1, os.ModePerm); err != nil {
-					panic(err)
-				}
-				ReportPDF2 := DestinationResult + "/bylanguage-report/pdf-report"
-				if err := os.MkdirAll(ReportPDF2, os.ModePerm); err != nil {
-					panic(err)
-				}
+				createDirectories(DestinationResult, directoriesToCreate)
+
 			} else {
 				os.Exit(1)
 			}
@@ -1025,10 +1018,7 @@ func main() {
 			if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
 				panic(err)
 			}
-			ConfigDirectory := DestinationResult + directoryconf
-			if err := os.MkdirAll(ConfigDirectory, os.ModePerm); err != nil {
-				panic(err)
-			}
+			createDirectories(DestinationResult, directoriesToCreate)
 
 		}
 	}

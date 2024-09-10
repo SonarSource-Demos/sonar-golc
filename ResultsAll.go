@@ -17,6 +17,8 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
+const port = 8091
+
 type Globalinfo struct {
 	Organization           string `json:"Organization"`
 	TotalLinesOfCode       string `json:"TotalLinesOfCode"`
@@ -218,8 +220,8 @@ func main() {
 	fmt.Println("✅ Launching web visualization...")
 	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("dist"))))
 
-	if isPortOpen(8080) {
-		fmt.Println("❗️ Port 8080 is already in use.")
+	if isPortOpen(port) {
+		fmt.Println("❗️ Port %s is already in use.", port)
 		reader := bufio.NewReader(os.Stdin)
 
 		fmt.Print("✅ Please enter the port you wish to use : ")
@@ -237,7 +239,7 @@ func main() {
 			startServer(port)
 		}
 	} else {
-		startServer(8080)
+		startServer(port)
 	}
 	/*} else {
 		fmt.Println("Exiting...")

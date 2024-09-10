@@ -1,0 +1,15 @@
+FROM alpine:3.20.1
+
+WORKDIR /app
+
+COPY resultsall/dist /app/dist
+COPY resultsall/imgs /app/imgs
+
+COPY resultsall/ResultsAll_amd64 /app/ResultsAll
+
+RUN chmod +x /app/ResultsAll
+
+EXPOSE 8091
+
+CMD ["/app/ResultsAll"]
+
