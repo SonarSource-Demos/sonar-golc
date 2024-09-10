@@ -118,10 +118,24 @@ func isRepoEmpty(ctx context.Context, gitClient git.Client, projectID string, re
 		RecursionLevel: &git.VersionControlRecursionTypeValues.None,
 	})
 	if err != nil {
+		return true, nil
+	}
+
+	branches, err := gitClient.GetBranches(ctx, git.GetBranchesArgs{
+		RepositoryId: &repoID,
+		Project:      &projectID,
+	})
+	if err != nil {
 		return false, err
 	}
 
-	return len(*items) == 0, nil
+	if len(*items) == 0 || len(*branches) == 0 {
+		return true, nil
+	}
+
+	return false, nil
+	//fmt.Println("ITEMS:", items)
+	//return len(*items) == 0, nil
 }
 
 func getAllProjects(ctx context.Context, coreClient core.Client, exclusionList *utils.ExclusionList) ([]core.TeamProjectReference, int, error) {
@@ -406,7 +420,7 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 
 		if err != nil {
 			if len(params.SingleRepos) == 0 {
-				loggers.Errorf("\r❌ Get Repos for each Project:", err)
+				loggers.Errorf("\r❌ Get Repos for each Project:%v", err)
 				spin1.Stop()
 				continue
 			} else {
@@ -501,6 +515,7 @@ func listReposForProject(parms ParamsProjectAzure, projectKey string, gitClient 
 		repoID := repo.Id.String()
 
 		isEmpty, err := isRepoEmpty(parms.Context, gitClient, projectKey, repoID)
+
 		if err != nil {
 			return 0, 0, 0, nil, err
 		}
