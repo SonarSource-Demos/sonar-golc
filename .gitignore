@@ -26,3 +26,4 @@ coverage.out
 test/*
 Docker1/*
 Logs/*
+tests/*
