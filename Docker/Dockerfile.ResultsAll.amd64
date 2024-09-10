@@ -9,7 +9,7 @@ COPY resultsall/ResultsAll_amd64 /app/ResultsAll
 
 RUN chmod +x /app/ResultsAll
 
-EXPOSE 8090
+EXPOSE 8091
 
 CMD ["/app/ResultsAll"]
 

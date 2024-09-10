@@ -1,0 +1,11 @@
+FROM alpine:3.20.1
+
+WORKDIR /app
+
+COPY golc/golc_amd64 /app/golc
+COPY resultsall/imgs /app/imgs
+
+RUN chmod +x /app/golc
+
+ENTRYPOINT  ["/app/golc"]
+

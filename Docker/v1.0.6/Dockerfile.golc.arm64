@@ -1,0 +1,11 @@
+FROM arm64v8/alpine:3.20.1
+
+WORKDIR /app
+
+COPY golc/golc_arm64 /app/golc
+COPY resultsall/imgs /app/imgs
+
+RUN chmod +x /app/golc
+
+ENTRYPOINT  ["/app/golc"]
+
