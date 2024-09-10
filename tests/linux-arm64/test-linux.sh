@@ -24,10 +24,11 @@ jq ".platforms.Github.Users = \"$SONAR_GOLC_GITHUB_USERNAME\" | .platforms.Githu
 cd Results/byfile-report/
 JSON_FILE="Result_SonarSource-Demos_opencv_4.x_byfile.json"
 TOTAL_LINES=$(jq -r '.TotalLines' $JSON_FILE)
-if [ "$TOTAL_LINES" -e 2940614 ]; then
-  echo "Success: TOTAL_LINES of $JSON_FILE is equal to 2940614."
+EXPECTED_TOTAL_LINES="2940614"
+if [ "$TOTAL_LINES" -eq "$EXPECTED_TOTAL_LINES" ]; then
+  echo "Success: TOTAL_LINES of $JSON_FILE is equal to $EXPECTED_TOTAL_LINES."
   exit 0
 else
-  echo "Error: TOTAL_LINES of $JSON_FILE is not equal to 2940614."
+  echo "Error: TOTAL_LINES of $JSON_FILE is not equal to $EXPECTED_TOTAL_LINES."
   exit 1
 fi
