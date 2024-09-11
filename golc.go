@@ -126,8 +126,6 @@ var logFile *os.File
 var AppConfig Config
 var logger *logrus.Logger
 var version1 = "1.0.6"
-<<<<<<< HEAD
-=======
 
 var directoriesToCreate = []string{
 	directoryconf,
@@ -138,7 +136,6 @@ var directoriesToCreate = []string{
 	"/bylanguage-report/csv-report",
 	"/bylanguage-report/pdf-report",
 }
->>>>>>> ver1.0.6
 
 // Check Exclusion File Exist
 func getFileNameIfExists(filePath string) string {
