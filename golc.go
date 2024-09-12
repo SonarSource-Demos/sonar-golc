@@ -127,6 +127,9 @@ var AppConfig Config
 var logger *logrus.Logger
 var version1 = "1.0.6"
 
+//stuff
+var version2 = ""
+
 var directoriesToCreate = []string{
 	directoryconf,
 	"/byfile-report",
