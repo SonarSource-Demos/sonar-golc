@@ -21,21 +21,12 @@ jobs:
       - name: Run Tests (Stub)
         run: echo "Running tests... (stubbed)"
 
-  # Manual Approval Job
-  manual_approval:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Wait for manual approval
-        uses: chrnorm/deploy-approval-action@v1.2.0
-        with:
-          approvers: 'SonarFox'  # Replace with the GitHub username(s) who can approve
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Stub Release Job
+  # Manual Approval & Release Job
   release_stub:
     runs-on: ubuntu-latest
-    needs: manual_approval
+    needs: build
+    environment:
+      name: production # Change this to your environment name
     steps:
       - name: Stub Release Process
         run: echo "Release process started... (stubbed)"
