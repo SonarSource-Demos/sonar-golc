@@ -25,6 +25,21 @@ jobs:
         with:
           go-version: '1.20' # Specify your Go version
 
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: |
+          go mod tidy
+          go mod download  # Download all dependencies
+
       - name: Build Go application for ${{ matrix.goos }}/{{ matrix.goarch }}
         run: |
           echo "Building for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
