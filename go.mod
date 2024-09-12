@@ -2,8 +2,6 @@ module github.com/SonarSource-Demos/sonar-golc
 
 go 1.21
 
-toolchain go1.23.0
-
 require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/fatih/color v1.17.0
