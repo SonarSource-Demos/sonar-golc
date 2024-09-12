@@ -64,8 +64,6 @@ func Getter(src string, token string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println("\n\nDestination:", dst)
-
 	//customGetter := &CustomHttpGetter{Token: token}
 
 	client := &getter.Client{

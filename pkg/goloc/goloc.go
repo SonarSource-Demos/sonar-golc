@@ -2,6 +2,7 @@ package goloc
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/filesystem"
@@ -41,6 +42,8 @@ type Params struct {
 	Repopath          string
 	ZipUpload         string
 	Zip               bool
+	Devops            string
+	NameZipDirectory  string
 }
 
 type GCloc struct {
@@ -58,19 +61,17 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		return nil, err
 	}
 
-	fmt.Println("\n\nupload :", params.Path)
-
-	/*	if params.Branch == "" {
+	if params.Branch == "" {
 		if lastPart := filepath.Base(path); lastPart != "" {
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
 		} else {
 			utils.NewLogger().Errorf("❌ Failed to create OutputName")
 		}
-	}*/
+	}
 
-	fmt.Println("\n\nPATH :", path)
-
-	//path = path + "/sonar-golc-main"
+	if (params.Devops == "Gitlab" || params.Devops == "Github") && params.Zip {
+		path = fmt.Sprintf("%s/%s", path, params.NameZipDirectory)
+	}
 
 	excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
 	if err != nil {
@@ -95,7 +96,7 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 
 func getRepoPath(params Params) (string, error) {
 
-	if params.Zip {
+	if params.Zip && (params.Devops != "Azure" && params.Devops != "BitbucketDC" && params.Devops != "Bitbucket") {
 
 		return getter.Getter(params.ZipUpload, params.Token)
 
@@ -104,7 +105,7 @@ func getRepoPath(params Params) (string, error) {
 			return params.Repopath, nil
 		}
 
-		if len(params.Branch) != 0 {
+		if len(params.Branch) != 0 && !params.Zip {
 			return gogit.Getrepos(params.Path, params.Branch, params.Token)
 		}
 		return getter.Getter(params.Path, params.Token)
