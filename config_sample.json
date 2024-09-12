@@ -96,7 +96,7 @@
         "Protocol": "https",
         "FileExclusion":".cloc_gitlab_ignore",
        "ExtExclusion":[],
-        "ExcludePaths":["dist/vendor"],
+        "ExcludePaths":[],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
