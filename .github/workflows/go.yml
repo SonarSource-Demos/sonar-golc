@@ -7,19 +7,34 @@ on:
   workflow_dispatch: # Allows manual triggers
 
 jobs:
-  # Stub Build Job
+  # Stub Build Job with Matrix for Multiple OS and Architectures
   build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]   # Target operating systems
+        goarch: [amd64, arm64]           # Target architectures
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Stub Build Process
-        run: echo "Building the Go application... (stubbed)"
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20' # Specify your Go version
 
-      - name: Run Tests (Stub)
-        run: echo "Running tests... (stubbed)"
+      - name: Build Go application for ${{ matrix.goos }}/{{ matrix.goarch }}
+        run: |
+          echo "Building for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/appname
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/${{ matrix.goos }}-${{ matrix.goarch }}/
 
   # Manual Approval & Release Job
   release_stub:
