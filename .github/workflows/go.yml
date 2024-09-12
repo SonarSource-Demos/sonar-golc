@@ -1,15 +1,13 @@
-name: Go Build with Manual Approval
+name: Stub Build and Manual Approval Release
 
 on:
   push:
     branches:
       - FoxDev  # Only run on changes to the FoxDev branch
-  pull_request:
-    branches:
-      - FoxDev  # Also runs on pull requests targeting FoxDev
   workflow_dispatch: # Allows manual triggers
 
 jobs:
+  # Stub Build Job
   build:
     runs-on: ubuntu-latest
 
@@ -17,30 +15,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20' # Specify your Go version
+      - name: Stub Build Process
+        run: echo "Building the Go application... (stubbed)"
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      - name: Run Tests (Stub)
+        run: echo "Running tests... (stubbed)"
 
-      - name: Install dependencies
-        run: go mod tidy
-
-      - name: Build Go app
-        run: go build -v ./...
-
-      - name: Run tests
-        run: go test -v ./...
-
+  # Manual Approval Job
   manual_approval:
     runs-on: ubuntu-latest
     needs: build
@@ -48,12 +29,13 @@ jobs:
       - name: Wait for manual approval
         uses: chrnorm/deploy-approval-action@v1.2.0
         with:
-          approvers: 'your-github-username' # List the GitHub usernames who can approve
+          approvers: 'SonarFox'  # Replace with the GitHub username(s) who can approve
           token: ${{ secrets.GITHUB_TOKEN }}
 
+  # Stub Release Job
   release_stub:
     runs-on: ubuntu-latest
     needs: manual_approval
     steps:
-      - name: Release process (stubbed)
-        run: echo "Release process started. Stubbed out for now."
+      - name: Stub Release Process
+        run: echo "Release process started... (stubbed)"
