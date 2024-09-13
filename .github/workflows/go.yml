@@ -56,16 +56,20 @@ jobs:
       - name: Create ZIP of both applications with version
         run: |
           mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
-          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
+          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/main build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
+          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/main build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           zip -r ../../golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
+
+      - name: Check if files exist
+        run: ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: build/golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+
 
   # Manual Approval & Release Job
   release_stub:
