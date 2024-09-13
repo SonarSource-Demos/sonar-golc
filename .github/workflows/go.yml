@@ -68,12 +68,13 @@ jobs:
           ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results
           ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
 
-      - name: Upload Build Artifacts
+      - name: Upload Large Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: build/golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-
+          retention-days: 5
+          retries: 5  # Retry upload 5 times
 
   # Manual Approval & Release Job
   release_stub:
