@@ -11,8 +11,8 @@ generate_test.sh
 **/*_test.go
 pkglist.txt
 cover.sh
-ResultsAll/*
-ResultsAll/reports/*
+results/*
+results/reports/*
 createreportdocker.sh
 Docker1/docker_test/*
 createrelease2.sh

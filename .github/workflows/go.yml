@@ -13,6 +13,7 @@ jobs:
 
     strategy:
       matrix:
+        app: [golc, results]
         goos: [linux, windows, darwin]   # Target operating systems
         goarch: [amd64, arm64]           # Target architectures
 
