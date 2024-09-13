@@ -64,8 +64,8 @@ jobs:
       - name: Check if files exist
         run:  |
           ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/golc
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/results
+          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc
+          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results
           ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
 
       - name: Upload Build Artifacts
