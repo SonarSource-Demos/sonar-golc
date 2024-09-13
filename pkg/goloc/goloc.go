@@ -2,6 +2,7 @@ package goloc
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
@@ -40,6 +41,10 @@ type Params struct {
 	Token             string
 	Cloned            bool
 	Repopath          string
+	ZipUpload         string
+	Zip               bool
+	Devops            string
+	NameZipDirectory  string
 }
 
 type GCloc struct {
@@ -51,95 +56,6 @@ type GCloc struct {
 	Repopath  string
 }
 
-/* func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
-	var path string
-	var err error
-	loggers := utils.NewLogger()
-
-	if !params.Cloned {
-		// The repository is not cloned, clone it
-		if len(params.Branch) != 0 {
-			path, err = gogit.Getrepos(params.Path, params.Branch, params.Token)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			path, err = getter.Getter(params.Path)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		lastPart := filepath.Base(path)
-		if lastPart != "" {
-			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
-		} else {
-			loggers.Errorf("❌ Failed to create OutputName")
-		}
-
-		excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
-		if err != nil {
-			return nil, err
-		}
-
-		analyzer := analyzer.NewAnalyzer(
-			path,
-			excludePaths,
-			utils.ConvertToMap(params.ExcludeExtensions),
-			utils.ConvertToMap(params.IncludeExtensions),
-			getExtensionsMap(languages),
-		)
-		scanner := scanner.NewScanner(languages)
-
-		reporters := getReporters(params.ReportFormats, params.OutputName, params.OutputPath, params.ByFile)
-
-		// Mark as cloned
-		params.Cloned = true
-
-		fmt.Print("\n")
-		loggers.Infof("PATH 1er tour: %s", path)
-
-		return &GCloc{
-			Params:    params,
-			analyzer:  analyzer,
-			scanner:   scanner,
-			sorter:    getSorter(params.ByFile, params.Order),
-			reporters: reporters,
-			Repopath:  path,
-		}, nil
-
-	} else {
-		// If the repo has already been cloned, use the path stored in params
-		path = params.Repopath
-
-		excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
-		if err != nil {
-			return nil, err
-		}
-
-		analyzer := analyzer.NewAnalyzer(
-			path,
-			excludePaths,
-			utils.ConvertToMap(params.ExcludeExtensions),
-			utils.ConvertToMap(params.IncludeExtensions),
-			getExtensionsMap(languages),
-		)
-
-		scanner := scanner.NewScanner(languages)
-
-		reporters := getReporters(params.ReportFormats, params.OutputName, params.OutputPath, params.ByFile)
-
-		return &GCloc{
-			Params:    params,
-			analyzer:  analyzer,
-			scanner:   scanner,
-			sorter:    getSorter(params.ByFile, params.Order),
-			reporters: reporters,
-			Repopath:  path,
-		}, nil
-	}
-}*/
-
 func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 	path, err := getRepoPath(params)
 	if err != nil {
@@ -150,8 +66,22 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		if lastPart := filepath.Base(path); lastPart != "" {
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
 		} else {
-			utils.NewLogger().Errorf("❌ Failed to create OutputName")
+			utils.NewLogger().Errorf("❌ pkg goloc :Failed to create OutputName")
 		}
+	}
+
+	if (params.Devops == "Gitlab" || params.Devops == "Github") && params.Zip {
+		path = fmt.Sprintf("%s/%s", path, params.NameZipDirectory)
+	}
+
+	if params.Devops == "Bitbucket" && params.Zip && params.Cloned {
+		rep1, err := os.ReadDir(path)
+		if err != nil {
+			utils.NewLogger().Errorf("❌ pkg goloc : Failed to get zip directory :%v", err)
+		}
+
+		path = fmt.Sprintf("%s/%s", path, rep1[0].Name())
+
 	}
 
 	excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
@@ -174,14 +104,25 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 }
 
 func getRepoPath(params Params) (string, error) {
-	if params.Cloned {
-		return params.Repopath, nil
+
+	if params.Zip && (params.Devops != "Azure" && params.Devops != "BitbucketDC" && params.Devops != "Bitbucket") {
+		if params.Cloned {
+			return params.Repopath, nil
+		} else {
+			return getter.Getter(params.ZipUpload, params.Token)
+		}
+
+	} else {
+		if params.Cloned {
+			return params.Repopath, nil
+		}
+
+		if len(params.Branch) != 0 && !params.Zip {
+			return gogit.Getrepos(params.Path, params.Branch, params.Token)
+		}
+		return getter.Getter(params.Path, params.Token)
 	}
 
-	if len(params.Branch) != 0 {
-		return gogit.Getrepos(params.Path, params.Branch, params.Token)
-	}
-	return getter.Getter(params.Path)
 }
 
 func initAnalyzerScannerReporters(path string, params Params, excludePaths []string, languages language.Languages) (*analyzer.Analyzer, *scanner.Scanner, []reporter.Reporter) {

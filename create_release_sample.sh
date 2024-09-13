@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export TAG="V1.0.6" # Release TAG in GitHub
-export Release1="v1.0.6" # Release Number
+export TAG="V1.0.7" # Release TAG in GitHub
+export Release1="v1.0.7" # Release Number
 export buildpath="xxxx/Release/"  # Replace with the path where the release files are located
 
 GITHUB_TOKEN="XXXXXXXXX" # Replace with your token
@@ -9,16 +9,8 @@ GITHUB_ORG="xXXXXXXXXX"    # Replace with your organization name
 GITHUB_REPO="XXXXXXXXX"   # Replace with the name of your GitHub repository
 
 # Set a description for the release
-RELEASE_DESCRIPTION="Added report Results By File\n\
-Added a csv report for Results By File\n\
-Added the possibility to download the report files in ZIP format from the web interface.\n\
-Added the ability to generate both reports (by language and by file) at the same time.\n\
-Added REST API, available when web report start.\n\
-Added support for analyzing user (non-organization) repositories for GitHub. The boolean parameter Org (in config.json), if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The Organization parameter should be set to your personal account.\n\
-Correction for extracting the package from the command line into the golc_version_os_platform directory.\n\
-Correct issue Docker ReportsAll.\n\
-Added Exclude directories\n\
-Added Test Release version"
+RELEASE_DESCRIPTION="Add Zip parameter improves performance if you have very large repositories; to enable it, you need to set it to true in config.json file.\n\"
+
 
 CMD=`PWD`
 

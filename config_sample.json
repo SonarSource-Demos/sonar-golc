@@ -24,7 +24,8 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":true
+        "Org":true,
+        "Zip":false
       },
       "BitBucket": {
         "Users": "XXXXX",
@@ -51,7 +52,8 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":true
+        "Org":true,
+        "Zip":false
       },
       
       "Github": {
@@ -78,7 +80,8 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":true
+        "Org":true,
+        "Zip":false
       },
 
       "Gitlab": {
@@ -105,7 +108,8 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":true
+        "Org":true,
+        "Zip":false
       },
       "Azure": {
         "Users": "XXXXX",
@@ -131,7 +135,8 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":true
+        "Org":true,
+        "Zip":false
       },
       "File": {
         "Organization": "XXXXX",
@@ -149,7 +154,7 @@
       "Level": "debug"
     },
     "Release":  {
-      "Version": "1.0.6"
+      "Version": "1.0.7"
     }
   }
   

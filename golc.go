@@ -3,11 +3,14 @@ package main
 import (
 	"archive/zip"
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -104,11 +107,15 @@ type LanguageRes struct {
 }
 
 type RepoParams struct {
-	ProjectKey string
-	Namespace  string
-	RepoSlug   string
-	MainBranch string
-	PathToScan string
+	ProjectKey       string
+	Namespace        string
+	RepoSlug         string
+	MainBranch       string
+	PathToScan       string
+	ZipUpload        string
+	Zip              bool
+	Devops           string
+	NameZipDirectory string
 }
 
 type logWriter struct {
@@ -116,16 +123,18 @@ type logWriter struct {
 	logFile *os.File
 }
 
-const errorMessageRepo = "❌ Error Analyse Repositories: "
+const errorMessageRepo = "❌ Error Analyse Repositories: %v"
 const errorMessageDi = "\r❌ Error deleting Repository Directory: %v\n"
 const errorMessageAnalyse = "\r❌ No Analysis performed...\n"
 const errorMessageRepos = "Error Get Info Repositories in organization '%s' : '%s'"
+const errorMessageDownloadzip = "❌ Error while downloading :%v"
+const infoMessageDownloadzip = "\t✅ Downloaded ZIP file as :%s \n"
 const directoryconf = "/config"
 
 var logFile *os.File
 var AppConfig Config
 var logger *logrus.Logger
-var version1 = "1.0.6"
+var version1 = "1.0.7"
 
 //stuff
 var version2 = ""
@@ -341,6 +350,60 @@ func addFileToZip(filePath, relPath string, fileInfo os.FileInfo, zipWriter *zip
 	return nil
 }
 
+// Function that downloads the zip file from the repository for Azure DevOps...
+
+func downloadFile(url string, username string, pat string, destfile string, devops string) (string, error) {
+
+	messageF := ""
+
+	// Create the HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	// Add Authorization Headers
+	if devops != "Bitbucket" {
+		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+pat)))
+	}
+
+	// Execute the query
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to download ZIP: %s", resp.Status)
+	}
+
+	// Create a temporary file to write the ZIP into
+	tempZipPath := filepath.Join(os.TempDir(), destfile)
+	out, err := os.Create(tempZipPath)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	s := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+	s.Color("green", "bold")
+	s.Prefix = "Downloaded ZIP file "
+	s.FinalMSG = messageF
+	s.Start()
+
+	// Copy the response body into the ZIP file
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		s.Stop()
+		return "", err
+	}
+	s.Stop()
+
+	return tempZipPath, nil
+}
+
 // Generic function to analyze repositories
 func AnalyseReposList(DestinationResult string, platformConfig map[string]interface{}, repolist interface{}, analyseRepoFunc func(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int)) (cpt int) {
 	//fmt.Print("\n🔎 Analysis of Repos ...\n")
@@ -406,16 +469,40 @@ func getExcludePaths(configValue interface{}) []string {
 func analyseBitCRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
 	p := project.(getbibucket.ProjectBranch)
 	var excludeExtensions []string
+	var PathToScan1 string
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
 
+	if platformConfig["Zip"].(bool) {
+
+		zipURL := fmt.Sprintf("https://%s:%s@bitbucket.org/%s/%s/get/%s.zip", platformConfig["Users"].(string), platformConfig["AppPasswd"].(string), platformConfig["Workspace"].(string), p.RepoSlug, p.MainBranch)
+		destfile := fmt.Sprintf("gcloc-download-%s.zip", p.RepoSlug)
+
+		zipFilePath, err := downloadFile(zipURL, platformConfig["Users"].(string), platformConfig["AccessToken"].(string), destfile, "Bitbucket")
+		if err != nil {
+			logger.Errorf(errorMessageDownloadzip, err)
+			return
+		}
+		logger.Infof(infoMessageDownloadzip, zipFilePath)
+
+		PathToScan1 = zipFilePath
+
+	} else {
+		PathToScan1 = fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug)
+
+	}
+
 	params := RepoParams{
-		ProjectKey: p.ProjectKey,
-		Namespace:  "",
-		RepoSlug:   p.RepoSlug,
-		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug),
+		ProjectKey:       p.ProjectKey,
+		Namespace:        "",
+		RepoSlug:         p.RepoSlug,
+		MainBranch:       p.MainBranch,
+		PathToScan:       PathToScan1,
+		ZipUpload:        "",
+		Zip:              platformConfig["Zip"].(bool),
+		Devops:           "Bitbucket",
+		NameZipDirectory: "",
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
@@ -424,16 +511,40 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 func analyseBitSRVRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, trimmedURL string, spin *spinner.Spinner, results chan int, count *int) {
 	p := project.(getbibucketdc.ProjectBranch)
 	var excludeExtensions []string
+	var PathToScan1 string
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
 
+	if platformConfig["Zip"].(bool) {
+		zipURL := fmt.Sprintf("%s://%s:%s@%srest/api/%s/projects/%s/repos/%s/archive?format=zip&at=%s",
+			platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, platformConfig["Apiver"].(string), p.ProjectKey, p.RepoSlug, p.MainBranch)
+		destfile := fmt.Sprintf("gcloc-download-%s.zip", p.RepoSlug)
+
+		zipFilePath, err := downloadFile(zipURL, platformConfig["Users"].(string), platformConfig["AccessToken"].(string), destfile, "BitbucketDC")
+		if err != nil {
+			logger.Errorf(errorMessageDownloadzip, err)
+			return
+		}
+		logger.Infof(infoMessageDownloadzip, zipFilePath)
+
+		PathToScan1 = zipFilePath
+
+	} else {
+		PathToScan1 = fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug)
+
+	}
+
 	params := RepoParams{
-		ProjectKey: p.ProjectKey,
-		Namespace:  "",
-		RepoSlug:   p.RepoSlug,
-		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
+		ProjectKey:       p.ProjectKey,
+		Namespace:        "",
+		RepoSlug:         p.RepoSlug,
+		MainBranch:       p.MainBranch,
+		PathToScan:       PathToScan1,
+		ZipUpload:        "",
+		Zip:              platformConfig["Zip"].(bool),
+		Devops:           "BitbucketDC",
+		NameZipDirectory: "",
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
@@ -447,11 +558,15 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
 
 	params := RepoParams{
-		ProjectKey: p.Org,
-		Namespace:  "",
-		RepoSlug:   p.RepoSlug,
-		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
+		ProjectKey:       p.Org,
+		Namespace:        "",
+		RepoSlug:         p.RepoSlug,
+		MainBranch:       p.MainBranch,
+		PathToScan:       fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
+		ZipUpload:        fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s/archive/refs/heads/%s.zip", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug, p.MainBranch),
+		Zip:              platformConfig["Zip"].(bool),
+		Devops:           "Github",
+		NameZipDirectory: fmt.Sprintf("%s-%s", p.RepoSlug, p.MainBranch),
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
@@ -466,12 +581,19 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 
 	domain := extractDomain(platformConfig["Url"].(string))
 
+	zipUpload := fmt.Sprintf("%s://%s/%s/-/archive/%s/%s-%s.zip?private_token=%s&ref=%s",
+		platformConfig["Protocol"].(string), domain, p.Namespace, p.MainBranch, p.RepoSlug, p.MainBranch, platformConfig["AccessToken"].(string), p.MainBranch)
+
 	params := RepoParams{
-		ProjectKey: p.Org,
-		Namespace:  p.Namespace,
-		RepoSlug:   p.RepoSlug,
-		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
+		ProjectKey:       p.Org,
+		Namespace:        p.Namespace,
+		RepoSlug:         p.RepoSlug,
+		MainBranch:       p.MainBranch,
+		PathToScan:       fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
+		ZipUpload:        zipUpload,
+		Zip:              platformConfig["Zip"].(bool),
+		Devops:           "Gitlab",
+		NameZipDirectory: fmt.Sprintf("%s-%s", p.RepoSlug, p.MainBranch),
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
@@ -479,34 +601,59 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 func analyseAzurebRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
 	p := project.(getazure.ProjectBranch)
 	var excludeExtensions []string
+	var PathToScan1 string
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
 
+	if platformConfig["Zip"].(bool) {
+		zipURL := fmt.Sprintf("https://dev.azure.com/%s/%s/_apis/git/repositories/%s/items?%s&api-version=%s&download=true&path=%s&resolveLfs=true&versionDescriptor[versionOptions]=0&versionDescriptor[versionType]=0&versionDescriptor[version]=%s",
+			platformConfig["Organization"].(string), p.ProjectKey, p.RepoSlug, url.Values{"$format": {"zip"}}.Encode(), platformConfig["Apiver"].(string), url.QueryEscape("/"), p.MainBranch)
+		destfile := fmt.Sprintf("gcloc-download-%s.zip", p.RepoSlug)
+
+		zipFilePath, err := downloadFile(zipURL, platformConfig["Users"].(string), platformConfig["AccessToken"].(string), destfile, "Azure")
+		if err != nil {
+			logger.Errorf(errorMessageDownloadzip, err)
+			return
+		}
+		logger.Infof(infoMessageDownloadzip, zipFilePath)
+		PathToScan1 = zipFilePath
+
+	} else {
+		PathToScan1 = fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug)
+
+	}
+
 	params := RepoParams{
-		ProjectKey: p.ProjectKey,
-		Namespace:  "",
-		RepoSlug:   p.RepoSlug,
-		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
+		ProjectKey:       p.ProjectKey,
+		Namespace:        "",
+		RepoSlug:         p.RepoSlug,
+		MainBranch:       p.MainBranch,
+		PathToScan:       PathToScan1,
+		ZipUpload:        "",
+		Zip:              platformConfig["Zip"].(bool),
+		Devops:           "Azure",
+		NameZipDirectory: "",
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Perform repository analysis (common logic)
 func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, excludePaths []string, ResultByFile bool, ResultAll bool) {
+
 	var outputFileName = ""
+	var messageF = ""
+
 	if len(params.Namespace) > 0 {
 		outputFileName = fmt.Sprintf("Result_%s_%s", params.Namespace, params.MainBranch)
 	} else {
 		outputFileName = fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
 	}
 	golocParams := goloc.Params{
-		Path:         params.PathToScan,
-		ByFile:       ResultByFile,
-		ByAll:        ResultAll,
-		ExcludePaths: excludePaths,
-		//ExcludePaths:      []string{},
+		Path:              params.PathToScan,
+		ByFile:            ResultByFile,
+		ByAll:             ResultAll,
+		ExcludePaths:      excludePaths,
 		ExcludeExtensions: excludeExtension,
 		IncludeExtensions: []string{},
 		OrderByLang:       false,
@@ -522,12 +669,17 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 		Branch:            params.MainBranch,
 		Cloned:            false,
 		Repopath:          "",
+		ZipUpload:         params.ZipUpload,
+		Zip:               params.Zip,
+		Devops:            params.Devops,
+		NameZipDirectory:  params.NameZipDirectory,
 	}
 	if ResultAll {
 		golocParams.ByFile = true
 	}
 	MessB := fmt.Sprintf("   Extracting files from repo : %s ", params.RepoSlug)
 	spin.Suffix = MessB
+	spin.FinalMSG = messageF
 	spin.Start()
 
 	gc, err := goloc.NewGCloc(golocParams, assets.Languages)
@@ -589,11 +741,13 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 			logger.Errorf(errorMessageDi, err1)
 		}
 		golocParams.Cloned = false
+
 		spin.Stop()
 		logger.Infof("\r\t\t\t\t✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
 		// Send result through channel
 		results <- 1
 	}
+
 }
 
 // Wait for all goroutines to complete
@@ -967,12 +1121,17 @@ func main() {
 	}
 	DestinationResult := pwd + "/Results"
 
-	logger.Infof("✅ Using configuration for DevOps platform '%s'\n", *devopsFlag)
+	if platformConfig["Zip"].(bool) {
+
+		logger.Infof("✅ Using configuration for DevOps platform '%s' with download repositories archive (zip)\n", *devopsFlag)
+	} else {
+		logger.Infof("✅ Using configuration for DevOps platform '%s' \n", *devopsFlag)
+	}
 
 	// Test whether to delete the Results directory and save it before deleting.
 
 	if *docker {
-		fmt.Println("Running in Docker mode")
+		fmt.Println("✅ Running in Docker mode")
 
 		createDirectories(DestinationResult, directoriesToCreate)
 
