@@ -59,7 +59,7 @@ jobs:
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          zip -r ../../golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
+          zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
       - name: Check if files exist
         run:  |
@@ -71,17 +71,47 @@ jobs:
       - name: Upload Large Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
           retention-days: 5
           retries: 5  # Retry upload 5 times
 
-  # Manual Approval & Release Job
   release_stub:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: production # Change this to your environment name
+      name: production # Specify the environment name, like production or staging
+      url: https://your-deployment-url.com # Optional, specify the deployment URL if needed
+
     steps:
-      - name: Stub Release Process
-        run: echo "Release process started... (stubbed)"
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }} # Adjust this if needed for your artifacts
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided by GitHub Actions
+        with:
+          tag_name: ${{ env.VERSION }}               # The version number, e.g., v1.0.0
+          release_name: Release ${{ env.VERSION }}    # The name of the release
+          draft: false                               # Whether this should be a draft release
+          prerelease: false                          # Set to true if this is a prerelease
+          body: |
+            Release notes for version ${{ env.VERSION }}:
+            - Platform: ${{ matrix.goos }}
+            - Architecture: ${{ matrix.goarch }}
+            - Includes golc and results applications bundled.
+
+      - name: Upload artifact to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}  # Uploads to the created release
+          asset_path: build/golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          asset_name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          asset_content_type: application/zip
