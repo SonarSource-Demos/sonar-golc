@@ -41,10 +41,14 @@ jobs:
           go mod tidy
           go mod download  # Download all dependencies
 
-      - name: Build Go application for ${{ matrix.goos }}/{{ matrix.goarch }}
+      - name: Build Go applications for ${{ matrix.goos }}/{{ matrix.goarch }}
         run: |
-          echo "Building for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/appname
+          echo "Building app1 for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/main ./golc
+          
+          echo "Building app2 for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/main ./results
+
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
