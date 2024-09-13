@@ -2,6 +2,7 @@ package goloc
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
@@ -65,7 +66,7 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		if lastPart := filepath.Base(path); lastPart != "" {
 			params.OutputName = fmt.Sprintf("%s%s", params.OutputName, lastPart)
 		} else {
-			utils.NewLogger().Errorf("❌ Failed to create OutputName")
+			utils.NewLogger().Errorf("❌ pkg goloc :Failed to create OutputName")
 		}
 	}
 
@@ -73,12 +74,20 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		path = fmt.Sprintf("%s/%s", path, params.NameZipDirectory)
 	}
 
+	if params.Devops == "Bitbucket" && params.Zip && params.Cloned {
+		rep1, err := os.ReadDir(path)
+		if err != nil {
+			utils.NewLogger().Errorf("❌ pkg goloc : Failed to get zip directory :%v", err)
+		}
+
+		path = fmt.Sprintf("%s/%s", path, rep1[0].Name())
+
+	}
+
 	excludePaths, err := filesystem.GetExcludePaths(path, params.ExcludePaths)
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("\n\nexcludePaths :", excludePaths)
 
 	analyzer, scanner, reporters := initAnalyzerScannerReporters(path, params, excludePaths, languages)
 
@@ -97,8 +106,11 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 func getRepoPath(params Params) (string, error) {
 
 	if params.Zip && (params.Devops != "Azure" && params.Devops != "BitbucketDC" && params.Devops != "Bitbucket") {
-
-		return getter.Getter(params.ZipUpload, params.Token)
+		if params.Cloned {
+			return params.Repopath, nil
+		} else {
+			return getter.Getter(params.ZipUpload, params.Token)
+		}
 
 	} else {
 		if params.Cloned {
