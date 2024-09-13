@@ -4,7 +4,7 @@
 DOCKER_USER="sonarsource-demos"
 IMAGE_NAME_GOLC="golc"
 IMAGE_NAME_RESULTSALL="resultsall"
-VERSION="1.0.6"
+VERSION="1.0.7"
 USERNAME="XXXXXXXXXXXXXXXXXXXXXXXX"
 REPOS="sonar-golc"
 CMD="podman"
