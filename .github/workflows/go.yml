@@ -18,6 +18,10 @@ jobs:
         goarch: [amd64, arm64]           # Target architectures
 
     steps:
+      - name: Read Version from VERSION.txt
+        id: get_version
+        run: echo "VERSION=$(cat VERSION.txt)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -49,12 +53,19 @@ jobs:
           echo "Building app2 for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/main ./results
 
+      - name: Create ZIP of both applications with version
+        run: |
+          mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
+          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/main build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
+          cp build/${{ matrix.goos }}-${{ matrix.goos }}-${{ matrix.goarch }}/results/main build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
+          cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
+          zip -r ../../golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: build-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/${{ matrix.goos }}-${{ matrix.goarch }}/
+          name: golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/golc-results-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
 
   # Manual Approval & Release Job
   release_stub:
