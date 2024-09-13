@@ -40,8 +40,8 @@ cp -r Release/v${VERSION}/amd64/linux/golc_v${VERSION}_linux_amd64/imgs ${DIR}/r
 cd ${DIR}
 
 # Build images amd64
-${CMD} build -t ${IMAGE_NAME_GOLC}:${TAG} -f Dockerfile.golc.amd64 .
-${CMD} build -t ${IMAGE_NAME_RESULTSALL}:${TAG} -f Dockerfile.ResultsAll.amd64 .
+${CMD}  buildx build --platform linux/amd64 -t ${IMAGE_NAME_GOLC}:${TAG} -f Dockerfile.golc.amd64 .
+${CMD}  buildx build --platform linux/amd64 -t ${IMAGE_NAME_RESULTSALL}:${TAG} -f Dockerfile.ResultsAll.amd64 .
 
 
 # Build images arm64
