@@ -47,11 +47,11 @@ jobs:
 
       - name: Build Go applications for ${{ matrix.goos }}/{{ matrix.goarch }}
         run: |
-          echo "Building app1 for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/main ./golc
+          echo "Building golc for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc ./golc
           
-          echo "Building app2 for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/main ./results
+          echo "Building results for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results ./results
 
       - name: Create ZIP of both applications with version
         run: |
