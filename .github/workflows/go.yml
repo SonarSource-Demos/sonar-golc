@@ -81,7 +81,6 @@ jobs:
     needs: build
     environment:
       name: production # Specify the environment name, like production or staging
-      url: https://your-deployment-url.com # Optional, specify the deployment URL if needed
 
     steps:
       - name: Checkout code
@@ -90,7 +89,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }} # Adjust this if needed for your artifacts
+          name: golc-* # Adjust this if needed for your artifacts
 
       - name: Create GitHub Release
         id: create_release
