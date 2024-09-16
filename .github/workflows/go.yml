@@ -77,7 +77,7 @@ jobs:
           name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: build/golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
           retention-days: 5
-          retries: 5  # Retry upload 5 times
+          retries: 10  # Retry upload 5 times
 
   release_stub:
     runs-on: ubuntu-latest
