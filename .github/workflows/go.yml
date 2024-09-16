@@ -18,15 +18,15 @@ jobs:
         goarch: [amd64, arm64]           # Target architectures
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Read Version from VERSION
         id: get_version
         run: |
           cat VERSION
           VER=$(cat VERSION)
           echo "VERSION=$VER" >> $GITHUB_ENV
-
-      - name: Checkout code
-        uses: actions/checkout@v3
 
       - name: Set up Go
         uses: actions/setup-go@v4
