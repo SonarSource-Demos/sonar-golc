@@ -105,26 +105,84 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
 
+      - name: Delete existing release and tag if it exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the release ID associated with the tag, if it exists
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ env.VERSION }} --silent --jq .id || echo "")
+          if [ -n "$RELEASE_ID" ]; then
+            echo "Deleting existing release with ID: $RELEASE_ID"
+            gh api --method DELETE repos/${{ github.repository }}/releases/$RELEASE_ID
+          fi
+
+          # Delete the tag if it exists
+          TAG_EXISTS=$(git tag --list "${{ env.VERSION }}" || echo "")
+          if [ -n "$TAG_EXISTS" ]; then
+            echo "Deleting existing tag: ${{ env.VERSION }}"
+            git push --delete origin ${{ env.VERSION }} || true
+            git tag -d ${{ env.VERSION }} || true
+          fi
+
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided by GitHub Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.VERSION }}               # The version number, e.g., v1.0.0
-          release_name: Release ${{ env.VERSION }}    # The name of the release
-          draft: false                               # Whether this should be a draft release
-          prerelease: false                          # Set to true if this is a prerelease
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
+          draft: false
+          prerelease: false
           body: |
             Release notes for version ${{ env.VERSION }}:
-            - Platform: ${{ matrix.goos }}
-            - Architecture: ${{ matrix.goarch }}
-            - Includes golc and results applications bundled.
+            Includes golc and results applications bundled for multiple platforms and architectures.
 
-      - name: Upload artifact to release
+      # Upload all artifacts to the single release
+      - name: Upload linux/amd64 artifact
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}  # Uploads to the created release
-          asset_path: build/golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-          asset_name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-linux-amd64
+          asset_name: golc-${{ env.VERSION }}-linux-amd64
+          asset_content_type: application/zip
+
+      - name: Upload linux/arm64 artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-linux-arm64
+          asset_name: golc-${{ env.VERSION }}-linux-arm64
+          asset_content_type: application/zip
+
+      - name: Upload windows/amd64 artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-windows-amd64.exe
+          asset_name: golc-${{ env.VERSION }}-windows-amd64.exe
+          asset_content_type: application/zip
+
+      - name: Upload windows/arm64 artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-windows-arm64.exe
+          asset_name: golc-${{ env.VERSION }}-windows-arm64.exe
+          asset_content_type: application/zip
+
+      - name: Upload darwin/amd64 artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-darwin-amd64
+          asset_name: golc-${{ env.VERSION }}-darwin-amd64
+          asset_content_type: application/zip
+
+      - name: Upload darwin/arm64 artifact
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/golc-${{ env.VERSION }}-darwin-arm64
+          asset_name: golc-${{ env.VERSION }}-darwin-arm64
           asset_content_type: application/zip
