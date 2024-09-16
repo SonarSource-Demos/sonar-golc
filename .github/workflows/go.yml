@@ -92,7 +92,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: 'build/golc-*' # Adjust this if needed for your artifacts
+          name: 'golc-*' # Adjust this if needed for your artifacts
 
       - name: Create GitHub Release
         id: create_release
