@@ -110,14 +110,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get the release ID associated with the tag, if it exists
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ env.VERSION }} --silent --jq .id || echo "")
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ env.VERSION }} --jq .id || echo "")
           if [ -n "$RELEASE_ID" ]; then
             echo "Deleting existing release with ID: $RELEASE_ID"
             gh api --method DELETE repos/${{ github.repository }}/releases/$RELEASE_ID
           fi
 
           # Delete the tag if it exists
-          TAG_EXISTS=$(git tag --list "${{ env.VERSION }}" || echo "")
+          TAG_EXISTS=$(git ls-remote --tags origin | grep "${{ env.VERSION }}" || echo "")
           if [ -n "$TAG_EXISTS" ]; then
             echo "Deleting existing tag: ${{ env.VERSION }}"
             git push --delete origin ${{ env.VERSION }} || true
