@@ -20,7 +20,9 @@ jobs:
     steps:
       - name: Read Version from VERSION
         id: get_version
-        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+        run: |
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -55,13 +57,11 @@ jobs:
 
       - name: Create ZIP of both applications with version
         run: |
-          ls
-          cat VERSION
           mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          zip -r ../../golc-$(cat VERSION)-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
+          zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
       - name: Check if files exist
         run:  |
