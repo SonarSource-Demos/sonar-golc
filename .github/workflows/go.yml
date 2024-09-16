@@ -59,7 +59,7 @@ jobs:
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          zip -r ../../golc-$(cat VERSION.txt)-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
+          zip -r ../../golc-$(cat /VERSION.txt)-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
       - name: Check if files exist
         run:  |
