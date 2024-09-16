@@ -150,6 +150,7 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-linux-amd64.zip/golc-${{ env.VERSION }}-linux-amd64.zip
           asset_name: golc-${{ env.VERSION }}-linux-amd64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload linux/arm64 artifact
         uses: actions/upload-release-asset@v1
@@ -158,6 +159,7 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-linux-arm64.zip/golc-${{ env.VERSION }}-linux-arm64.zip
           asset_name: golc-${{ env.VERSION }}-linux-arm64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload windows/amd64 artifact
         uses: actions/upload-release-asset@v1
@@ -166,6 +168,7 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-amd64.zip/golc-${{ env.VERSION }}-windows-amd64.zip
           asset_name: golc-${{ env.VERSION }}-windows-amd64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload windows/arm64 artifact
         uses: actions/upload-release-asset@v1
@@ -174,6 +177,7 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-arm64.zip/golc-${{ env.VERSION }}-windows-arm64.zip
           asset_name: golc-${{ env.VERSION }}-windows-arm64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload darwin/amd64 artifact
         uses: actions/upload-release-asset@v1
@@ -182,6 +186,7 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-amd64.zip/golc-${{ env.VERSION }}-darwin-amd64.zip
           asset_name: golc-${{ env.VERSION }}-darwin-amd64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload darwin/arm64 artifact
         uses: actions/upload-release-asset@v1
@@ -190,3 +195,4 @@ jobs:
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-arm64.zip/golc-${{ env.VERSION }}-darwin-arm64.zip
           asset_name: golc-${{ env.VERSION }}-darwin-arm64.zip
           asset_content_type: application/zip
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
