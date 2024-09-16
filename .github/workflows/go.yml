@@ -61,6 +61,10 @@ jobs:
           mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
+          cp README.md build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/README.md
+          cp config_sample.json build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/config.json
+          cp images/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/images
+          cp dist/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/dist
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
