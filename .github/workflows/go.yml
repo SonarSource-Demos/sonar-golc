@@ -139,7 +139,7 @@ jobs:
 
       - name: validate files are there
         run: |
-          ls -al /home/runner/work/sonar-golc/sonar-golc/golc-v1.0.8-darwin-amd64.zip
+          ls -al /home/runner/work/sonar-golc/sonar-golc
           pwd
 
       # Upload all artifacts to the single release
@@ -147,7 +147,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: golc-${{ env.VERSION }}-linux-amd64.zip
+          asset_path: golc-${{ env.VERSION }}-linux-amd64.zip/golc-${{ env.VERSION }}-linux-amd64.zip
           asset_name: golc-${{ env.VERSION }}-linux-amd64.zip
           asset_content_type: application/zip
 
@@ -155,7 +155,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./golc-${{ env.VERSION }}-linux-arm64.zip
+          asset_path: golc-${{ env.VERSION }}-linux-arm64.zip/golc-${{ env.VERSION }}-linux-arm64.zip
           asset_name: golc-${{ env.VERSION }}-linux-arm64.zip
           asset_content_type: application/zip
 
@@ -163,7 +163,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-amd64.zip
+          asset_path: golc-${{ env.VERSION }}-windows-amd64.zip/golc-${{ env.VERSION }}-windows-amd64.zip
           asset_name: golc-${{ env.VERSION }}-windows-amd64.zip
           asset_content_type: application/zip
 
@@ -171,7 +171,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-arm64.zip
+          asset_path: golc-${{ env.VERSION }}-windows-arm64.zip/golc-${{ env.VERSION }}-windows-arm64.zip
           asset_name: golc-${{ env.VERSION }}-windows-arm64.zip
           asset_content_type: application/zip
 
@@ -179,7 +179,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-amd64.zip
+          asset_path: golc-${{ env.VERSION }}-darwin-amd64.zip/golc-${{ env.VERSION }}-darwin-amd64.zip
           asset_name: golc-${{ env.VERSION }}-darwin-amd64.zip
           asset_content_type: application/zip
 
@@ -187,6 +187,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-arm64.zip
+          asset_path: golc-${{ env.VERSION }}-darwin-arm64.zip/golc-${{ env.VERSION }}-darwin-arm64.zip
           asset_name: golc-${{ env.VERSION }}-darwin-arm64.zip
           asset_content_type: application/zip
