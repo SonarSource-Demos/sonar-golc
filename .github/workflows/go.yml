@@ -142,11 +142,16 @@ jobs:
           ls -al /home/runner/work/sonar-golc/sonar-golc
           pwd
 
+      - name: Test GitHub API call with GITHUB_TOKEN
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/releases
+
       # Upload all artifacts to the single release
       - name: Upload linux/amd64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-linux-amd64.zip/golc-${{ env.VERSION }}-linux-amd64.zip
@@ -156,7 +161,7 @@ jobs:
       - name: Upload linux/arm64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-linux-arm64.zip/golc-${{ env.VERSION }}-linux-arm64.zip
@@ -166,7 +171,7 @@ jobs:
       - name: Upload windows/amd64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-amd64.zip/golc-${{ env.VERSION }}-windows-amd64.zip
@@ -176,7 +181,7 @@ jobs:
       - name: Upload windows/arm64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-windows-arm64.zip/golc-${{ env.VERSION }}-windows-arm64.zip
@@ -186,7 +191,7 @@ jobs:
       - name: Upload darwin/amd64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-amd64.zip/golc-${{ env.VERSION }}-darwin-amd64.zip
@@ -196,7 +201,7 @@ jobs:
       - name: Upload darwin/arm64 artifact
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: $ {{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: /home/runner/work/sonar-golc/sonar-golc/golc-${{ env.VERSION }}-darwin-arm64.zip/golc-${{ env.VERSION }}-darwin-arm64.zip
