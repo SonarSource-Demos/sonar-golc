@@ -83,7 +83,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
 
-    strategy:
     environment:
       name: production # Specify the environment name, like production or staging
 
