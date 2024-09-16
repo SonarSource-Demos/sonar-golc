@@ -55,6 +55,7 @@ jobs:
 
       - name: Create ZIP of both applications with version
         run: |
+          le
           cat /VERSION.txt
           mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
