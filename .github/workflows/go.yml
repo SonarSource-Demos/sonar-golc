@@ -139,7 +139,7 @@ jobs:
 
       - name: validate files are there
         run: |
-          ls -al /home/runner/work/sonar-golc/sonar-golc
+          ls -al /home/runner/work/sonar-golc/sonar-golc/golc-v1.0.8-darwin-amd64.zip
           pwd
 
       # Upload all artifacts to the single release
