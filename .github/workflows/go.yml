@@ -63,8 +63,8 @@ jobs:
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
           cp README.md build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/README.md
           cp config_sample.json build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/config.json
-          cp imgs/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/imgs
-          cp dist/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/dist
+          cp -r imgs/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/imgs
+          cp -r dist/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/dist
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
