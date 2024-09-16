@@ -84,10 +84,6 @@ jobs:
     needs: build
 
     strategy:
-      matrix:
-        goos: [ linux, windows, darwin ]   # Target operating systems
-        goarch: [ amd64, arm64 ]           # Target architectures
-
     environment:
       name: production # Specify the environment name, like production or staging
 
