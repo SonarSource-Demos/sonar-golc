@@ -207,9 +207,10 @@ jobs:
 
       - name: Read Release Notes from RELEASE_NOTES
         run: |
-          cat RELEASE_NOTES
-          NOTES=$(cat RELEASE_NOTES)
-          echo "RELEASE_NOTES=$NOTES" >> $GITHUB_ENV
+          RELEASE_NOTES=$(cat RELEASE_NOTES)
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
