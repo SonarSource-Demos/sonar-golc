@@ -11,12 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        app: [golc, results]
-        goos: [linux, windows, darwin]   # Target operating systems
-        goarch: [amd64, arm64]           # Target architectures
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
