@@ -7,7 +7,6 @@ on:
   workflow_dispatch: # Allows manual triggers
 
 jobs:
-  # Stub Build Job with Matrix for Multiple OS and Architectures
   build:
     runs-on: ubuntu-latest
 
@@ -206,6 +205,12 @@ jobs:
           VER=$(cat VERSION)
           echo "VERSION=$VER" >> $GITHUB_ENV
 
+      - name: Read Release Notes from RELEASE_NOTES
+        run: |
+          cat RELEASE_NOTES
+          NOTES=$(cat RELEASE_NOTES)
+          echo "RELEASE_NOTES=$NOTES" >> $GITHUB_ENV
+
       - name: Download build artifacts
         uses: actions/download-artifact@v3
 
@@ -244,7 +249,7 @@ jobs:
           prerelease: false
           body: |
             Release notes for version ${{ env.VERSION }}:
-            Includes golc and results applications bundled for multiple platforms and architectures.
+            ${{ env.RELEASE_NOTES }}
 
       - name: validate files are there
         run: |
