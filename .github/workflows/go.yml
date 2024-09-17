@@ -1,4 +1,4 @@
-name: Stub Build and Manual Approval Release
+name: Build and Manual Approval Release
 
 on:
   push:
@@ -71,20 +71,71 @@ jobs:
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
-      - name: Upload Large Artifacts
-        id:  upload
-        if:  steps.zip.outcome == 'success'
+  uploadBuildArtifacts:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Read Version from VERSION
+        id: get_version
+        run: |
+          cat VERSION
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV        
+
+      - name: Upload linux/amd64
         uses: actions/upload-artifact@v3
         with:
-          name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-          path: build/golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          name: golc-${{ env.VERSION }}-linux-amd64.zip
+          path: build/golc-${{ env.VERSION }}-linux-amd64.zip
           retention-days: 5
           retries: 10
 
-  release_stub:
+      - name: Upload linux/arm64
+        uses: actions/upload-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-linux-arm64.zip
+          path: build/golc-${{ env.VERSION }}-linux-arm64.zip
+          retention-days: 5
+          retries: 10
+
+      - name: Upload windows/amd64
+        uses: actions/upload-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-windows-amd64.zip
+          path: build/golc-${{ env.VERSION }}-windows-amd64.zip
+          retention-days: 5
+          retries: 10
+
+      - name: Upload windows/arm64
+        uses: actions/upload-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-windows-arm64.zip
+          path: build/golc-${{ env.VERSION }}-windows-arm64.zip
+          retention-days: 5
+          retries: 10
+
+      - name: Upload darwin/amd64
+        uses: actions/upload-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-darwin-amd64.zip
+          path: build/golc-${{ env.VERSION }}-darwin-amd64.zip
+          retention-days: 5
+          retries: 10
+
+      - name: Upload darwin/arm64
+        uses: actions/upload-artifact@v3
+        with:
+          name: golc-${{ env.VERSION }}-darwin-arm64.zip
+          path: build/golc-${{ env.VERSION }}-darwin-arm64.zip
+          retention-days: 5
+          retries: 10
+
+  release:
     runs-on: ubuntu-latest
     needs: build
-
     environment:
       name: production # Specify the environment name, like production or staging
 
