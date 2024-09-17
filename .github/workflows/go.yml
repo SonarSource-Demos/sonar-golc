@@ -51,42 +51,101 @@ jobs:
       - name: Build Go applications for ${{ matrix.goos }}/{{ matrix.goarch }}
         id:  build
         run: |
-          echo "Building golc for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc ./golc
+          echo "Building golc for OS: linux, Architecture: amd64"
+          go build -o build/linux-amd64/golc/golc ./golc
+          go build -o build/linux-amd64/results/results ./results
           
-          echo "Building results for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results ./results
+          echo "Building golc for OS: linux, Architecture: arm64"
+          go build -o build/linux-arm64/golc/golc ./golc
+          go build -o build/linux-arm64/results/results ./results
+          
+          echo "Building golc for OS: windows, Architecture: amd64"
+          go build -o build/windows-amd64/golc/golc ./golc
+          go build -o build/windows-amd64/results/results ./results
+          
+          echo "Building golc for OS: windows, Architecture: arm64"
+          go build -o build/windows-arm64/golc/golc ./golc
+          go build -o build/windows-arm64/results/results ./results
+          
+          echo "Building golc for OS: darwin, Architecture: amd64"
+          go build -o build/darwin-amd64/golc/golc ./golc
+          go build -o build/darwin-amd64/results/results ./results
+          
+          echo "Building golc for OS: darwin, Architecture: arm64"
+          go build -o build/darwin-arm64/golc/golc ./golc
+          go build -o build/darwin-arm64/results/results ./results
 
-      - name: Create ZIP of both applications with version
-        id:  zip
-        if:  steps.build.outcome == 'success'
+      - name: Create ZIP of both applications with version for linux-amd64
         run: |
-          mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
-          cp build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/results
-          cp README.md build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/README.md
-          cp config_sample.json build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/config.json
-          cp -r imgs/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/imgs
-          cp -r dist/ build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/dist
-          cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-          zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
+          mkdir -p build/linux-amd64/bundle
+          cp build/linux-amd64/golc/golc build/linux-amd64/bundle/golc
+          cp build/linux-amd64/results/results build/linux-amd64/bundle/results
+          cp README.md build/linux-amd64/bundle/README.md
+          cp config_sample.json build/linux-amd64/bundle/config.json
+          cp -r imgs/ build/linux-amd64/bundle/imgs
+          cp -r dist/ build/linux-amd64/bundle/dist
+          cd build/linux-amd64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-linux-amd64.zip *
 
-  uploadBuildArtifacts:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Read Version from VERSION
-        id: get_version
+      - name: Create ZIP of both applications with version for linux-arm64
         run: |
-          cat VERSION
-          VER=$(cat VERSION)
-          echo "VERSION=$VER" >> $GITHUB_ENV        
+          mkdir -p build/linux-arm64/bundle
+          cp build/linux-arm64/golc/golc build/linux-arm64/bundle/golc
+          cp build/linux-arm64/results/results build/linux-arm64/bundle/results
+          cp README.md build/linux-arm64/bundle/README.md
+          cp config_sample.json build/linux-arm64/bundle/config.json
+          cp -r imgs/ build/linux-arm64/bundle/imgs
+          cp -r dist/ build/linux-arm64/bundle/dist
+          cd build/linux-arm64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-linux-arm64.zip *
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
+      - name: Create ZIP of both applications with version for windows-amd64
+        run: |
+          mkdir -p build/windows-amd64/bundle
+          cp build/windows-amd64/golc/golc build/windows-amd64/bundle/golc
+          cp build/windows-amd64/results/results build/windows-amd64/bundle/results
+          cp README.md build/windows-amd64/bundle/README.md
+          cp config_sample.json build/windows-amd64/bundle/config.json
+          cp -r imgs/ build/windows-amd64/bundle/imgs
+          cp -r dist/ build/windows-amd64/bundle/dist
+          cd build/windows-amd64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-windows-amd64.zip *
+
+      - name: Create ZIP of both applications with version for windows-arm64
+        run: |
+          mkdir -p build/windows-arm64/bundle
+          cp build/windows-arm64/golc/golc build/windows-arm64/bundle/golc
+          cp build/windows-arm64/results/results build/windows-arm64/bundle/results
+          cp README.md build/windows-arm64/bundle/README.md
+          cp config_sample.json build/windows-arm64/bundle/config.json
+          cp -r imgs/ build/windows-arm64/bundle/imgs
+          cp -r dist/ build/windows-arm64/bundle/dist
+          cd build/windows-arm64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-windows-arm64.zip *
+
+      - name: Create ZIP of both applications with version for darwin-amd64
+        run: |
+          mkdir -p build/darwin-amd64/bundle
+          cp build/darwin-amd64/golc/golc build/darwin-amd64/bundle/golc
+          cp build/darwin-amd64/results/results build/darwin-amd64/bundle/results
+          cp README.md build/darwin-amd64/bundle/README.md
+          cp config_sample.json build/darwin-amd64/bundle/config.json
+          cp -r imgs/ build/darwin-amd64/bundle/imgs
+          cp -r dist/ build/darwin-amd64/bundle/dist
+          cd build/darwin-amd64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-darwin-amd64.zip *
+
+      - name: Create ZIP of both applications with version for darwin-arm64
+        run: |
+          mkdir -p build/darwin-arm64/bundle
+          cp build/darwin-arm64/golc/golc build/darwin-arm64/bundle/golc
+          cp build/darwin-arm64/results/results build/darwin-arm64/bundle/results
+          cp README.md build/darwin-arm64/bundle/README.md
+          cp config_sample.json build/darwin-arm64/bundle/config.json
+          cp -r imgs/ build/darwin-arm64/bundle/imgs
+          cp -r dist/ build/darwin-arm64/bundle/dist
+          cd build/darwin-arm64/bundle
+          zip -r ../../golc-${{ env.VERSION }}-darwin-arm64.zip *
 
       - name: Upload linux/amd64
         uses: actions/upload-artifact@v3
