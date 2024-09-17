@@ -85,6 +85,9 @@ jobs:
           VER=$(cat VERSION)
           echo "VERSION=$VER" >> $GITHUB_ENV        
 
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+
       - name: Upload linux/amd64
         uses: actions/upload-artifact@v3
         with:
