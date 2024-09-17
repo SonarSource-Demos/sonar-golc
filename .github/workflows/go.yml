@@ -49,6 +49,7 @@ jobs:
           go mod download  # Download all dependencies
 
       - name: Build Go applications for ${{ matrix.goos }}/{{ matrix.goarch }}
+        id:  build
         run: |
           echo "Building golc for OS: ${{ matrix.goos }}, Architecture: ${{ matrix.goarch }}"
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc ./golc
@@ -57,6 +58,8 @@ jobs:
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results ./results
 
       - name: Create ZIP of both applications with version
+        id:  zip
+        if:  steps.build.outcome == 'success'
         run: |
           mkdir -p build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           cp build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle/golc
@@ -68,14 +71,9 @@ jobs:
           cd build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
           zip -r ../../golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip *
 
-      - name: Check if files exist
-        run:  |
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/golc/golc
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/results/results
-          ls -al build/${{ matrix.goos }}-${{ matrix.goarch }}/bundle
-
       - name: Upload Large Artifacts
+        id:  upload
+        if:  steps.zip.outcome == 'success'
         uses: actions/upload-artifact@v3
         with:
           name: golc-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
