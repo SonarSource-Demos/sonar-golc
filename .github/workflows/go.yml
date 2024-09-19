@@ -41,6 +41,11 @@ jobs:
           go mod tidy
           go mod download  # Download all dependencies
 
+      - uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
       - name: Build Go applications for ${{ matrix.goos }}/{{ matrix.goarch }}
         id:  build
         run: |
