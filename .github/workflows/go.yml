@@ -51,28 +51,28 @@ jobs:
         id:  build
         run: |
           echo "Building golc for OS: linux, Architecture: amd64"
-          go build -o build/linux-amd64/golc/golc ./golc
-          go build -o build/linux-amd64/results/results ./results
+          GOOS=linux GOARCH=amd64 go build -o build/linux-amd64/golc/golc ./golc
+          GOOS=linux GOARCH=amd64 go build -o build/linux-amd64/results/results ./results
           
           echo "Building golc for OS: linux, Architecture: arm64"
-          go build -o build/linux-arm64/golc/golc ./golc
-          go build -o build/linux-arm64/results/results ./results
+          GOOS=linux GOARCH=arm64 go build -o build/linux-arm64/golc/golc ./golc
+          GOOS=linux GOARCH=arm64 go build -o build/linux-arm64/results/results ./results
           
           echo "Building golc for OS: windows, Architecture: amd64"
-          go build -o build/windows-amd64/golc/golc ./golc
-          go build -o build/windows-amd64/results/results ./results
+          GOOS=windows GOARCH=amd64 go build -o build/windows-amd64/golc/golc ./golc
+          GOOS=windows GOARCH=amd64 go build -o build/windows-amd64/results/results ./results
           
           echo "Building golc for OS: windows, Architecture: arm64"
-          go build -o build/windows-arm64/golc/golc ./golc
-          go build -o build/windows-arm64/results/results ./results
+          GOOS=windows GOARCH=arm64 go build -o build/windows-arm64/golc/golc ./golc
+          GOOS=windows GOARCH=arm64 go build -o build/windows-arm64/results/results ./results
           
           echo "Building golc for OS: darwin, Architecture: amd64"
-          go build -o build/darwin-amd64/golc/golc ./golc
-          go build -o build/darwin-amd64/results/results ./results
+          GOOS=darwin GOARCH=amd64 go build -o build/darwin-amd64/golc/golc ./golc
+          GOOS=darwin GOARCH=amd4 go build -o build/darwin-amd64/results/results ./results
           
           echo "Building golc for OS: darwin, Architecture: arm64"
-          go build -o build/darwin-arm64/golc/golc ./golc
-          go build -o build/darwin-arm64/results/results ./results
+          GOOS=darwin GOARCH=arm64 go build -o build/darwin-arm64/golc/golc ./golc
+          GOOS=darwin GOARCH=arm64 go build -o build/darwin-arm64/results/results ./results
 
       - name: Create ZIP of both applications with version for linux-amd64
         run: |
