@@ -134,7 +134,6 @@ const directoryconf = "/config"
 var logFile *os.File
 var AppConfig Config
 var logger *logrus.Logger
-var version1 = "1.0.7"
 
 //stuff
 var version2 = ""
@@ -1037,13 +1036,6 @@ func init() {
 		os.Exit(1)
 	}
 
-	if AppConfig.Release.Version != version1 {
-		logrus.Fatalf("\n❌ Version mismatch: expected %s but got %s - Use the correct config.json file !", version1, AppConfig.Release.Version)
-		os.Exit(1)
-	}
-
-	logrus.Info("✅ Configuration loaded successfully and version matched!")
-
 	// Create Logs Directory
 	logDir := "Logs"
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
@@ -1098,7 +1090,18 @@ func main() {
 	}
 
 	if *versionflag {
-		fmt.Printf("GoLC version: %s %s/%s\n", version1, runtime.GOOS, runtime.GOARCH)
+		// Read the content of the VERSION file
+    	content, err := ioutil.ReadFile("VERSION")
+    	if err != nil {
+    		log.Fatalf("Error reading VERSION file: %v", err)
+    	}
+
+    	// Trim any surrounding whitespace or newline characters
+    	version := strings.TrimSpace(string(content))
+
+    	// Output the version or use it in your application
+    	fmt.Printf("Version: %s\n", version)
+		fmt.Printf("GoLC version: %s %s/%s\n", version, runtime.GOOS, runtime.GOARCH)
 		os.Exit(0)
 	}
 
