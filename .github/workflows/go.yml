@@ -80,6 +80,7 @@ jobs:
           cp build/linux-amd64/golc/golc build/linux-amd64/bundle/golc
           cp build/linux-amd64/results/results build/linux-amd64/bundle/results
           cp README.md build/linux-amd64/bundle/README.md
+          cp VERSION build/linux-amd64/bundle/VERSION
           cp config_sample.json build/linux-amd64/bundle/config.json
           cp -r imgs/ build/linux-amd64/bundle/imgs
           cp -r dist/ build/linux-amd64/bundle/dist
@@ -92,6 +93,7 @@ jobs:
           cp build/linux-arm64/golc/golc build/linux-arm64/bundle/golc
           cp build/linux-arm64/results/results build/linux-arm64/bundle/results
           cp README.md build/linux-arm64/bundle/README.md
+          cp VERSION build/linux-arm64/bundle/VERSION
           cp config_sample.json build/linux-arm64/bundle/config.json
           cp -r imgs/ build/linux-arm64/bundle/imgs
           cp -r dist/ build/linux-arm64/bundle/dist
@@ -104,6 +106,7 @@ jobs:
           cp build/windows-amd64/golc/golc build/windows-amd64/bundle/golc
           cp build/windows-amd64/results/results build/windows-amd64/bundle/results
           cp README.md build/windows-amd64/bundle/README.md
+          cp VERSION build/windows-amd64/bundle/VERSION
           cp config_sample.json build/windows-amd64/bundle/config.json
           cp -r imgs/ build/windows-amd64/bundle/imgs
           cp -r dist/ build/windows-amd64/bundle/dist
@@ -116,6 +119,7 @@ jobs:
           cp build/windows-arm64/golc/golc build/windows-arm64/bundle/golc
           cp build/windows-arm64/results/results build/windows-arm64/bundle/results
           cp README.md build/windows-arm64/bundle/README.md
+          cp VERSION build/windows-arm64/bundle/VERSION
           cp config_sample.json build/windows-arm64/bundle/config.json
           cp -r imgs/ build/windows-arm64/bundle/imgs
           cp -r dist/ build/windows-arm64/bundle/dist
@@ -128,6 +132,7 @@ jobs:
           cp build/darwin-amd64/golc/golc build/darwin-amd64/bundle/golc
           cp build/darwin-amd64/results/results build/darwin-amd64/bundle/results
           cp README.md build/darwin-amd64/bundle/README.md
+          cp VERSION build/darwin-amd64/bundle/VERSION
           cp config_sample.json build/darwin-amd64/bundle/config.json
           cp -r imgs/ build/darwin-amd64/bundle/imgs
           cp -r dist/ build/darwin-amd64/bundle/dist
@@ -140,6 +145,7 @@ jobs:
           cp build/darwin-arm64/golc/golc build/darwin-arm64/bundle/golc
           cp build/darwin-arm64/results/results build/darwin-arm64/bundle/results
           cp README.md build/darwin-arm64/bundle/README.md
+          cp VERSION build/darwin-arm64/bundle/VERSION
           cp config_sample.json build/darwin-arm64/bundle/config.json
           cp -r imgs/ build/darwin-arm64/bundle/imgs
           cp -r dist/ build/darwin-arm64/bundle/dist
