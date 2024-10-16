@@ -1,3 +1,8 @@
+# Important
+a number of problems, on large DevOps organizations mostly, have been reported to us. At the present time unable to reproduce these issues and therefore fix them, please consider these options if you encounter issues with the tool:
+* https://github.com/SonarSource/sonar-loc-count is slow but is based on Bash or PowerShell scripts and can, therefore, be more easily tweaked
+* gather your repositories in one folder and run the 'File' flavor of sonar-golc on that folder.
+
 ![Static Badge](https://img.shields.io/badge/Go-v1.22-blue:)
 
 
