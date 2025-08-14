@@ -381,7 +381,7 @@ To exclude directories from your repository from the analysis, initialize the va
 
  To launch GoLC with the following command, you must specify your DevOps platform. In this example, we analyze repositories hosted on Bitbucket Cloud. The supported flags for -devops are :
  ```bash
-flag : <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>
+flag : <BitBucketSRV>||<BitBucket>||<Github>||<GithubEnterprise>||<Gitlab>||<Azure>||<File>
 
  ```
  ❗️ GoLC runs on Windows, Linux, and OSX, but the preferred platforms are OSX or Linux.
