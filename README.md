@@ -179,6 +179,32 @@ Scala              | .scala                                   | //              
         "ResultAll": true,
         "Org":true
       },
+      "GithubEnterprise": {
+        "Users": "xxxxxxxxxxxxxx",
+        "AccessToken": "xxxxxxxxxxxxxx",
+        "Organization": "xxxxxxxxxx",
+        "DevOps": "github",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "DefaultBranch": false,
+        "Url": "https://github.yourcompany.com/",
+        "Apiver": "",
+        "Baseapi": "github.yourcompany.com",
+        "Protocol": "https",
+        "FileExclusion":".cloc_github_ignore",
+        "ExtExclusion":[],
+        "ExcludePaths":[],
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 30,
+        "NumberWorkerRepos":30,
+        "ResultByFile": false,
+        "ResultAll": true,
+        "Org":true
+      },
       "Gitlab": {
         "Users": "xxxxxxxxxxxxxx",
         "AccessToken": "xxxxxxxxxxxxxx",
@@ -247,7 +273,7 @@ Scala              | .scala                                   | //              
   }
     
  ```
-This file represents the 6 supported platforms for analysis: BitBucketSRV (Bitbucket DC), BitBucket (cloud), GitHub, GitLab, Azure (Azure DevOps), and File. Depending on your platform, for example, Bitbucket DC (enter BitBucketSRV), specify the parameters:
+This file represents the 6 supported platforms for analysis: BitBucketSRV (Bitbucket DC), BitBucket (cloud), GitHub (Cloud and Enterprise Server), GitLab, Azure (Azure DevOps), and File. Depending on your platform, for example, Bitbucket DC (enter BitBucketSRV), specify the parameters:
 
  ```json
 "Users": "xxxxxxxxxxxxxx" : Your User login
@@ -295,6 +321,22 @@ REPO2_SLUG
 ```
 - REPO1_SLUG = for one Repository
 ```
+
+**GitHub Enterprise Server Configuration:**
+
+For GitHub Enterprise Server (on-premises), modify the URL configuration:
+
+```json
+"GithubEnterprise": {
+  "Url": "https://github.yourcompany.com/",
+  "Baseapi": "github.yourcompany.com",
+  "Protocol": "https"
+}
+```
+
+- **Url**: Your GitHub Enterprise Server URL (e.g., `https://github.yourcompany.com/`)
+- **Baseapi**: Your GitHub Enterprise Server hostname (e.g., `github.yourcompany.com`)
+- The tool automatically detects GitHub Enterprise Server by checking if the URL differs from `https://api.github.com/`
 
 The syntax of this file is as follows for File:
 

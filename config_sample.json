@@ -80,6 +80,32 @@
         "ResultAll": true,
         "Org":true
       },
+      "GithubEnterprise": {
+        "Users": "XXXXX",
+        "AccessToken": "XXXXX", 
+        "Organization": "XXXXX",
+        "DevOps": "github",
+        "Project": "",
+        "Repos": "",
+        "Branch": "",
+        "DefaultBranch": true,
+        "Url": "https://github-enterprise.sonarqube.com/",
+        "Apiver": "2022-11-28",
+        "Baseapi": "github-enterprise.sonarqube.com",
+        "Protocol": "https",
+        "FileExclusion":".cloc_github_ignore",
+       "ExtExclusion":[],
+        "ExcludePaths":[],
+        "Period":-1,
+        "Factor":33,
+        "Multithreading":true,
+        "Stats": false,
+        "Workers": 10 ,
+        "NumberWorkerRepos":10,
+        "ResultByFile": false,
+        "ResultAll": true,
+        "Org":false
+      },
 
       "Gitlab": {
         "Users": "XXXXX",
