@@ -17,13 +17,13 @@ GoLC can be used to estimate LoC counts that would be produced by a Sonar analys
 
 GoLC The tool analyzes your repositories and identifies the largest branch of each repository, counting the total number of lines of code per language for that branch. At the end of the analysis, a text and PDF report is generated, along with a JSON results file for each repository.It starts an HTTP service to display an HTML page with the results.
 
-> This last version is ver1.0.6 is available for Bitbucket Cloud , Bitbucket DC, GitHub , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
+> This last version is ver1.0.8 is available for Bitbucket Cloud , Bitbucket DC, GitHub (Cloud and On-premises) , GitLab cloud and  On-Premise , Azure DevOps and Files.A Docker version is available.
 
 
 ---
 ## Installation
 
-You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.6)
+You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.8)
 
 
 
@@ -555,11 +555,11 @@ Report By file :
 
 ✅ Pull Images
 
-There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.6** and **amd64-1.0.6** .
+There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.8** and **amd64-1.0.8** .
 
  ```bash
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.6
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.6
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.8
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.8
 ```
 
 ✅ Create volumes to persist data or map a local directory
@@ -570,7 +570,7 @@ You need a persistent volume or to map a local directory to store the analysis r
 
 ✅ Running the container: 
  ```bash
-:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.6 -devops Github -docker
+:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.8 -devops Github -docker
 
 ✅ Using configuration for DevOps platform 'Github'
 Running in Docker mode
@@ -615,7 +615,7 @@ Running in Docker mode
  The default port is 8091.
 
 ```
-:> docker run --rm -p 8091:8091 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.6
+:> docker run --rm -p 8091:8091 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.8
 
 
 ✅ Launching web visualization...
