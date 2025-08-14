@@ -946,7 +946,7 @@ func main() {
 	}
 
 	if *devopsFlag == "" {
-		fmt.Println("\n❌ Please specify the DevOps platform using the -devops flag : <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>")
+		fmt.Println("\n❌ Please specify the DevOps platform using the -devops flag : <BitBucketSRV>||<BitBucket>||<Github>||<GithubEnterprise>||<Gitlab>||<Azure>||<File>")
 		fmt.Println("✅ Example for BitBucket server : golc -devops BitBucketSRV")
 		os.Exit(1)
 	}
@@ -954,7 +954,7 @@ func main() {
 	platformConfig, ok := AppConfig.Platforms[*devopsFlag].(map[string]interface{})
 	if !ok {
 		fmt.Printf("\n❌ Configuration for DevOps platform '%s' not found\n", *devopsFlag)
-		fmt.Println("✅ the -devops flag is : <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>")
+		fmt.Println("✅ the -devops flag is : <BitBucketSRV>||<BitBucket>||<Github>||<GithubEnterprise>||<Gitlab>||<Azure>||<File>")
 		os.Exit(1)
 	}
 
