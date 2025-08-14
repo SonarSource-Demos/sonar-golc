@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export TAG="V1.0.6" # Release TAG in GitHub
-export Release1="v1.0.6" # Release Number
+export TAG="V1.0.8" # Release TAG in GitHub
+export Release1="v1.0.8" # Release Number
 export buildpath="xxxx/Release/"  # Replace with the path where the release files are located
 
 GITHUB_TOKEN="XXXXXXXXX" # Replace with your token

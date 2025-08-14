@@ -670,7 +670,39 @@ func loadExclusionFile(exclusionfile string, spin *spinner.Spinner) (ExclusionRe
 
 func initializeGithubClient(platformConfig map[string]interface{}) (context.Context, *github.Client) {
 	ctx := context.Background()
-	client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
+	accessToken := platformConfig["AccessToken"].(string)
+	url := platformConfig["Url"].(string)
+
+	// Check if this is GitHub Enterprise Server (not GitHub cloud)
+	if url != "https://api.github.com/" && url != "https://api.github.com" {
+		// GitHub Enterprise Server - construct the proper API URLs
+		baseURL := url
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		// GitHub Enterprise Server API is typically at /api/v3/
+		// Only add /api/v3/ if it's not already present
+		if !strings.Contains(baseURL, "/api/v3/") && !strings.Contains(baseURL, "/api/v4/") {
+			if strings.HasSuffix(baseURL, "/") {
+				baseURL += "api/v3/"
+			} else {
+				baseURL += "/api/v3/"
+			}
+		}
+
+		// Create client for GitHub Enterprise Server
+		client, err := github.NewClient(nil).WithAuthToken(accessToken).WithEnterpriseURLs(baseURL, baseURL)
+		if err != nil {
+			loggers := utils.NewLogger()
+			loggers.Errorf("❌ Failed to create GitHub Enterprise client: %v", err)
+			// Fallback to regular client
+			client = github.NewClient(nil).WithAuthToken(accessToken)
+		}
+		return ctx, client
+	}
+
+	// GitHub Cloud (default)
+	client := github.NewClient(nil).WithAuthToken(accessToken)
 	return ctx, client
 }
 
@@ -801,8 +833,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 
 	if len(platformConfig["Repos"].(string)) == 0 {
 
-		ctx := context.Background()
-		client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
+		ctx, client := initializeGithubClient(platformConfig)
 
 		// Get all Repositories in Organization
 		for {
@@ -853,8 +884,7 @@ func FastAnalys(platformConfig map[string]interface{}, exlusionfile string) erro
 	} else {
 
 		var reposSlice []*github.Repository
-		ctx := context.Background()
-		client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
+		ctx, client := initializeGithubClient(platformConfig)
 
 		repos1, _, err := client.Repositories.Get(ctx, platformConfig["Organization"].(string), platformConfig["Repos"].(string))
 		if err != nil {
@@ -927,8 +957,12 @@ func GetGithubLanguages(parms ParamsReposGithub, ctx context.Context, client *gi
 
 		}
 		if !isEmpty {
-			ctx := context.Background()
-			client := github.NewClient(nil).WithAuthToken(parms.AccessToken)
+			// Create a temporary platform config map for client initialization
+			tempConfig := map[string]interface{}{
+				"AccessToken": parms.AccessToken,
+				"Url":         parms.URL,
+			}
+			ctx, client := initializeGithubClient(tempConfig)
 
 			totalFiles := 0
 			totalLines := 0
