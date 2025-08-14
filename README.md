@@ -188,9 +188,9 @@ Scala              | .scala                                   | //              
         "Repos": "",
         "Branch": "",
         "DefaultBranch": false,
-        "Url": "https://github.yourcompany.com/",
+        "Url": "https://github-enterprise.yourcompany.com/",
         "Apiver": "",
-        "Baseapi": "github.yourcompany.com",
+        "Baseapi": "github-enterprise.yourcompany.com",
         "Protocol": "https",
         "FileExclusion":".cloc_github_ignore",
         "ExtExclusion":[],
@@ -336,7 +336,6 @@ For GitHub Enterprise Server (on-premises), modify the URL configuration:
 
 - **Url**: Your GitHub Enterprise Server URL (e.g., `https://github.yourcompany.com/`)
 - **Baseapi**: Your GitHub Enterprise Server hostname (e.g., `github.yourcompany.com`)
-- The tool automatically detects GitHub Enterprise Server by checking if the URL differs from `https://api.github.com/`
 
 The syntax of this file is as follows for File:
 
