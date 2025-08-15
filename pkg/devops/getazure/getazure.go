@@ -316,7 +316,7 @@ func GetRepoAzureList(platformConfig map[string]interface{}, exclusionFile strin
 		ProjectBranches: importantBranches,
 	}
 	if err := SaveResult(result); err != nil {
-		loggers.Errorf("❌ Error Save Result of Analysis :", err)
+		loggers.Errorf("❌ Error Save Result of Analysis : %v", err)
 		os.Exit(1)
 	}
 
@@ -723,7 +723,7 @@ func SaveResult(result AnalysisResult) error {
 	// Open or create the file
 	file, err := os.Create("Results/config/analysis_result_azure.json")
 	if err != nil {
-		loggers.Errorf("❌ Error creating Analysis file:", err)
+		loggers.Errorf("❌ Error creating Analysis file: %v", err)
 		return err
 	}
 	defer file.Close()
@@ -733,7 +733,7 @@ func SaveResult(result AnalysisResult) error {
 
 	// Encode the result and write it to the file
 	if err := encoder.Encode(result); err != nil {
-		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_azure.json> :", err)
+		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_azure.json> : %v", err)
 		return err
 	}
 

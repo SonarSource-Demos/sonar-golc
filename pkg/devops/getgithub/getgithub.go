@@ -322,7 +322,7 @@ func GetReposGithub(parms ParamsReposGithub, ctx context.Context, client *github
 		ProjectBranches: importantBranches,
 	}
 	if err := SaveResult(result); err != nil {
-		loggers.Errorf("❌ Error Save Result of Analysis :", err)
+		loggers.Errorf("❌ Error Save Result of Analysis : %v", err)
 		os.Exit(1)
 	}
 
@@ -388,7 +388,7 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 
 	allEvents, err = getAllEvents(ctx, client, *repo.Name, parms.Organization)
 	if err != nil {
-		loggers.Errorf("❌ Error fetching repository events:", err)
+		loggers.Errorf("❌ Error fetching repository events: %v", err)
 		spin1.Stop()
 		return "", nil
 	}
@@ -457,7 +457,7 @@ func countBranchPushes(events []*github.Event, period int) map[string]*BranchInf
 			case "PushEvent":
 				payload, err := event.ParsePayload()
 				if err != nil {
-					loggers.Errorf("❌ Error parsing payload:", err)
+					loggers.Errorf("❌ Error parsing payload: %v", err)
 					continue
 				}
 				pushEvent, ok := payload.(*github.PushEvent)
