@@ -35,9 +35,82 @@ type LanguageData struct {
 	CodeLinesF string  `json:"CodeLinesF"`
 }
 
+type RepositoryData struct {
+	Number      int    `json:"Number"`
+	Repository  string `json:"Repository"`
+	Branch      string `json:"Branch"`
+	Lines       int    `json:"Lines"`
+	BlankLines  int    `json:"BlankLines"`
+	Comments    int    `json:"Comments"`
+	CodeLines   int    `json:"CodeLines"`
+	LinesF      string `json:"LinesF"`
+	BlankLinesF string `json:"BlankLinesF"`
+	CommentsF   string `json:"CommentsF"`
+	CodeLinesF  string `json:"CodeLinesF"`
+}
+
+type ProjectBranch struct {
+	Org         string `json:"Org"`
+	RepoSlug    string `json:"RepoSlug"`
+	MainBranch  string `json:"MainBranch"`
+	LargestSize int64  `json:"LargestSize"`
+}
+
+type AnalysisResult struct {
+	NumRepositories int             `json:"NumRepositories"`
+	ProjectBranches []ProjectBranch `json:"ProjectBranches"`
+}
+
+type RepositoryLanguageData struct {
+	Language    string `json:"Language"`
+	Files       int    `json:"Files"`
+	Lines       int    `json:"Lines"`
+	BlankLines  int    `json:"BlankLines"`
+	Comments    int    `json:"Comments"`
+	CodeLines   int    `json:"CodeLines"`
+	FilesF      string `json:"FilesF"`
+	LinesF      string `json:"LinesF"`
+	BlankLinesF string `json:"BlankLinesF"`
+	CommentsF   string `json:"CommentsF"`
+	CodeLinesF  string `json:"CodeLinesF"`
+}
+
+type BranchData struct {
+	Branch      string `json:"Branch"`
+	Lines       int    `json:"Lines"`
+	BlankLines  int    `json:"BlankLines"`
+	Comments    int    `json:"Comments"`
+	CodeLines   int    `json:"CodeLines"`
+	LinesF      string `json:"LinesF"`
+	BlankLinesF string `json:"BlankLinesF"`
+	CommentsF   string `json:"CommentsF"`
+	CodeLinesF  string `json:"CodeLinesF"`
+}
+
+type RepositoryDetailData struct {
+	Repository       string                   `json:"Repository"`
+	MainBranch       string                   `json:"MainBranch"`
+	Organization     string                   `json:"Organization"`
+	TotalLines       int                      `json:"TotalLines"`
+	TotalBlankLines  int                      `json:"TotalBlankLines"`
+	TotalComments    int                      `json:"TotalComments"`
+	TotalCodeLines   int                      `json:"TotalCodeLines"`
+	TotalLinesF      string                   `json:"TotalLinesF"`
+	TotalBlankLinesF string                   `json:"TotalBlankLinesF"`
+	TotalCommentsF   string                   `json:"TotalCommentsF"`
+	TotalCodeLinesF  string                   `json:"TotalCodeLinesF"`
+	Languages        []RepositoryLanguageData `json:"Languages"`
+	OtherBranches    []BranchData             `json:"OtherBranches"`
+	GlobalReport     Globalinfo               `json:"GlobalReport"`
+	Platform         string                   `json:"Platform"`
+	PlatformIcon     string                   `json:"PlatformIcon"`
+	RepositoryURL    string                   `json:"RepositoryURL"`
+}
+
 type PageData struct {
 	Languages    []LanguageData
 	GlobalReport Globalinfo
+	Repositories []RepositoryData
 }
 
 var globalInfo Globalinfo       // Variable pour stocker les infos globales
@@ -49,6 +122,244 @@ func getGlobalInfo() Globalinfo {
 
 func getLanguageData() []LanguageData {
 	return languageData
+}
+
+func getRepositoryData() ([]RepositoryData, error) {
+	var repositories []RepositoryData
+
+	// Read analysis results to get repository and branch information
+	analysisFile, err := os.ReadFile("Results/config/analysis_result_github.json")
+	if err != nil {
+		fmt.Println("❌ Error reading analysis_result_github.json file", err)
+		return nil, err
+	}
+
+	var analysisResult AnalysisResult
+	err = json.Unmarshal(analysisFile, &analysisResult)
+	if err != nil {
+		fmt.Println("❌ Error decoding JSON analysis_result_github.json file", err)
+		return nil, err
+	}
+
+	// Process each repository
+	for i, branch := range analysisResult.ProjectBranches {
+		// Construct filename for byfile report
+		fileName := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
+			branch.Org, branch.RepoSlug, branch.MainBranch)
+
+		// Read the byfile report
+		fileData, err := os.ReadFile(fileName)
+		if err != nil {
+			fmt.Printf("❌ Error reading byfile report %s: %v\n", fileName, err)
+			continue // Skip this repository if file doesn't exist
+		}
+
+		// Parse the JSON structure
+		var reportData struct {
+			TotalLines      int `json:"TotalLines"`
+			TotalBlankLines int `json:"TotalBlankLines"`
+			TotalComments   int `json:"TotalComments"`
+			TotalCodeLines  int `json:"TotalCodeLines"`
+		}
+
+		err = json.Unmarshal(fileData, &reportData)
+		if err != nil {
+			fmt.Printf("❌ Error decoding JSON byfile report %s: %v\n", fileName, err)
+			continue
+		}
+
+		// Create repository data entry
+		repo := RepositoryData{
+			Number:      i + 1,
+			Repository:  branch.RepoSlug,
+			Branch:      branch.MainBranch,
+			Lines:       reportData.TotalLines,
+			BlankLines:  reportData.TotalBlankLines,
+			Comments:    reportData.TotalComments,
+			CodeLines:   reportData.TotalCodeLines,
+			LinesF:      utils.FormatCodeLines(float64(reportData.TotalLines)),
+			BlankLinesF: utils.FormatCodeLines(float64(reportData.TotalBlankLines)),
+			CommentsF:   utils.FormatCodeLines(float64(reportData.TotalComments)),
+			CodeLinesF:  utils.FormatCodeLines(float64(reportData.TotalCodeLines)),
+		}
+
+		repositories = append(repositories, repo)
+	}
+
+	return repositories, nil
+}
+
+func detectPlatformAndReadAnalysis() (string, []byte, error) {
+	// Try to detect platform from existing analysis result files
+	platforms := []string{"github", "gitlab", "bitbucket", "azure"}
+
+	for _, platform := range platforms {
+		filePath := fmt.Sprintf("Results/config/analysis_result_%s.json", platform)
+		if data, err := os.ReadFile(filePath); err == nil {
+			return platform, data, nil
+		}
+	}
+
+	// Default fallback to github if no specific file found
+	data, err := os.ReadFile("Results/config/analysis_result_github.json")
+	if err != nil {
+		return "", nil, fmt.Errorf("no analysis result file found")
+	}
+	return "github", data, nil
+}
+
+func getPlatformInfoAndURL(platform, org, repo string) (string, string) {
+	switch platform {
+	case "github":
+		return "fab fa-github", fmt.Sprintf("https://github.com/%s/%s", org, repo)
+	case "gitlab":
+		return "fab fa-gitlab", fmt.Sprintf("https://gitlab.com/%s/%s", org, repo)
+	case "bitbucket":
+		return "fab fa-bitbucket", fmt.Sprintf("https://bitbucket.org/%s/%s", org, repo)
+	case "azure":
+		return "fab fa-microsoft", fmt.Sprintf("https://dev.azure.com/%s/_git/%s", org, repo)
+	default:
+		return "fab fa-github", fmt.Sprintf("https://github.com/%s/%s", org, repo)
+	}
+}
+
+func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData, error) {
+	// Detect platform and read analysis results
+	platform, analysisFile, err := detectPlatformAndReadAnalysis()
+	if err != nil {
+		return nil, fmt.Errorf("error reading analysis file: %v", err)
+	}
+
+	var analysisResult AnalysisResult
+	err = json.Unmarshal(analysisFile, &analysisResult)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding analysis result file: %v", err)
+	}
+
+	// Find the repository in analysis results
+	var orgName string
+	for _, branch := range analysisResult.ProjectBranches {
+		if branch.RepoSlug == repoName {
+			orgName = branch.Org
+			break
+		}
+	}
+
+	if orgName == "" {
+		return nil, fmt.Errorf("repository %s not found in analysis results", repoName)
+	}
+
+	// Read the byfile report for totals
+	byFileReportPath := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
+		orgName, repoName, branchName)
+
+	byFileData, err := os.ReadFile(byFileReportPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading byfile report %s: %v", byFileReportPath, err)
+	}
+
+	var byFileReport struct {
+		TotalLines      int `json:"TotalLines"`
+		TotalBlankLines int `json:"TotalBlankLines"`
+		TotalComments   int `json:"TotalComments"`
+		TotalCodeLines  int `json:"TotalCodeLines"`
+		Results         []struct {
+			File       string `json:"File"`
+			Lines      int    `json:"Lines"`
+			BlankLines int    `json:"BlankLines"`
+			Comments   int    `json:"Comments"`
+			CodeLines  int    `json:"CodeLines"`
+		} `json:"Results"`
+	}
+
+	err = json.Unmarshal(byFileData, &byFileReport)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding byfile report: %v", err)
+	}
+
+	// Read the bylanguage report for language breakdown
+	byLanguageReportPath := fmt.Sprintf("Results/bylanguage-report/Result_%s_%s_%s.json",
+		orgName, repoName, branchName)
+
+	languageData, err := os.ReadFile(byLanguageReportPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading bylanguage report %s: %v", byLanguageReportPath, err)
+	}
+
+	var languageReport struct {
+		TotalFiles      int                      `json:"TotalFiles"`
+		TotalLines      int                      `json:"TotalLines"`
+		TotalBlankLines int                      `json:"TotalBlankLines"`
+		TotalComments   int                      `json:"TotalComments"`
+		TotalCodeLines  int                      `json:"TotalCodeLines"`
+		Results         []RepositoryLanguageData `json:"Results"`
+	}
+
+	err = json.Unmarshal(languageData, &languageReport)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding bylanguage report: %v", err)
+	}
+
+	// Read global report
+	globalData, err := os.ReadFile("Results/GlobalReport.json")
+	if err != nil {
+		return nil, fmt.Errorf("error reading GlobalReport.json: %v", err)
+	}
+
+	var globalInfo Globalinfo
+	err = json.Unmarshal(globalData, &globalInfo)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding GlobalReport.json: %v", err)
+	}
+
+	// Process language data to add formatted fields
+	var formattedLanguages []RepositoryLanguageData
+	for _, lang := range languageReport.Results {
+		formattedLang := RepositoryLanguageData{
+			Language:    lang.Language,
+			Files:       lang.Files,
+			Lines:       lang.Lines,
+			BlankLines:  lang.BlankLines,
+			Comments:    lang.Comments,
+			CodeLines:   lang.CodeLines,
+			FilesF:      utils.FormatCodeLines(float64(lang.Files)),
+			LinesF:      utils.FormatCodeLines(float64(lang.Lines)),
+			BlankLinesF: utils.FormatCodeLines(float64(lang.BlankLines)),
+			CommentsF:   utils.FormatCodeLines(float64(lang.Comments)),
+			CodeLinesF:  utils.FormatCodeLines(float64(lang.CodeLines)),
+		}
+		formattedLanguages = append(formattedLanguages, formattedLang)
+	}
+
+	// Get platform info and repository URL
+	platformIcon, repositoryURL := getPlatformInfoAndURL(platform, orgName, repoName)
+
+	// Get other branches (for now, we'll simulate this - in future could read from git or analysis)
+	otherBranches := []BranchData{
+		// This would be populated with actual branch data if available
+	}
+
+	repoDetail := &RepositoryDetailData{
+		Repository:       repoName,
+		MainBranch:       branchName,
+		Organization:     orgName,
+		TotalLines:       byFileReport.TotalLines,
+		TotalBlankLines:  byFileReport.TotalBlankLines,
+		TotalComments:    byFileReport.TotalComments,
+		TotalCodeLines:   byFileReport.TotalCodeLines,
+		TotalLinesF:      utils.FormatCodeLines(float64(byFileReport.TotalLines)),
+		TotalBlankLinesF: utils.FormatCodeLines(float64(byFileReport.TotalBlankLines)),
+		TotalCommentsF:   utils.FormatCodeLines(float64(byFileReport.TotalComments)),
+		TotalCodeLinesF:  utils.FormatCodeLines(float64(byFileReport.TotalCodeLines)),
+		Languages:        formattedLanguages,
+		OtherBranches:    otherBranches,
+		GlobalReport:     globalInfo,
+		Platform:         platform,
+		PlatformIcon:     platformIcon,
+		RepositoryURL:    repositoryURL,
+	}
+
+	return repoDetail, nil
 }
 
 func startServer(port int) {
@@ -176,9 +487,17 @@ func main() {
 		return
 	}
 
+	// Get repository data
+	repositoryData, err := getRepositoryData()
+	if err != nil {
+		fmt.Println("❌ Error loading repository data:", err)
+		repositoryData = []RepositoryData{} // Use empty slice if error
+	}
+
 	pageData = PageData{
 		Languages:    languages,
 		GlobalReport: globalInfo,
+		Repositories: repositoryData,
 	}
 
 	// Load HTML template
@@ -210,6 +529,40 @@ func main() {
 	http.HandleFunc("/api/global-info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(globalInfo)
+	})
+
+	// API Endpoint for Repository Data
+	http.HandleFunc("/api/repositories", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(repositoryData)
+	})
+
+	// Repository Detail Page Handler
+	http.HandleFunc("/repository/", func(w http.ResponseWriter, r *http.Request) {
+		// Parse URL path to extract repository name and branch
+		pathParts := strings.Split(strings.TrimPrefix(r.URL.Path, "/repository/"), "/")
+		if len(pathParts) < 2 {
+			http.Error(w, "Invalid repository URL", http.StatusBadRequest)
+			return
+		}
+
+		repoName := pathParts[0]
+		branchName := pathParts[1]
+
+		// Get repository detail data
+		repoData, err := getRepositoryDetailData(repoName, branchName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error loading repository data: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Execute repository detail template
+		tmplRepo := template.Must(template.New("repository").Parse(repositoryDetailTemplate))
+		err = tmplRepo.Execute(w, repoData)
+		if err != nil {
+			http.Error(w, "Error executing repository template", http.StatusInternalServerError)
+			return
+		}
 	})
 
 	/*fmt.Println("Would you like to launch web visualization? (Y/N)")
@@ -307,6 +660,58 @@ const htmlTemplate = `
         padding: 1.5rem;
         border-radius: 0.25rem;
       }
+      
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      .navbar {
+        background: rgba(253, 106, 133, 0.15) !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-bottom: 1px solid rgba(253, 106, 133, 0.2);
+        padding: 0.25rem 0 !important;
+        min-height: 3rem !important;
+      }
+      
+      .navbar-brand {
+        padding: 0.25rem 0 !important;
+      }
+      
+      .navbar-brand img {
+        height: 2rem !important;
+        filter: brightness(1.1);
+      }
+      
+      .navbar-nav {
+        padding: 0.25rem 0 !important;
+      }
+      
+      .navbar-nav .nav-link {
+        font-weight: 500;
+        color: rgba(255,255,255,0.9) !important;
+        transition: all 0.3s ease;
+        padding: 0.25rem 1rem !important;
+        font-size: 0.9rem;
+      }
+      
+      .navbar-nav .nav-link:hover {
+        color: #fd6a85 !important;
+        background-color: rgba(253, 106, 133, 0.1);
+        border-radius: 4px;
+      }
+      
+      .repo-link {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      
+      .repo-link:hover {
+        color: #fd6a85;
+        text-decoration: underline;
+      }
        .sw-flex {
         display: flex !important;
       }
@@ -370,7 +775,7 @@ const htmlTemplate = `
                 </div>
             </div>
             <div class="col-lg-6 mt-3 mt-lg-0">
-              <div class="card text-white bg-primary mb-4" style="max-width: 21rem;">
+                              <div class="card text-white bg-primary mb-4" style="max-width: 21rem;">
                 <h5 class="card-header text-white" style="padding: 1rem 1rem;"><i class="fas fa-code"></i> Languages</h5>
                 <div class="card-body text-white" style="padding: 1rem 1rem;">
                     <ul>
@@ -379,6 +784,69 @@ const htmlTemplate = `
                     {{end}}
                     </ul>
                 </div>    
+              </div>
+              <div class="text-center mt-3">
+                <a href="#repository-section" class="btn btn-outline-light btn-lg">
+                  <i class="fas fa-table"></i> View Repository Details
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Repository Details Table Section -->
+      <section id="repository-section" style="background-color: #f8f9fa; padding: 3rem 0; margin-top: 2rem;">
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <h2 class="text-center mb-4" style="color: #333;">
+                <i class="fas fa-table"></i> Repository Analysis Details
+              </h2>
+              <div class="card shadow-lg">
+                <h5 class="card-header bg-primary text-white">
+                  <i class="fas fa-code-branch"></i> Lines of Code by Repository ({{len .Repositories}} repositories analyzed)
+                </h5>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                      <thead class="table-dark">
+                        <tr>
+                          <th scope="col">#</th>
+                          <th scope="col">Repository</th>
+                          <th scope="col">Branch</th>
+                          <th scope="col">Lines</th>
+                          <th scope="col">Blank Lines</th>
+                          <th scope="col">Comments</th>
+                          <th scope="col">Code Lines</th>
+                        </tr>
+                      </thead>
+                      <tbody id="repositoryTableBody">
+                        {{range .Repositories}}
+                        <tr>
+                          <td>{{.Number}}</td>
+                          <td><a href="/repository/{{.Repository}}/{{.Branch}}" class="repo-link">{{.Repository}}</a></td>
+                          <td>{{.Branch}}</td>
+                          <td>{{.LinesF}}</td>
+                          <td>{{.BlankLinesF}}</td>
+                          <td>{{.CommentsF}}</td>
+                          <td><strong>{{.CodeLinesF}}</strong></td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                      <tfoot class="table-secondary">
+                        <tr id="totalsRow">
+                          <td><strong>Total</strong></td>
+                          <td colspan="2"><strong>{{len .Repositories}} repositories</strong></td>
+                          <td id="totalLines"><strong>-</strong></td>
+                          <td id="totalBlankLines"><strong>-</strong></td>
+                          <td id="totalComments"><strong>-</strong></td>
+                          <td id="totalCodeLines"><strong>-</strong></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -421,6 +889,9 @@ const htmlTemplate = `
                   </div>
                    <div class="sw-mt-4 markdown"><i class="fa fa-link"></i> <strong>GET</strong> /api/global-info</div>
                    <div class="sw-mt-4 markdown">Returns the global information for the analysis.</div>
+                   
+                   <div class="sw-mt-4 markdown"><i class="fa fa-link"></i> <strong>GET</strong> /api/repositories</div>
+                   <div class="sw-mt-4 markdown">Returns detailed repository metrics including lines of code per repository.</div>
 
                     <div class="accordion" id="accordion2">
                     <div class="accordion-item">
@@ -521,7 +992,287 @@ const htmlTemplate = `
                 modal.style.display = "none";
             }
         }
+
+        // Calculate and display totals for repository table
+        function calculateRepositoryTotals() {
+            let totalLines = 0;
+            let totalBlankLines = 0;
+            let totalComments = 0;
+            let totalCodeLines = 0;
+
+            {{range .Repositories}}
+            totalLines += {{.Lines}};
+            totalBlankLines += {{.BlankLines}};
+            totalComments += {{.Comments}};
+            totalCodeLines += {{.CodeLines}};
+            {{end}}
+
+            // Format numbers with commas
+            function formatNumber(num) {
+                return num.toLocaleString();
+            }
+
+            // Update totals in the table
+            document.getElementById('totalLines').innerHTML = '<strong>' + formatNumber(totalLines) + '</strong>';
+            document.getElementById('totalBlankLines').innerHTML = '<strong>' + formatNumber(totalBlankLines) + '</strong>';
+            document.getElementById('totalComments').innerHTML = '<strong>' + formatNumber(totalComments) + '</strong>';
+            document.getElementById('totalCodeLines').innerHTML = '<strong>' + formatNumber(totalCodeLines) + '</strong>';
+        }
+
+        // Calculate totals when page loads
+        calculateRepositoryTotals();
     </script>
+  </body>
+</html>
+`
+
+// Repository Detail HTML template
+const repositoryDetailTemplate = `
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Repository}} - Repository Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="/dist/css/theme.min.css" rel="stylesheet" type="text/css" />
+    <link href="/dist/vendors/fontawesome/css/all.min.css" rel="stylesheet" type="text/css" />
+    <style>
+      .navbar {
+        background: rgba(253, 106, 133, 0.15) !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-bottom: 1px solid rgba(253, 106, 133, 0.2);
+        padding: 0.25rem 0 !important;
+        min-height: 3rem !important;
+      }
+      
+      .navbar-brand {
+        padding: 0.25rem 0 !important;
+      }
+      
+      .navbar-brand img {
+        height: 2rem !important;
+        filter: brightness(1.1);
+      }
+      
+      .navbar-nav {
+        padding: 0.25rem 0 !important;
+      }
+      
+      .navbar-nav .nav-link {
+        font-weight: 500;
+        color: rgba(255,255,255,0.9) !important;
+        transition: all 0.3s ease;
+        padding: 0.25rem 1rem !important;
+        font-size: 0.9rem;
+      }
+      
+      .navbar-nav .nav-link:hover {
+        color: #fd6a85 !important;
+        background-color: rgba(253, 106, 133, 0.1);
+        border-radius: 4px;
+      }
+      
+      .back-btn {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      
+      .back-btn:hover {
+        color: #fd6a85;
+      }
+      
+      .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      
+      .lang-table th {
+        background-color: #343a40;
+        color: white;
+      }
+      
+      .repo-external-link {
+        color: #fff;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      .repo-external-link:hover {
+        color: #00d4aa;
+        text-decoration: none;
+      }
+      
+      .repo-external-link i {
+        font-size: 1.1em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="main" id="top">
+      <nav class="navbar navbar-expand-lg fixed-top navbar-dark" data-navbar-on-scroll="data-navbar-on-scroll">
+       <div class="container"><a class="navbar-brand" href="/"><img src="/dist/img//Logo.png" alt="" /></a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i class="fa-solid fa-bars text-white fs-3"></i></button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
+              <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
+              <li class="nav-item"><a class="nav-link" href="/download" target="downloads">Reports</a></li>
+              <li class="nav-item"><a class="nav-link" href="#" id="apiButton">API</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+      
+      <div class="bg-dark" style="padding-top: 5rem; padding-bottom: 2rem;">
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <a href="/" class="back-btn">
+                  <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+              </div>
+              <h1 class="text-white fs-3 mb-4">
+                <i class="fab fa-git-alt"></i> {{.Repository}}
+              </h1>
+              
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <h5><i class="fas fa-info-circle"></i> Repository Info</h5>
+                    <p><strong>Organization:</strong> {{.Organization}}</p>
+                    <p><strong>Main Branch:</strong> {{.MainBranch}}</p>
+                    <p><strong>Repository:</strong> 
+                      <a href="{{.RepositoryURL}}" target="_blank" class="repo-external-link">
+                        <i class="{{.PlatformIcon}}"></i>
+                        {{.Repository}}
+                        <i class="fas fa-external-link-alt" style="font-size: 0.8em; margin-left: 0.3rem;"></i>
+                      </a>
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <h5><i class="fas fa-chart-line"></i> Summary Stats</h5>
+                    <p><strong>Total Lines:</strong> {{.TotalLinesF}}</p>
+                    <p><strong>Code Lines:</strong> {{.TotalCodeLinesF}}</p>
+                    <p><strong>Languages:</strong> {{len .Languages}}</p>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="stat-card">
+                    <h5><i class="fas fa-code"></i> Code Details</h5>
+                    <p><strong>Blank Lines:</strong> {{.TotalBlankLinesF}}</p>
+                    <p><strong>Comments:</strong> {{.TotalCommentsF}}</p>
+                    <p><strong>Files:</strong> Multiple</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Language Breakdown Section -->
+      <section style="background-color: #f8f9fa; padding: 3rem 0;">
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <h2 class="text-center mb-4">
+                <i class="fas fa-code"></i> Language Breakdown for {{.Repository}}
+              </h2>
+              <div class="card shadow">
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-striped lang-table">
+                      <thead>
+                        <tr>
+                          <th>Language</th>
+                          <th>Files</th>
+                          <th>Total Lines</th>
+                          <th>Blank Lines</th>
+                          <th>Comments</th>
+                          <th>Code Lines</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {{range .Languages}}
+                        <tr>
+                          <td><strong>{{.Language}}</strong></td>
+                          <td>{{.FilesF}}</td>
+                          <td>{{.LinesF}}</td>
+                          <td>{{.BlankLinesF}}</td>
+                          <td>{{.CommentsF}}</td>
+                          <td><strong>{{.CodeLinesF}}</strong></td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {{if .OtherBranches}}
+      <!-- Other Branches Section -->
+      <section style="padding: 3rem 0;">
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <h2 class="text-center mb-4">
+                <i class="fas fa-code-branch"></i> Other Branches
+              </h2>
+              <div class="card shadow">
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-striped">
+                      <thead class="table-dark">
+                        <tr>
+                          <th>Branch</th>
+                          <th>Total Lines</th>
+                          <th>Blank Lines</th>
+                          <th>Comments</th>
+                          <th>Code Lines</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {{range .OtherBranches}}
+                        <tr>
+                          <td><strong>{{.Branch}}</strong></td>
+                          <td>{{.LinesF}}</td>
+                          <td>{{.BlankLinesF}}</td>
+                          <td>{{.CommentsF}}</td>
+                          <td><strong>{{.CodeLinesF}}</strong></td>
+                        </tr>
+                        {{end}}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {{end}}
+      
+    </main>
+    
+    <script src="/dist/vendors/bootstrap/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
 `
