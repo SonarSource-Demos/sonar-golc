@@ -208,6 +208,83 @@ func detectPlatformAndReadAnalysis() (string, []byte, error) {
 	return "github", data, nil
 }
 
+func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData {
+	var branches []BranchData
+
+	// Look for all byfile reports for this repository (different branches)
+	pattern := fmt.Sprintf("Results/byfile-report/Result_%s_%s_*_byfile.json", orgName, repoName)
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		fmt.Printf("Warning: Could not search for branch files: %v\n", err)
+		return branches
+	}
+
+	for _, filePath := range matches {
+		// Extract branch name from filename
+		filename := filepath.Base(filePath)
+		// Format: Result_ORG_REPO_BRANCH_byfile.json
+		parts := strings.Split(filename, "_")
+		if len(parts) < 4 {
+			continue
+		}
+
+		// Find the branch part (everything between REPO and "byfile.json")
+		branchPart := strings.TrimSuffix(parts[len(parts)-2], ".json")
+		if branchPart == "byfile" && len(parts) >= 5 {
+			// Handle case where branch name is the second-to-last part
+			branchPart = parts[len(parts)-3]
+		}
+
+		// Extract actual branch name - more robust parsing
+		// Remove the prefix and suffix to get the branch name
+		prefix := fmt.Sprintf("Result_%s_%s_", orgName, repoName)
+		suffix := "_byfile.json"
+		branchName := strings.TrimSuffix(strings.TrimPrefix(filename, prefix), suffix)
+
+		// Skip the current branch (it's already shown in the main stats)
+		if branchName == currentBranch {
+			continue
+		}
+
+		// Read the byfile report for this branch
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Printf("Warning: Could not read branch file %s: %v\n", filePath, err)
+			continue
+		}
+
+		var branchReport struct {
+			TotalLines      int `json:"TotalLines"`
+			TotalBlankLines int `json:"TotalBlankLines"`
+			TotalComments   int `json:"TotalComments"`
+			TotalCodeLines  int `json:"TotalCodeLines"`
+		}
+
+		err = json.Unmarshal(data, &branchReport)
+		if err != nil {
+			fmt.Printf("Warning: Could not parse branch file %s: %v\n", filePath, err)
+			continue
+		}
+
+		// Create formatted branch data
+		branchData := BranchData{
+			Branch:      branchName,
+			Lines:       branchReport.TotalLines,
+			BlankLines:  branchReport.TotalBlankLines,
+			Comments:    branchReport.TotalComments,
+			CodeLines:   branchReport.TotalCodeLines,
+			LinesF:      utils.FormatCodeLines(float64(branchReport.TotalLines)),
+			BlankLinesF: utils.FormatCodeLines(float64(branchReport.TotalBlankLines)),
+			CommentsF:   utils.FormatCodeLines(float64(branchReport.TotalComments)),
+			CodeLinesF:  utils.FormatCodeLines(float64(branchReport.TotalCodeLines)),
+		}
+
+		branches = append(branches, branchData)
+	}
+
+	return branches
+}
+
 func getPlatformInfoAndURL(platform, org, repo string) (string, string) {
 	switch platform {
 	case "github":
@@ -334,10 +411,8 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	// Get platform info and repository URL
 	platformIcon, repositoryURL := getPlatformInfoAndURL(platform, orgName, repoName)
 
-	// Get other branches (for now, we'll simulate this - in future could read from git or analysis)
-	otherBranches := []BranchData{
-		// This would be populated with actual branch data if available
-	}
+	// Get other branches by finding all byfile reports for this repository
+	otherBranches := getOtherBranchesData(orgName, repoName, branchName)
 
 	repoDetail := &RepositoryDetailData{
 		Repository:       repoName,
