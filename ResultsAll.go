@@ -20,6 +20,13 @@ import (
 
 const port = 8091
 
+// HTTP header constants
+const (
+	contentTypeHeader   = "Content-Type"
+	applicationJSONType = "application/json"
+	applicationZipType  = "application/zip"
+)
+
 type Globalinfo struct {
 	Organization           string `json:"Organization"`
 	TotalLinesOfCode       string `json:"TotalLinesOfCode"`
@@ -52,6 +59,7 @@ type RepositoryData struct {
 
 type ProjectBranch struct {
 	Org         string `json:"Org"`
+	ProjectKey  string `json:"ProjectKey"`
 	RepoSlug    string `json:"RepoSlug"`
 	MainBranch  string `json:"MainBranch"`
 	LargestSize int64  `json:"LargestSize"`
@@ -141,17 +149,17 @@ func isMainBranch(branchName string) bool {
 func getRepositoryData() ([]RepositoryData, error) {
 	var repositories []RepositoryData
 
-	// Read analysis results to get repository and branch information
-	analysisFile, err := os.ReadFile("Results/config/analysis_result_github.json")
+	// Detect platform and read analysis results
+	platform, analysisFile, err := detectPlatformAndReadAnalysis()
 	if err != nil {
-		fmt.Println("❌ Error reading analysis_result_github.json file", err)
+		fmt.Printf("❌ Error reading analysis result file: %v\n", err)
 		return nil, err
 	}
 
 	var analysisResult AnalysisResult
 	err = json.Unmarshal(analysisFile, &analysisResult)
 	if err != nil {
-		fmt.Println("❌ Error decoding JSON analysis_result_github.json file", err)
+		fmt.Printf("❌ Error decoding JSON analysis result file for platform %s: %v\n", platform, err)
 		return nil, err
 	}
 
@@ -175,9 +183,10 @@ func getRepositoryData() ([]RepositoryData, error) {
 	i := 0
 	for _, branch := range repoMap {
 		i++
-		// Construct filename for byfile report
+		// Construct filename for byfile report using platform-specific logic
+		firstPart := getFirstPartForPlatform(platform, branch, branch.RepoSlug)
 		fileName := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-			branch.Org, branch.RepoSlug, branch.MainBranch)
+			firstPart, branch.RepoSlug, branch.MainBranch)
 
 		// Read the byfile report
 		fileData, err := os.ReadFile(fileName)
@@ -233,7 +242,8 @@ func getRepositoryData() ([]RepositoryData, error) {
 
 func detectPlatformAndReadAnalysis() (string, []byte, error) {
 	// Try to detect platform from existing analysis result files
-	platforms := []string{"github", "gitlab", "bitbucket", "azure"}
+	// Supporting all platforms from config_sample.json
+	platforms := []string{"github", "gitlab", "bitbucket", "bitbucket_dc", "azure", "file"}
 
 	for _, platform := range platforms {
 		filePath := fmt.Sprintf("Results/config/analysis_result_%s.json", platform)
@@ -250,11 +260,55 @@ func detectPlatformAndReadAnalysis() (string, []byte, error) {
 	return "github", data, nil
 }
 
+// Helper function to determine the correct first part of filename based on platform
+func getFirstPartForPlatform(platform string, branch AnalysisResult_ProjectBranch, repoName string) string {
+	switch platform {
+	case "azure":
+		// Azure uses ProjectKey for filenames
+		if branch.ProjectKey != "" {
+			return branch.ProjectKey
+		}
+		// Fallback to repoName if ProjectKey is not available
+		return repoName
+	case "bitbucket", "bitbucket_dc", "github", "gitlab", "file":
+		// All other platforms use Org
+		return branch.Org
+	default:
+		// Default fallback to Org
+		return branch.Org
+	}
+}
+
+// Helper function for cases where we only have orgName and repoName
+func getFirstPartForFilename(platform, orgName, repoName string) string {
+	switch platform {
+	case "azure":
+		// Azure uses ProjectKey (equals repoName) for filenames
+		return repoName
+	case "bitbucket", "bitbucket_dc", "github", "gitlab", "file":
+		// All other platforms use Org
+		return orgName
+	default:
+		// Default fallback to Org
+		return orgName
+	}
+}
+
 func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData {
 	var branches []BranchData
 
+	// Detect platform to know which naming pattern to use
+	platform, _, err := detectPlatformAndReadAnalysis()
+	if err != nil {
+		fmt.Printf("Warning: Could not detect platform: %v\n", err)
+		return branches
+	}
+
+	// Get the correct first part for filename based on platform
+	firstPart := getFirstPartForFilename(platform, orgName, repoName)
+
 	// Look for all byfile reports for this repository (different branches)
-	pattern := fmt.Sprintf("Results/byfile-report/Result_%s_%s_*_byfile.json", orgName, repoName)
+	pattern := fmt.Sprintf("Results/byfile-report/Result_%s_%s_*_byfile.json", firstPart, repoName)
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		fmt.Printf("Warning: Could not search for branch files: %v\n", err)
@@ -369,8 +423,9 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	}
 
 	// Read the byfile report for totals
+	firstPart := getFirstPartForFilename(platform, orgName, repoName)
 	byFileReportPath := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-		orgName, repoName, branchName)
+		firstPart, repoName, branchName)
 
 	byFileData, err := os.ReadFile(byFileReportPath)
 	if err != nil {
@@ -398,7 +453,7 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 
 	// Read the bylanguage report for language breakdown
 	byLanguageReportPath := fmt.Sprintf("Results/bylanguage-report/Result_%s_%s_%s.json",
-		orgName, repoName, branchName)
+		firstPart, repoName, branchName)
 
 	languageData, err := os.ReadFile(byLanguageReportPath)
 	if err != nil {
@@ -546,7 +601,7 @@ func zipResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set(contentTypeHeader, applicationZipType)
 	w.Header().Set("Content-Disposition", "attachment; filename=Results.zip")
 
 	http.ServeFile(w, r, "Results.zip")
@@ -638,19 +693,19 @@ func main() {
 
 	// API Endpoint for Language Data
 	http.HandleFunc("/api/languages", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(contentTypeHeader, applicationJSONType)
 		json.NewEncoder(w).Encode(languageData)
 	})
 
 	// API Endpoint for Global Info
 	http.HandleFunc("/api/global-info", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(contentTypeHeader, applicationJSONType)
 		json.NewEncoder(w).Encode(globalInfo)
 	})
 
 	// API Endpoint for Repository Data
 	http.HandleFunc("/api/repositories", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(contentTypeHeader, applicationJSONType)
 		json.NewEncoder(w).Encode(repositoryData)
 	})
 
