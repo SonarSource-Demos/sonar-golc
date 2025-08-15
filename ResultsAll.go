@@ -61,6 +61,8 @@ type AnalysisResult struct {
 	ProjectBranches []ProjectBranch `json:"ProjectBranches"`
 }
 
+type AnalysisResult_ProjectBranch = ProjectBranch
+
 type RepositoryLanguageData struct {
 	Language    string `json:"Language"`
 	Files       int    `json:"Files"`
@@ -124,6 +126,17 @@ func getLanguageData() []LanguageData {
 	return languageData
 }
 
+// isMainBranch checks if a branch name is a main/default branch
+func isMainBranch(branchName string) bool {
+	mainBranches := []string{"main", "master", "develop", "development", "default"}
+	for _, main := range mainBranches {
+		if branchName == main {
+			return true
+		}
+	}
+	return false
+}
+
 func getRepositoryData() ([]RepositoryData, error) {
 	var repositories []RepositoryData
 
@@ -141,8 +154,26 @@ func getRepositoryData() ([]RepositoryData, error) {
 		return nil, err
 	}
 
-	// Process each repository
-	for i, branch := range analysisResult.ProjectBranches {
+	// Group by repository to avoid duplicate entries (needed for --all-branches mode)
+	repoMap := make(map[string]AnalysisResult_ProjectBranch)
+
+	// First pass: Group by repository and prefer main/master/default branches
+	for _, branch := range analysisResult.ProjectBranches {
+		repoKey := branch.RepoSlug
+
+		// If we haven't seen this repo, or if this is a main branch, use it
+		if existing, exists := repoMap[repoKey]; !exists || isMainBranch(branch.MainBranch) {
+			// Only override if current is main branch, or existing is not main branch
+			if !exists || isMainBranch(branch.MainBranch) || !isMainBranch(existing.MainBranch) {
+				repoMap[repoKey] = branch
+			}
+		}
+	}
+
+	// Process each unique repository (now showing only one branch per repository)
+	i := 0
+	for _, branch := range repoMap {
+		i++
 		// Construct filename for byfile report
 		fileName := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
 			branch.Org, branch.RepoSlug, branch.MainBranch)
@@ -170,7 +201,7 @@ func getRepositoryData() ([]RepositoryData, error) {
 
 		// Create repository data entry
 		repo := RepositoryData{
-			Number:      i + 1,
+			Number:      i,
 			Repository:  branch.RepoSlug,
 			Branch:      branch.MainBranch,
 			Lines:       reportData.TotalLines,

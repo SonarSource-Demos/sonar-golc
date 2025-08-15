@@ -921,6 +921,7 @@ func main() {
 
 	devopsFlag := flag.String("devops", "", "Specify the DevOps platform")
 	fastFlag := flag.Bool("fast", false, "Enable fast mode (only for Github)")
+	allBranchesFlag := flag.Bool("all-branches", false, "Analyze all branches for each repository (not just main branch)")
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
 	versionflag := flag.Bool("version", false, "Show version")
@@ -931,6 +932,11 @@ func main() {
 	if *helpFlag {
 		fmt.Println("Usage: golc -devops [OPTIONS]")
 		fmt.Println("Options:  <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  golc -devops Github                    # Analyze main branches only")
+		fmt.Println("  golc -devops Github -all-branches      # Analyze ALL branches")
+		fmt.Println("  golc -devops Github -fast              # Fast analysis mode")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -1078,20 +1084,46 @@ func main() {
 		} else {
 			fast = false
 
-			repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
-			if err != nil {
-				logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
-				return
-			}
+			if *allBranchesFlag {
+				fmt.Println("🌿 All-branches mode enabled for Github")
+				logger.Infof("🌿 All-branches mode enabled - analyzing ALL branches for each repository")
 
-			if len(repositories) == 0 {
-				logger.Error(errorMessageAnalyse)
-				os.Exit(1)
+				// Get the main repositories list (one per repo)
+				repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
+				if err != nil {
+					logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
+					return
+				}
 
+				if len(repositories) == 0 {
+					logger.Error(errorMessageAnalyse)
+					os.Exit(1)
+				} else {
+					// Get all branches for each repository and analyze them
+					allBranches, err := getgithub.GetAllBranchesForRepositories(platformConfig, repositories)
+					if err != nil {
+						logger.Errorf("❌ Error getting all branches: %v", err)
+						return
+					}
+
+					NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, allBranches)
+				}
 			} else {
+				repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
+				if err != nil {
+					logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
+					return
+				}
 
-				NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, repositories)
+				if len(repositories) == 0 {
+					logger.Error(errorMessageAnalyse)
+					os.Exit(1)
 
+				} else {
+
+					NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, repositories)
+
+				}
 			}
 		}
 
