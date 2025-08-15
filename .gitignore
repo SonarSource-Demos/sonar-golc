@@ -27,3 +27,4 @@ test/*
 Docker1/*
 Logs/*
 tests/*
+.vscode/*
