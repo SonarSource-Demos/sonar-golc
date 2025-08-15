@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -215,6 +216,16 @@ func getRepositoryData() ([]RepositoryData, error) {
 		}
 
 		repositories = append(repositories, repo)
+	}
+
+	// Sort repositories by Code Lines (descending) by default
+	sort.Slice(repositories, func(i, j int) bool {
+		return repositories[i].CodeLines > repositories[j].CodeLines
+	})
+
+	// Update numbers after sorting
+	for i := range repositories {
+		repositories[i].Number = i + 1
 	}
 
 	return repositories, nil
@@ -830,6 +841,47 @@ const htmlTemplate = `
         .rule-desc, .markdown {
           line-height: 1.5;
       }
+      
+      /* Sortable table styles */
+      .sortable {
+          cursor: pointer;
+          user-select: none;
+          transition: background-color 0.2s;
+      }
+      
+      .sortable:hover {
+          background-color: rgba(52, 144, 220, 0.3) !important;
+      }
+      
+      .sort-icon {
+          float: right;
+          margin-left: 0.5rem;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+      }
+      
+      .sortable:hover .sort-icon {
+          opacity: 1;
+      }
+      
+      .sortable.sorted .sort-icon {
+          opacity: 1;
+          color: #ffd700;
+      }
+      
+      /* Make repository table full width */
+      .repository-table-container .card-body {
+          padding: 0;
+      }
+      
+      .repository-table-container .table-responsive {
+          margin: 0;
+      }
+      
+      .repository-table-container .table {
+          margin-top: 0;
+          margin-bottom: 0;
+      }
     </style>
     <script src="/dist/vendors/chartjs/chart.js"></script>
     <script src="/dist/vendors/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -909,7 +961,7 @@ const htmlTemplate = `
               <h2 class="text-center mb-4" style="color: #333;">
                 <i class="fas fa-table"></i> Repository Analysis Details
               </h2>
-              <div class="card shadow-lg">
+              <div class="card shadow-lg repository-table-container">
                 <h5 class="card-header bg-primary text-white">
                   <i class="fas fa-code-branch"></i> Lines of Code by Repository ({{len .Repositories}} repositories analyzed)
                 </h5>
@@ -919,17 +971,29 @@ const htmlTemplate = `
                       <thead class="table-dark">
                         <tr>
                           <th scope="col">#</th>
-                          <th scope="col">Repository</th>
-                          <th scope="col">Branch</th>
-                          <th scope="col">Lines</th>
-                          <th scope="col">Blank Lines</th>
-                          <th scope="col">Comments</th>
-                          <th scope="col">Code Lines</th>
+                          <th scope="col" class="sortable" data-column="repository">
+                            Repository <i class="fas fa-sort sort-icon"></i>
+                          </th>
+                          <th scope="col" class="sortable" data-column="branch">
+                            Branch <i class="fas fa-sort sort-icon"></i>
+                          </th>
+                          <th scope="col" class="sortable" data-column="lines">
+                            Lines <i class="fas fa-sort sort-icon"></i>
+                          </th>
+                          <th scope="col" class="sortable" data-column="blanklines">
+                            Blank Lines <i class="fas fa-sort sort-icon"></i>
+                          </th>
+                          <th scope="col" class="sortable" data-column="comments">
+                            Comments <i class="fas fa-sort sort-icon"></i>
+                          </th>
+                          <th scope="col" class="sortable" data-column="codelines">
+                            Code Lines <i class="fas fa-sort-down sort-icon"></i>
+                          </th>
                         </tr>
                       </thead>
                       <tbody id="repositoryTableBody">
                         {{range .Repositories}}
-                        <tr>
+                        <tr data-repository="{{.Repository}}" data-branch="{{.Branch}}" data-lines="{{.Lines}}" data-blanklines="{{.BlankLines}}" data-comments="{{.Comments}}" data-codelines="{{.CodeLines}}">
                           <td>{{.Number}}</td>
                           <td><a href="/repository/{{.Repository}}/{{.Branch}}" class="repo-link">{{.Repository}}</a></td>
                           <td>{{.Branch}}</td>
@@ -1127,6 +1191,78 @@ const htmlTemplate = `
 
         // Calculate totals when page loads
         calculateRepositoryTotals();
+        
+        // Repository table sorting functionality
+        let currentSort = { column: 'codelines', direction: 'desc' };
+        
+        // Function to update sorting icons
+        function updateSortingIcons(activeColumn, direction) {
+            // Reset all icons
+            document.querySelectorAll('.sortable .sort-icon').forEach(icon => {
+                icon.className = 'fas fa-sort sort-icon';
+                icon.parentElement.classList.remove('sorted');
+            });
+            
+            // Set active column icon
+            const activeHeader = document.querySelector('[data-column="' + activeColumn + '"]');
+            if (activeHeader) {
+                const icon = activeHeader.querySelector('.sort-icon');
+                icon.className = 'fas fa-sort-' + (direction === 'asc' ? 'up' : 'down') + ' sort-icon';
+                activeHeader.classList.add('sorted');
+            }
+        }
+        
+        // Initialize sorting state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSortingIcons('codelines', 'desc');
+        });
+        
+        function sortTable(column) {
+            const tbody = document.getElementById('repositoryTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Determine sort direction
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.direction = 'desc'; // Default to descending for new column
+                currentSort.column = column;
+            }
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (column === 'repository' || column === 'branch') {
+                    aVal = a.dataset[column].toLowerCase();
+                    bVal = b.dataset[column].toLowerCase();
+                    return currentSort.direction === 'asc' ? 
+                        aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                } else {
+                    aVal = parseInt(a.dataset[column]);
+                    bVal = parseInt(b.dataset[column]);
+                    return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+            });
+            
+            // Update row numbers and re-append rows
+            rows.forEach((row, index) => {
+                row.querySelector('td:first-child').textContent = index + 1;
+                tbody.appendChild(row);
+            });
+            
+            // Update sort icons
+            updateSortingIcons(column, currentSort.direction);
+        }
+        
+        // Add click handlers to sortable columns
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', () => {
+                sortTable(header.dataset.column);
+            });
+        });
+        
+
     </script>
   </body>
 </html>
