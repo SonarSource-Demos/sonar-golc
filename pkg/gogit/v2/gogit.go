@@ -10,9 +10,9 @@ import (
 	"regexp"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
-	"github.com/go-git/go-git"
-	"github.com/go-git/go-git/plumbing/protocol/packp/capability"
-	"github.com/go-git/go-git/plumbing/transport"
+	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp/capability"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
@@ -30,8 +30,6 @@ func Getrepos(src, branch, token string) (string, error) {
 		return "", err
 	}
 	log.SetOutput(os.Stderr)
-
-	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/heads/%s.zip", owner, repo, branch)
 
 	transport.UnsupportedCapabilities = []capability.Capability{
 		capability.ThinPack,
