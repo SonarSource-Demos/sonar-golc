@@ -104,7 +104,7 @@
         "NumberWorkerRepos":10,
         "ResultByFile": false,
         "ResultAll": true,
-        "Org":false
+        "Org":true
       },
 
       "Gitlab": {
