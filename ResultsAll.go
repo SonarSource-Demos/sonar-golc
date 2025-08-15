@@ -607,22 +607,20 @@ func zipResults(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "Results.zip")
 }
 
-func main() {
+// loadApplicationData loads and processes all required data files
+func loadApplicationData() (PageData, error) {
 	var pageData PageData
-
 	ligneDeCodeParLangage := make(map[string]int)
 
 	// Reading data from the code_lines_by_language.json file
 	inputFileData, err := os.ReadFile("Results/code_lines_by_language.json")
 	if err != nil {
-		fmt.Println("❌ Error reading code_lines_by_language.json file", err)
-		return
+		return pageData, fmt.Errorf("error reading code_lines_by_language.json file: %v", err)
 	}
 
 	err = json.Unmarshal(inputFileData, &languageData)
 	if err != nil {
-		fmt.Println("❌ Error decoding JSON code_lines_by_language.json file", err)
-		return
+		return pageData, fmt.Errorf("error decoding JSON code_lines_by_language.json file: %v", err)
 	}
 
 	// Summarize results by language
@@ -649,14 +647,12 @@ func main() {
 
 	data0, err := os.ReadFile("Results/GlobalReport.json")
 	if err != nil {
-		fmt.Println("❌ Error reading GlobalReport.json file", err)
-		return
+		return pageData, fmt.Errorf("error reading GlobalReport.json file: %v", err)
 	}
 
 	err = json.Unmarshal(data0, &globalInfo)
 	if err != nil {
-		fmt.Println("❌ Error decoding JSON GlobalReport.json file", err)
-		return
+		return pageData, fmt.Errorf("error decoding JSON GlobalReport.json file: %v", err)
 	}
 
 	// Get repository data
@@ -672,11 +668,16 @@ func main() {
 		Repositories: repositoryData,
 	}
 
+	return pageData, nil
+}
+
+// setupHTTPHandlers configures all HTTP route handlers
+func setupHTTPHandlers(pageData PageData) {
 	// Load HTML template
 	tmpl := template.Must(template.New("index").Parse(htmlTemplate))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		err = tmpl.Execute(w, pageData)
+		err := tmpl.Execute(w, pageData)
 		if err != nil {
 			http.Error(w, "❌ Error executing HTML template", http.StatusInternalServerError)
 			return
@@ -706,7 +707,7 @@ func main() {
 	// API Endpoint for Repository Data
 	http.HandleFunc("/api/repositories", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set(contentTypeHeader, applicationJSONType)
-		json.NewEncoder(w).Encode(repositoryData)
+		json.NewEncoder(w).Encode(pageData.Repositories)
 	})
 
 	// Repository Detail Page Handler
@@ -736,40 +737,50 @@ func main() {
 			return
 		}
 	})
+}
 
-	/*fmt.Println("Would you like to launch web visualization? (Y/N)")
-	var launchWeb string
-	fmt.Scanln(&launchWeb)*/
-
-	//if launchWeb == "Y" || launchWeb == "y" {
+// handleServerStartup manages port checking and server startup
+func handleServerStartup() {
 	fmt.Println("✅ Launching web visualization...")
 	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("dist"))))
 
 	if isPortOpen(port) {
-		fmt.Println("❗️ Port %s is already in use.", port)
-		reader := bufio.NewReader(os.Stdin)
-
-		fmt.Print("✅ Please enter the port you wish to use : ")
-		portStr, _ := reader.ReadString('\n')
-		portStr = strings.TrimSpace(portStr)
-		port, err := strconv.Atoi(portStr)
-		if err != nil {
-			fmt.Println("❌ Invalid port...")
-			os.Exit(1)
-		}
-		if isPortOpen(port) {
-			fmt.Printf("❌ Port %d is already in use...\n", port)
-			os.Exit(1)
-		} else {
-			startServer(port)
-		}
+		handlePortConflict()
 	} else {
 		startServer(port)
 	}
-	/*} else {
-		fmt.Println("Exiting...")
-		os.Exit(0)
-	} */
+}
+
+// handlePortConflict handles the case when the default port is in use
+func handlePortConflict() {
+	fmt.Println("❗️ Port %s is already in use.", port)
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("✅ Please enter the port you wish to use : ")
+	portStr, _ := reader.ReadString('\n')
+	portStr = strings.TrimSpace(portStr)
+	newPort, err := strconv.Atoi(portStr)
+	if err != nil {
+		fmt.Println("❌ Invalid port...")
+		os.Exit(1)
+	}
+	if isPortOpen(newPort) {
+		fmt.Printf("❌ Port %d is already in use...\n", newPort)
+		os.Exit(1)
+	} else {
+		startServer(newPort)
+	}
+}
+
+func main() {
+	pageData, err := loadApplicationData()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	setupHTTPHandlers(pageData)
+	handleServerStartup()
 }
 
 // HTML template

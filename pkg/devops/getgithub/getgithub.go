@@ -627,18 +627,8 @@ func GetAllBranchesForRepositories(platformConfig map[string]interface{}, reposi
 	return allBranches, nil
 }
 
-func GetRepoGithubListAllBranches(platformConfig map[string]interface{}, exclusionfile string, fast bool) ([]ProjectBranch, error) {
-	var totalSize int64
-	var totalExclude, totalArchiv, emptyRepo, TotalBranches, nbRepos int
-	var largestRepoBranch, largesRepo string
-	var allBranches []ProjectBranch
-
-	loggers := utils.NewLogger()
-
-	client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
-	ctx := context.Background()
-
-	// Get all repositories first
+// getAllRepositories fetches all repositories from GitHub organization
+func getAllRepositories(client *github.Client, ctx context.Context, orgName string) ([]*github.Repository, error) {
 	opt := &github.RepositoryListByOrgOptions{
 		Type:        "all",
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -646,7 +636,7 @@ func GetRepoGithubListAllBranches(platformConfig map[string]interface{}, exclusi
 
 	var allRepos []*github.Repository
 	for {
-		repos, resp, err := client.Repositories.ListByOrg(ctx, platformConfig["Organization"].(string), opt)
+		repos, resp, err := client.Repositories.ListByOrg(ctx, orgName, opt)
 		if err != nil {
 			return nil, fmt.Errorf("error listing repositories: %v", err)
 		}
@@ -656,81 +646,126 @@ func GetRepoGithubListAllBranches(platformConfig map[string]interface{}, exclusi
 		}
 		opt.Page = resp.NextPage
 	}
+	return allRepos, nil
+}
+
+// processRepositoryBranches processes a single repository to get all its branches
+func processRepositoryBranches(client *github.Client, ctx context.Context, repo *github.Repository, orgName, exclusionfile string, stats *RepoProcessingStats) ([]ProjectBranch, error) {
+	var branches []ProjectBranch
+
+	if repo.GetArchived() {
+		stats.TotalArchiv++
+		return branches, nil
+	}
+
+	repoName := repo.GetName()
+
+	// Skip if in exclusion list
+	if exclusionfile != "0" {
+		exclusionList, err := loadExclusionList(exclusionfile)
+		if err == nil && exclusionList.Repos[repoName] {
+			stats.TotalExclude++
+			return branches, nil
+		}
+	}
+
+	// Check if repo is empty
+	if repo.GetSize() == 0 {
+		stats.EmptyRepo++
+		return branches, nil
+	}
+
+	// Get ALL branches for this repository
+	branchOpt := &github.BranchListOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+
+	var repoBranches []*github.Branch
+	for {
+		branchList, resp, err := client.Repositories.ListBranches(ctx, orgName, repoName, branchOpt)
+		if err != nil {
+			return branches, fmt.Errorf("error getting branches for repo %s: %v", repoName, err)
+		}
+		repoBranches = append(repoBranches, branchList...)
+		if resp.NextPage == 0 {
+			break
+		}
+		branchOpt.Page = resp.NextPage
+	}
+
+	// Create a ProjectBranch entry for EACH branch
+	for _, branch := range repoBranches {
+		branches = append(branches, ProjectBranch{
+			Org:         orgName,
+			RepoSlug:    repoName,
+			MainBranch:  branch.GetName(),
+			LargestSize: int64(repo.GetSize()),
+		})
+	}
+
+	stats.TotalBranches += len(repoBranches)
+	stats.NbRepos++
+	stats.TotalSize += int64(repo.GetSize())
+
+	return branches, nil
+}
+
+// RepoProcessingStats holds statistics during repository processing
+type RepoProcessingStats struct {
+	TotalSize     int64
+	TotalExclude  int
+	TotalArchiv   int
+	EmptyRepo     int
+	TotalBranches int
+	NbRepos       int
+}
+
+func GetRepoGithubListAllBranches(platformConfig map[string]interface{}, exclusionfile string, fast bool) ([]ProjectBranch, error) {
+	loggers := utils.NewLogger()
+	stats := &RepoProcessingStats{}
+
+	client := github.NewClient(nil).WithAuthToken(platformConfig["AccessToken"].(string))
+	ctx := context.Background()
+	orgName := platformConfig["Organization"].(string)
+
+	// Get all repositories first
+	allRepos, err := getAllRepositories(client, ctx, orgName)
+	if err != nil {
+		return nil, err
+	}
 
 	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 	spin1.Color("green", "bold")
 
+	var allBranches []ProjectBranch
+
 	// Process each repository to get ALL its branches
 	for i, repo := range allRepos {
-		if repo.GetArchived() {
-			totalArchiv++
-			continue
-		}
-
-		repoName := repo.GetName()
-
-		// Skip if in exclusion list
-		if exclusionfile != "0" {
-			exclusionList, err := loadExclusionList(exclusionfile)
-			if err == nil && exclusionList.Repos[repoName] {
-				totalExclude++
-				continue
-			}
-		}
-
-		// Check if repo is empty
-		if repo.GetSize() == 0 {
-			emptyRepo++
-			continue
-		}
-
-		messageB := fmt.Sprintf("   🌿 Getting all branches for repo %d/%d: %s ", i+1, len(allRepos), repoName)
+		messageB := fmt.Sprintf("   🌿 Getting all branches for repo %d/%d: %s ", i+1, len(allRepos), repo.GetName())
 		spin1.Suffix = messageB
 		spin1.Start()
 
-		// Get ALL branches for this repository
-		branchOpt := &github.BranchListOptions{
-			ListOptions: github.ListOptions{PerPage: 100},
+		branches, err := processRepositoryBranches(client, ctx, repo, orgName, exclusionfile, stats)
+		if err != nil {
+			loggers.Errorf("❌ Error processing repo %s: %v", repo.GetName(), err)
+			spin1.Stop()
+			continue
 		}
 
-		var repoBranches []*github.Branch
-		for {
-			branches, resp, err := client.Repositories.ListBranches(ctx, platformConfig["Organization"].(string), repoName, branchOpt)
-			if err != nil {
-				loggers.Errorf("❌ Error getting branches for repo %s: %v", repoName, err)
-				break
-			}
-			repoBranches = append(repoBranches, branches...)
-			if resp.NextPage == 0 {
-				break
-			}
-			branchOpt.Page = resp.NextPage
-		}
-
-		// Create a ProjectBranch entry for EACH branch
-		for _, branch := range repoBranches {
-			allBranches = append(allBranches, ProjectBranch{
-				Org:         platformConfig["Organization"].(string),
-				RepoSlug:    repoName,
-				MainBranch:  branch.GetName(),
-				LargestSize: int64(repo.GetSize()),
-			})
-		}
-
-		TotalBranches += len(repoBranches)
-		nbRepos++
-		totalSize += int64(repo.GetSize())
+		allBranches = append(allBranches, branches...)
 
 		spin1.Stop()
-		loggers.Infof("\r\t\t\t\t✅ %d Repo: %s - Found %d branches", i+1, repoName, len(repoBranches))
+		if len(branches) > 0 {
+			loggers.Infof("\r\t\t\t\t✅ %d Repo: %s - Found %d branches", i+1, repo.GetName(), len(branches))
+		}
 	}
 
 	// Find largest repo info
-	largesRepo, largestRepoBranch = findLargestRepository(allBranches, &totalSize)
+	largesRepo, largestRepoBranch := findLargestRepository(allBranches, &stats.TotalSize)
 
 	// Create analysis result file
 	result := AnalysisResult{
-		NumRepositories: nbRepos,
+		NumRepositories: stats.NbRepos,
 		ProjectBranches: allBranches,
 	}
 	if err := SaveResult(result); err != nil {
@@ -742,20 +777,20 @@ func GetRepoGithubListAllBranches(platformConfig map[string]interface{}, exclusi
 	_ = SummaryStats{
 		LargestRepo:       largesRepo,
 		LargestRepoBranch: largestRepoBranch,
-		NbRepos:           nbRepos,
-		EmptyRepo:         emptyRepo,
-		TotalExclude:      totalExclude,
-		TotalArchiv:       totalArchiv,
-		TotalBranches:     TotalBranches,
+		NbRepos:           stats.NbRepos,
+		EmptyRepo:         stats.EmptyRepo,
+		TotalExclude:      stats.TotalExclude,
+		TotalArchiv:       stats.TotalArchiv,
+		TotalBranches:     stats.TotalBranches,
 	}
 
 	loggers.Infof("✅ Analysis completed:")
-	loggers.Infof("   - Repositories analyzed: %d", nbRepos)
-	loggers.Infof("   - Total branches found: %d", TotalBranches)
+	loggers.Infof("   - Repositories analyzed: %d", stats.NbRepos)
+	loggers.Infof("   - Total branches found: %d", stats.TotalBranches)
 	loggers.Infof("   - Branches to be analyzed: %d", len(allBranches))
-	loggers.Infof("   - Empty repositories skipped: %d", emptyRepo)
-	loggers.Infof("   - Archived repositories skipped: %d", totalArchiv)
-	loggers.Infof("   - Excluded repositories: %d", totalExclude)
+	loggers.Infof("   - Empty repositories skipped: %d", stats.EmptyRepo)
+	loggers.Infof("   - Archived repositories skipped: %d", stats.TotalArchiv)
+	loggers.Infof("   - Excluded repositories: %d", stats.TotalExclude)
 
 	return allBranches, nil
 }
