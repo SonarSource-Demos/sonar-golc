@@ -1,7 +1,7 @@
 ![Static Badge](https://img.shields.io/badge/Go-v1.22-blue:)
 
-[![Quality gate](https://nautilus.sonarqube.org/api/project_badges/quality_gate?project=SonarSource-Demos_sonar-golc&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)
-[![Reliability Issues](https://nautilus.sonarqube.org/api/project_badges/measure?project=SonarSource-Demos_sonar-golc&metric=software_quality_reliability_issues&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)
+[![Quality gate](https://nautilus.sonarqube.org/api/project_badges/quality_gate?project=SonarSource-Demos_sonar-golc&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)[![Quality gate](https://nautilus.sonarqube.org/api/project_badges/quality_gate?project=SonarSource-Demos_sonar-golc&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)
+
 
 ## Introduction
 
