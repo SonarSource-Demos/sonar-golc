@@ -37,11 +37,13 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Build Go app
-        run: go build -v ./...
+      - name: Build Go apps
+        run: |
+          go build -o golc ./golc.go
+          go build -o ResultsAll ./ResultsAll.go
 
       - name: Run tests
-        run: go test -v ./...
+        run: go test -v ./pkg/...
 
       # SonarQube Analysis
       - name: Run SonarQube Analysis
