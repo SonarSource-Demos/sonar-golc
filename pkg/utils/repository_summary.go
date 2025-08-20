@@ -199,9 +199,74 @@ func getRepositoryData() ([]RepositoryData, error) {
 	return repositories, nil
 }
 
+// truncateText truncates text to maxLength and adds "..." if needed
+func truncateText(text string, maxLength int) string {
+	if len(text) > maxLength {
+		return text[:maxLength-3] + "..."
+	}
+	return text
+}
+
+// createPDFTableHeader creates the standard table header for repository reports
+func createPDFTableHeader(pdf *gofpdf.Fpdf, codeLinesHeader string) {
+	pdf.SetFont("Arial", "B", 9)
+	pdf.SetFillColor(51, 153, 255)
+	pdf.CellFormat(10, 8, "#", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(50, 8, "Repository", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 8, "Branch", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(25, 8, "Lines", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(25, 8, "Comments", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(25, 8, "Blank", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(25, 8, codeLinesHeader, "1", 1, "C", true, 0, "")
+}
+
+// createRepositoryPDFRow creates a single row in the PDF table
+func createRepositoryPDFRow(pdf *gofpdf.Fpdf, repo RepositoryData, fill bool) {
+	repoName := truncateText(repo.Repository, 20)
+	branchName := truncateText(repo.Branch, 12)
+
+	pdf.CellFormat(10, 6, strconv.Itoa(repo.Number), "1", 0, "C", fill, 0, "")
+	pdf.CellFormat(50, 6, repoName, "1", 0, "L", fill, 0, "")
+	pdf.CellFormat(30, 6, branchName, "1", 0, "C", fill, 0, "")
+	pdf.CellFormat(25, 6, repo.LinesF, "1", 0, "R", fill, 0, "")
+	pdf.CellFormat(25, 6, repo.CommentsF, "1", 0, "R", fill, 0, "")
+	pdf.CellFormat(25, 6, repo.BlankLinesF, "1", 0, "R", fill, 0, "")
+	pdf.CellFormat(25, 6, repo.CodeLinesF, "1", 1, "R", fill, 0, "")
+}
+
+// generateReportWithErrorHandling generates a report and handles errors consistently
+func generateReportWithErrorHandling(reportType, filePath string, generateFunc func() error) {
+	loggers := NewLogger()
+	if err := generateFunc(); err != nil {
+		loggers.Errorf("❌ Error generating %s report: %v", reportType, err)
+	} else {
+		loggers.Infof("✅ Repository summary %s report exported to %s", reportType, filePath)
+	}
+}
+
+// createReportFilePaths creates the file paths for all report types
+func createReportFilePaths(directory string) (csvPath, jsonPath, pdfPath string) {
+	baseOutputPath := filepath.Join(directory, "byfile-report")
+	csvPath = filepath.Join(baseOutputPath, "csv-report")
+	jsonPath = baseOutputPath
+	pdfPath = filepath.Join(baseOutputPath, "pdf-report")
+	return
+}
+
+// calculateTotals calculates summary totals from repositories
+func calculateTotals(repositories []RepositoryData) (totalLines, totalBlankLines, totalComments, totalCodeLines int) {
+	for _, repo := range repositories {
+		totalLines += repo.Lines
+		totalBlankLines += repo.BlankLines
+		totalComments += repo.Comments
+		totalCodeLines += repo.CodeLines
+	}
+	return
+}
+
 // generateRepositoryCSVReport creates a CSV report of all repositories
 func generateRepositoryCSVReport(summary *RepositorySummaryReport, outputPath string) error {
-	loggers := NewLogger()
+	const codeLinesHeader = "Code Lines"
 
 	// Create CSV file
 	filePath := filepath.Join(outputPath, "repository_summary.csv")
@@ -213,9 +278,6 @@ func generateRepositoryCSVReport(summary *RepositorySummaryReport, outputPath st
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-
-	// Define constants
-	const codeLinesHeader = "Code Lines"
 
 	// Write header
 	header := []string{"#", "Repository", "Branch", "Lines", "Blank Lines", "Comments", codeLinesHeader}
@@ -247,14 +309,11 @@ func generateRepositoryCSVReport(summary *RepositorySummaryReport, outputPath st
 	}
 	writer.Write(totalRow)
 
-	loggers.Infof("✅ Repository summary CSV report exported to %s", filePath)
 	return nil
 }
 
 // generateRepositoryJSONReport creates a JSON report of all repositories
 func generateRepositoryJSONReport(summary *RepositorySummaryReport, outputPath string) error {
-	loggers := NewLogger()
-
 	// Marshal to JSON with indentation
 	jsonData, err := json.MarshalIndent(summary, "", "  ")
 	if err != nil {
@@ -263,21 +322,13 @@ func generateRepositoryJSONReport(summary *RepositorySummaryReport, outputPath s
 
 	// Write to file
 	filePath := filepath.Join(outputPath, "repository_summary.json")
-	err = os.WriteFile(filePath, jsonData, 0644)
-	if err != nil {
-		return err
-	}
-
-	loggers.Infof("✅ Repository summary JSON report exported to %s", filePath)
-	return nil
+	return os.WriteFile(filePath, jsonData, 0644)
 }
 
 // generateRepositoryPDFReport creates a PDF report of all repositories
 func generateRepositoryPDFReport(summary *RepositorySummaryReport, outputPath string) error {
-	loggers := NewLogger()
-
-	// Define constants
 	const codeLinesHeader = "Code Lines"
+	const maxRowsPerPage = 35
 
 	// Create PDF
 	pdf := gofpdf.New("P", "mm", "A4", "")
@@ -318,39 +369,18 @@ func generateRepositoryPDFReport(summary *RepositorySummaryReport, outputPath st
 
 	pdf.Ln(5)
 
-	// Table header
-	pdf.SetFont("Arial", "B", 9)
-	pdf.SetFillColor(51, 153, 255)
-	pdf.CellFormat(10, 8, "#", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(50, 8, "Repository", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 8, "Branch", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 8, "Lines", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 8, "Comments", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 8, "Blank", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 8, codeLinesHeader, "1", 1, "C", true, 0, "")
+	// Initial table header
+	createPDFTableHeader(pdf, codeLinesHeader)
 
 	// Table data
 	pdf.SetFont("Arial", "", 8)
 	pdf.SetFillColor(240, 240, 240)
 
 	rowCount := 0
-	const maxRowsPerPage = 35
-
 	for _, repo := range summary.Repositories {
 		if rowCount >= maxRowsPerPage {
 			pdf.AddPage()
-
-			// Re-add header
-			pdf.SetFont("Arial", "B", 9)
-			pdf.SetFillColor(51, 153, 255)
-			pdf.CellFormat(10, 8, "#", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(50, 8, "Repository", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(30, 8, "Branch", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(25, 8, "Lines", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(25, 8, "Comments", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(25, 8, "Blank", "1", 0, "C", true, 0, "")
-			pdf.CellFormat(25, 8, codeLinesHeader, "1", 1, "C", true, 0, "")
-
+			createPDFTableHeader(pdf, codeLinesHeader)
 			pdf.SetFont("Arial", "", 8)
 			pdf.SetFillColor(240, 240, 240)
 			rowCount = 0
@@ -358,39 +388,13 @@ func generateRepositoryPDFReport(summary *RepositorySummaryReport, outputPath st
 
 		// Alternate row colors
 		fill := rowCount%2 == 0
-
-		// Truncate repository name if too long
-		repoName := repo.Repository
-		if len(repoName) > 20 {
-			repoName = repoName[:17] + "..."
-		}
-
-		// Truncate branch name if too long
-		branchName := repo.Branch
-		if len(branchName) > 12 {
-			branchName = branchName[:9] + "..."
-		}
-
-		pdf.CellFormat(10, 6, strconv.Itoa(repo.Number), "1", 0, "C", fill, 0, "")
-		pdf.CellFormat(50, 6, repoName, "1", 0, "L", fill, 0, "")
-		pdf.CellFormat(30, 6, branchName, "1", 0, "C", fill, 0, "")
-		pdf.CellFormat(25, 6, repo.LinesF, "1", 0, "R", fill, 0, "")
-		pdf.CellFormat(25, 6, repo.CommentsF, "1", 0, "R", fill, 0, "")
-		pdf.CellFormat(25, 6, repo.BlankLinesF, "1", 0, "R", fill, 0, "")
-		pdf.CellFormat(25, 6, repo.CodeLinesF, "1", 1, "R", fill, 0, "")
-
+		createRepositoryPDFRow(pdf, repo, fill)
 		rowCount++
 	}
 
 	// Save PDF
 	filePath := filepath.Join(outputPath, "repository_summary.pdf")
-	err := pdf.OutputFileAndClose(filePath)
-	if err != nil {
-		return err
-	}
-
-	loggers.Infof("✅ Repository summary PDF report exported to %s", filePath)
-	return nil
+	return pdf.OutputFileAndClose(filePath)
 }
 
 // GenerateRepositorySummaryReports generates CSV, JSON, and PDF reports for all repositories
@@ -411,14 +415,8 @@ func GenerateRepositorySummaryReports(directory string) error {
 		return nil
 	}
 
-	// Calculate totals
-	var totalLines, totalBlankLines, totalComments, totalCodeLines int
-	for _, repo := range repositories {
-		totalLines += repo.Lines
-		totalBlankLines += repo.BlankLines
-		totalComments += repo.Comments
-		totalCodeLines += repo.CodeLines
-	}
+	// Calculate totals using helper function
+	totalLines, totalBlankLines, totalComments, totalCodeLines := calculateTotals(repositories)
 
 	// Create summary report structure
 	summary := &RepositorySummaryReport{
@@ -434,28 +432,24 @@ func GenerateRepositorySummaryReports(directory string) error {
 		Repositories:      repositories,
 	}
 
-	// Use existing directory structure
-	baseOutputPath := filepath.Join(directory, "byfile-report")
-	csvOutputPath := filepath.Join(baseOutputPath, "csv-report")
-	pdfOutputPath := filepath.Join(baseOutputPath, "pdf-report")
+	// Get output paths using helper function
+	csvOutputPath, jsonOutputPath, pdfOutputPath := createReportFilePaths(directory)
 
-	// Generate CSV report in existing csv-report directory
-	err = generateRepositoryCSVReport(summary, csvOutputPath)
-	if err != nil {
-		loggers.Errorf("❌ Error generating CSV report: %v", err)
-	}
+	// Generate reports with consistent error handling
+	csvFilePath := filepath.Join(csvOutputPath, "repository_summary.csv")
+	generateReportWithErrorHandling("CSV", csvFilePath, func() error {
+		return generateRepositoryCSVReport(summary, csvOutputPath)
+	})
 
-	// Generate JSON report in main byfile-report directory
-	err = generateRepositoryJSONReport(summary, baseOutputPath)
-	if err != nil {
-		loggers.Errorf("❌ Error generating JSON report: %v", err)
-	}
+	jsonFilePath := filepath.Join(jsonOutputPath, "repository_summary.json")
+	generateReportWithErrorHandling("JSON", jsonFilePath, func() error {
+		return generateRepositoryJSONReport(summary, jsonOutputPath)
+	})
 
-	// Generate PDF report in existing pdf-report directory
-	err = generateRepositoryPDFReport(summary, pdfOutputPath)
-	if err != nil {
-		loggers.Errorf("❌ Error generating PDF report: %v", err)
-	}
+	pdfFilePath := filepath.Join(pdfOutputPath, "repository_summary.pdf")
+	generateReportWithErrorHandling("PDF", pdfFilePath, func() error {
+		return generateRepositoryPDFReport(summary, pdfOutputPath)
+	})
 
 	loggers.Infof("✅ Repository summary reports generated successfully")
 	return nil
