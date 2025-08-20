@@ -6,11 +6,17 @@ import (
 	"testing"
 )
 
+// Constants to avoid duplicating string literals (SonarQube maintainability)
+const (
+	errFailedToCreateTempDir = "Failed to create temp dir: %v"
+	resultsConfigDir         = "Results/config"
+)
+
 func TestSaveResultGitlab(t *testing.T) {
 	// Create temporary directory structure for testing
 	tempDir, err := os.MkdirTemp("", "test_gitlab_save_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -20,7 +26,7 @@ func TestSaveResultGitlab(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directories
-	dirs := []string{"Logs", "Results", "Results/config"}
+	dirs := []string{"Logs", "Results", resultsConfigDir}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
@@ -48,7 +54,7 @@ func TestSaveResultGitlab(t *testing.T) {
 		}
 
 		// Verify that the correct GitLab-specific file was created
-		expectedFile := "Results/config/analysis_result_gitlab.json"
+		expectedFile := resultsConfigDir + "/analysis_result_gitlab.json"
 		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
 			t.Errorf("Expected GitLab analysis file was not created: %s", expectedFile)
 		}
@@ -75,7 +81,7 @@ func TestSaveResultGitlab(t *testing.T) {
 		}
 
 		// Verify specific GitLab filename (not GitHub)
-		githubFile := "Results/config/analysis_result_github.json"
+		githubFile := resultsConfigDir + "/analysis_result_github.json"
 		if _, err := os.Stat(githubFile); !os.IsNotExist(err) {
 			t.Error("SaveResult() incorrectly created GitHub analysis file instead of GitLab file")
 		}
@@ -103,7 +109,7 @@ func TestGitlabErrorFormatting(t *testing.T) {
 	// Create temporary logs directory for testing
 	tempDir, err := os.MkdirTemp("", "test_gitlab_logs_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -119,9 +125,9 @@ func TestGitlabErrorFormatting(t *testing.T) {
 	}
 
 	// Create Results/config directory
-	err = os.MkdirAll("Results/config", 0755)
+	err = os.MkdirAll(resultsConfigDir, 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Results/config dir: %v", err)
+		t.Fatalf("Failed to create "+resultsConfigDir+" dir: %v", err)
 	}
 
 	t.Run("Error encoding JSON file formatting", func(t *testing.T) {
@@ -129,14 +135,14 @@ func TestGitlabErrorFormatting(t *testing.T) {
 		// by making the file directory read-only to force an encoding error
 
 		// Make the config directory read-only to force error
-		err := os.Chmod("Results/config", 0444)
+		err := os.Chmod(resultsConfigDir, 0444)
 		if err != nil {
 			t.Fatalf("Failed to make directory read-only: %v", err)
 		}
 
 		// Restore permissions after test
 		defer func() {
-			os.Chmod("Results/config", 0755)
+			os.Chmod(resultsConfigDir, 0755)
 		}()
 
 		result := AnalysisResult{
@@ -166,7 +172,7 @@ func TestGitlabFileNaming(t *testing.T) {
 	// Create temporary directory structure
 	tempDir, err := os.MkdirTemp("", "test_gitlab_naming_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -176,7 +182,7 @@ func TestGitlabFileNaming(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directories
-	dirs := []string{"Logs", "Results", "Results/config"}
+	dirs := []string{"Logs", "Results", resultsConfigDir}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
@@ -207,8 +213,8 @@ func TestGitlabFileNaming(t *testing.T) {
 		}
 
 		// The key fix: GitLab should save to analysis_result_gitlab.json, NOT analysis_result_github.json
-		gitlabFile := "Results/config/analysis_result_gitlab.json"
-		githubFile := "Results/config/analysis_result_github.json"
+		gitlabFile := resultsConfigDir + "/analysis_result_gitlab.json"
+		githubFile := resultsConfigDir + "/analysis_result_github.json"
 
 		// Verify GitLab file exists
 		if _, err := os.Stat(gitlabFile); os.IsNotExist(err) {

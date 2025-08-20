@@ -435,7 +435,7 @@ func TestGenerateRepositoryPDFReport(t *testing.T) {
 	}
 }
 
-func TestGenerateRepositorySummaryReports_NoAnalysisFiles(t *testing.T) {
+func TestGenerateRepositorySummaryReportsNoAnalysisFiles(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_no_analysis_*")
 	if err != nil {
@@ -461,7 +461,7 @@ func TestGenerateRepositorySummaryReports_NoAnalysisFiles(t *testing.T) {
 	}
 }
 
-func TestGenerateRepositorySummaryReports_WithAnalysisFiles(t *testing.T) {
+func TestGenerateRepositorySummaryReportsWithAnalysisFiles(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_with_analysis_*")
 	if err != nil {
@@ -572,7 +572,7 @@ func TestGenerateReportWithErrorHandling(t *testing.T) {
 	})
 }
 
-func TestGetRepositoryData_EmptyAnalysis(t *testing.T) {
+func TestGetRepositoryDataEmptyAnalysis(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_empty_analysis_*")
 	if err != nil {
@@ -623,7 +623,7 @@ func containsLine(content, line string) bool {
 	return false
 }
 
-func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
+func TestGetRepositoryDataComplexScenarios(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_complex_scenarios_*")
 	if err != nil {
