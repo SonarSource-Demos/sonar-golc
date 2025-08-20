@@ -1,3 +1,6 @@
+//go:build resultsall
+// +build resultsall
+
 package main
 
 import (
@@ -18,7 +21,7 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
-const port = 8091
+const port = 8092
 
 // HTTP header constants
 const (
@@ -753,7 +756,7 @@ func handleServerStartup() {
 
 // handlePortConflict handles the case when the default port is in use
 func handlePortConflict() {
-	fmt.Println("❗️ Port %s is already in use.", port)
+	fmt.Printf("❗️ Port %d is already in use.\n", port)
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("✅ Please enter the port you wish to use : ")
