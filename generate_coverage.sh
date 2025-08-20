@@ -9,6 +9,12 @@ echo "🔬 Generating test coverage reports for local development..."
 # Clean up old coverage files
 rm -f coverage-*.out coverage.out
 
+# Create config file for testing if it doesn't exist
+if [ ! -f config.json ]; then
+    echo "📝 Creating config.json from sample for testing..."
+    cp config_sample.json config.json
+fi
+
 # 1. Test pkg/ directory (shared packages)
 echo "📦 Testing pkg/ directory..."
 go test -coverprofile=coverage-pkg.out ./pkg/...

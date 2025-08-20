@@ -46,6 +46,9 @@ jobs:
 
       - name: Generate test coverage reports
         run: |
+          # Create config file for testing
+          cp config_sample.json config.json
+          
           echo "📦 Testing pkg/ directory..."
           go test -coverprofile=coverage-pkg.out ./pkg/...
           
