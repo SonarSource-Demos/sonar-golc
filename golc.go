@@ -910,20 +910,23 @@ func init() {
 	logger.SetLevel(AppConfig.Logging.Level)
 }
 
-func main() {
+// ApplicationFlags holds command line arguments
+type ApplicationFlags struct {
+	DevOps      string
+	Fast        bool
+	AllBranches bool
+	Help        bool
+	Languages   bool
+	Version     bool
+	Docker      bool
+}
 
-	var maxTotalCodeLines int
-	var maxProject, maxRepo string
-	var NumberRepos int
-	var startTime time.Time
-	var ListDirectory []string
-	var ListExclusion []string
-	var message0, message1, message2, message3, message4, message5 string
-
-	// Test command line Flags
-
+// parseAndValidateFlags processes command line arguments and validates them
+func parseAndValidateFlags() (ApplicationFlags, map[string]interface{}) {
+	// Define flags
 	devopsFlag := flag.String("devops", "", "Specify the DevOps platform")
 	fastFlag := flag.Bool("fast", false, "Enable fast mode (only for Github)")
+	allBranchesFlag := flag.Bool("all-branches", false, "Analyze all branches for each repository (not just main branch)")
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
 	versionflag := flag.Bool("version", false, "Show version")
@@ -931,9 +934,15 @@ func main() {
 
 	flag.Parse()
 
+	// Handle informational flags
 	if *helpFlag {
 		fmt.Println("Usage: golc -devops [OPTIONS]")
 		fmt.Println("Options:  <BitBucketSRV>||<BitBucket>||<Github>||<Gitlab>||<Azure>||<File>")
+		fmt.Println("")
+		fmt.Println("Examples:")
+		fmt.Println("  golc -devops Github                    # Analyze main branches only")
+		fmt.Println("  golc -devops Github -all-branches      # Analyze ALL branches")
+		fmt.Println("  golc -devops Github -fast              # Fast analysis mode")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -948,6 +957,7 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Validate required flags
 	if *devopsFlag == "" {
 		fmt.Println("\n❌ Please specify the DevOps platform using the -devops flag : <BitBucketSRV>||<BitBucket>||<Github>||<GithubEnterprise>||<Gitlab>||<Azure>||<File>")
 		fmt.Println("✅ Example for BitBucket server : golc -devops BitBucketSRV")
@@ -961,67 +971,86 @@ func main() {
 		os.Exit(1)
 	}
 
+	return ApplicationFlags{
+		DevOps:      *devopsFlag,
+		Fast:        *fastFlag,
+		AllBranches: *allBranchesFlag,
+		Help:        *helpFlag,
+		Languages:   *languagesFlag,
+		Version:     *versionflag,
+		Docker:      *docker,
+	}, platformConfig
+}
+
+// setupResultsDirectory handles Results directory creation and backup logic
+func setupResultsDirectory(flags ApplicationFlags) string {
 	pwd, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
 	DestinationResult := pwd + "/Results"
 
-	logger.Infof("✅ Using configuration for DevOps platform '%s'\n", *devopsFlag)
+	logger.Infof("✅ Using configuration for DevOps platform '%s'\n", flags.DevOps)
 
-	// Test whether to delete the Results directory and save it before deleting.
-
-	if *docker {
+	if flags.Docker {
 		fmt.Println("Running in Docker mode")
-
 		createDirectories(DestinationResult, directoriesToCreate)
+		return DestinationResult
+	}
 
-	} else {
+	_, err = os.Stat(DestinationResult)
+	if err == nil {
+		fmt.Printf("❗️ Directory <'%s'> already exists. Do you want to delete it? (y/n): ", DestinationResult)
+		var response string
+		fmt.Scanln(&response)
 
-		_, err = os.Stat(DestinationResult)
-		if err == nil {
+		if response == "y" || response == "Y" {
+			fmt.Printf("❗️ Do you want to create a backup of the directory before deleting? (y/n): ")
+			var backupResponse string
+			fmt.Scanln(&backupResponse)
 
-			fmt.Printf("❗️ Directory <'%s'> already exists. Do you want to delete it? (y/n): ", DestinationResult)
-			var response string
-			fmt.Scanln(&response)
-
-			if response == "y" || response == "Y" {
-
-				fmt.Printf("❗️ Do you want to create a backup of the directory before deleting? (y/n): ")
-				var backupResponse string
-				fmt.Scanln(&backupResponse)
-
-				if backupResponse == "y" || backupResponse == "Y" {
-					// Create ZIP backup
-					err := createBackup(DestinationResult, pwd)
-					if err != nil {
-						fmt.Printf("❌ Error creating backup: %s\n", err)
-						os.Exit(1)
-					}
-				}
-
-				err := os.RemoveAll(DestinationResult)
-				if err != nil {
-					fmt.Printf("❌ Error deleting directory: %s\n", err)
+			if backupResponse == "y" || backupResponse == "Y" {
+				if err := createBackup(DestinationResult, pwd); err != nil {
+					fmt.Printf("❌ Error creating backup: %s\n", err)
 					os.Exit(1)
 				}
-				if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
-					panic(err)
-				}
-				createDirectories(DestinationResult, directoriesToCreate)
-
-			} else {
-				os.Exit(1)
 			}
 
-		} else if os.IsNotExist(err) {
+			if err := os.RemoveAll(DestinationResult); err != nil {
+				fmt.Printf("❌ Error deleting directory: %s\n", err)
+				os.Exit(1)
+			}
 			if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
 				panic(err)
 			}
 			createDirectories(DestinationResult, directoriesToCreate)
-
+		} else {
+			os.Exit(1)
 		}
+	} else if os.IsNotExist(err) {
+		if err := os.MkdirAll(DestinationResult, os.ModePerm); err != nil {
+			panic(err)
+		}
+		createDirectories(DestinationResult, directoriesToCreate)
 	}
+
+	return DestinationResult
+}
+
+func main() {
+	var maxTotalCodeLines int
+	var maxProject, maxRepo string
+	var NumberRepos int
+	var startTime time.Time
+	var ListDirectory []string
+	var ListExclusion []string
+	var message0, message1, message2, message3, message4, message5 string
+
+	// Parse and validate command line flags
+	flags, platformConfig := parseAndValidateFlags()
+
+	// Setup results directory
+	DestinationResult := setupResultsDirectory(flags)
 	fmt.Printf("\n")
 
 	// Create Global Report File
@@ -1069,7 +1098,7 @@ func main() {
 
 		startTime = time.Now()
 
-		if *fastFlag {
+		if flags.Fast {
 			fmt.Println("🚀 Fast mode enabled for Github")
 			fast = true
 			err := getgithub.FastAnalys(platformConfig, fileexclusionEX)
@@ -1081,20 +1110,46 @@ func main() {
 		} else {
 			fast = false
 
-			repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
-			if err != nil {
-				logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
-				return
-			}
+			if flags.AllBranches {
+				fmt.Println("🌿 All-branches mode enabled for Github")
+				logger.Infof("🌿 All-branches mode enabled - analyzing ALL branches for each repository")
 
-			if len(repositories) == 0 {
-				logger.Error(errorMessageAnalyse)
-				os.Exit(1)
+				// Get the main repositories list (one per repo)
+				repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
+				if err != nil {
+					logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
+					return
+				}
 
+				if len(repositories) == 0 {
+					logger.Error(errorMessageAnalyse)
+					os.Exit(1)
+				} else {
+					// Get all branches for each repository and analyze them
+					allBranches, err := getgithub.GetAllBranchesForRepositories(platformConfig, repositories)
+					if err != nil {
+						logger.Errorf("❌ Error getting all branches: %v", err)
+						return
+					}
+
+					NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, allBranches)
+				}
 			} else {
+				repositories, err := getgithub.GetRepoGithubList(platformConfig, fileexclusionEX, fast)
+				if err != nil {
+					logger.Errorf(errorMessageRepos, platformConfig["Organization"].(string), err)
+					return
+				}
 
-				NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, repositories)
+				if len(repositories) == 0 {
+					logger.Error(errorMessageAnalyse)
+					os.Exit(1)
 
+				} else {
+
+					NumberRepos = AnalyseReposListGithub(DestinationResult, platformConfig, repositories)
+
+				}
 			}
 		}
 
@@ -1322,6 +1377,12 @@ func main() {
 	err = utils.CreateGlobalReport(DestinationResult)
 	if err != nil {
 		log.Fatalf("❌ Error creating global report: %v", err)
+	}
+
+	// Generate Repository Summary Reports
+	err = utils.GenerateRepositorySummaryReports(DestinationResult)
+	if err != nil {
+		logger.Errorf("❌ Error creating repository summary reports: %v", err)
 	}
 
 	fmt.Printf("\n")
