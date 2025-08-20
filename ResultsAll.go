@@ -20,7 +20,7 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
-const port = 8091
+const port = 8092
 
 type Globalinfo struct {
 	Organization           string `json:"Organization"`
