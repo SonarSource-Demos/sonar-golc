@@ -1376,6 +1376,12 @@ func main() {
 		log.Fatalf("❌ Error creating global report: %v", err)
 	}
 
+	// Generate Repository Summary Reports
+	err = utils.GenerateRepositorySummaryReports(DestinationResult)
+	if err != nil {
+		logger.Errorf("❌ Error creating repository summary reports: %v", err)
+	}
+
 	fmt.Printf("\n")
 
 	endTime := time.Now()
