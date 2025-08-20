@@ -10,11 +10,23 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
+// Constants to avoid duplicating string literals (SonarQube maintainability)
+const (
+	errFailedToCreateTempDir      = "Failed to create temp dir: %v"
+	errFailedToCreateLogsDir      = "Failed to create Logs dir: %v"
+	errSaveResultOfAnalysis       = "❌ Error Save Result of Analysis : %v"
+	testRepoName                  = "test-repo"
+	errRetrievingBranchesForRepo  = "❌ Error when retrieving branches for repo %v: %v\n"
+	errFetchingRepositoryEvents   = "❌ Error fetching repository events: %v"
+	errFailedToCreateGitHubClient = "❌ Failed to create GitHub Enterprise client: %v"
+	errFetchingRepositories       = "❌ Error fetching repositories: %v\n"
+)
+
 func TestLoggerErrorFormatting(t *testing.T) {
 	// Create temporary logs directory for testing
 	tempDir, err := os.MkdirTemp("", "test_logs_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -26,7 +38,7 @@ func TestLoggerErrorFormatting(t *testing.T) {
 	// Create Logs directory
 	err = os.MkdirAll("Logs", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
+		t.Fatalf(errFailedToCreateLogsDir, err)
 	}
 
 	loggers := utils.NewLogger()
@@ -41,16 +53,16 @@ func TestLoggerErrorFormatting(t *testing.T) {
 			name: "Save Result Error Format",
 			testFunction: func() {
 				err := errors.New("save error")
-				loggers.Errorf("❌ Error Save Result of Analysis : %v", err)
+				loggers.Errorf(errSaveResultOfAnalysis, err)
 			},
 			expectedNoFail: true,
 		},
 		{
 			name: "Branch Retrieval Error Format",
 			testFunction: func() {
-				repoName := "test-repo"
+				repoName := testRepoName
 				err := errors.New("branch error")
-				loggers.Errorf("❌ Error when retrieving branches for repo %v: %v\n", repoName, err)
+				loggers.Errorf(errRetrievingBranchesForRepo, repoName, err)
 			},
 			expectedNoFail: true,
 		},
@@ -58,7 +70,7 @@ func TestLoggerErrorFormatting(t *testing.T) {
 			name: "Repository Events Error Format",
 			testFunction: func() {
 				err := errors.New("events error")
-				loggers.Errorf("❌ Error fetching repository events: %v", err)
+				loggers.Errorf(errFetchingRepositoryEvents, err)
 			},
 			expectedNoFail: true,
 		},
@@ -90,7 +102,7 @@ func TestLoggerErrorFormatting(t *testing.T) {
 		{
 			name: "Branches List Error Format",
 			testFunction: func() {
-				repoSlug := "test-repo"
+				repoSlug := testRepoName
 				err := errors.New("branches list error")
 				loggers.Errorf("❌ Error getting branches for repo %s: %v", repoSlug, err)
 			},
@@ -117,7 +129,7 @@ func TestErrorFormattingInAnalysisFlow(t *testing.T) {
 	// Create temporary logs directory for testing
 	tempDir, err := os.MkdirTemp("", "test_analysis_logs_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -129,14 +141,14 @@ func TestErrorFormattingInAnalysisFlow(t *testing.T) {
 	// Create Logs directory
 	err = os.MkdirAll("Logs", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
+		t.Fatalf(errFailedToCreateLogsDir, err)
 	}
 
 	loggers := utils.NewLogger()
 
 	// Test error scenarios that would occur during analysis
 	t.Run("Repository Processing Error", func(t *testing.T) {
-		repoName := "test-repo"
+		repoName := testRepoName
 		err := errors.New("processing error")
 		loggers.Errorf("❌ Error processing repo %s: %v", repoName, err)
 	})
@@ -149,12 +161,12 @@ func TestErrorFormattingInAnalysisFlow(t *testing.T) {
 
 	t.Run("GitHub Enterprise Client Error", func(t *testing.T) {
 		err := errors.New("client creation error")
-		loggers.Errorf("❌ Failed to create GitHub Enterprise client: %v", err)
+		loggers.Errorf(errFailedToCreateGitHubClient, err)
 	})
 
 	t.Run("Repository Fetch Error", func(t *testing.T) {
 		err := errors.New("fetch error")
-		loggers.Errorf("❌ Error fetching repositories: %v\n", err)
+		loggers.Errorf(errFetchingRepositories, err)
 	})
 
 	t.Run("Single Repository Fetch Error", func(t *testing.T) {
@@ -167,7 +179,7 @@ func TestGitHubAPIErrorHandling(t *testing.T) {
 	// Create temporary logs directory for testing
 	tempDir, err := os.MkdirTemp("", "test_github_api_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -179,7 +191,7 @@ func TestGitHubAPIErrorHandling(t *testing.T) {
 	// Create Logs directory
 	err = os.MkdirAll("Logs", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
+		t.Fatalf(errFailedToCreateLogsDir, err)
 	}
 
 	loggers := utils.NewLogger()
@@ -202,7 +214,7 @@ func TestGitHubAPIErrorHandling(t *testing.T) {
 	})
 
 	t.Run("Branch Listing Error", func(t *testing.T) {
-		repoName := "test-repo"
+		repoName := testRepoName
 		err := errors.New("branch listing error")
 		errMsg := fmt.Errorf("error getting branches for repo %s: %v", repoName, err)
 
@@ -214,7 +226,7 @@ func TestSaveResultFunction(t *testing.T) {
 	// Create temporary directory structure for testing
 	tempDir, err := os.MkdirTemp("", "test_save_result_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -240,7 +252,7 @@ func TestSaveResultFunction(t *testing.T) {
 			ProjectBranches: []ProjectBranch{
 				{
 					Org:        "test-org",
-					RepoSlug:   "test-repo",
+					RepoSlug:   testRepoName,
 					MainBranch: "main",
 				},
 			},
@@ -251,7 +263,7 @@ func TestSaveResultFunction(t *testing.T) {
 		if err != nil {
 			// This is expected to cover the error logging line
 			loggers := utils.NewLogger()
-			loggers.Errorf("❌ Error Save Result of Analysis : %v", err)
+			loggers.Errorf(errSaveResultOfAnalysis, err)
 		}
 	})
 }
@@ -261,7 +273,7 @@ func TestGitHubClientErrorScenarios(t *testing.T) {
 	// Create temporary logs directory
 	tempDir, err := os.MkdirTemp("", "test_github_client_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -273,7 +285,7 @@ func TestGitHubClientErrorScenarios(t *testing.T) {
 	// Create Logs directory
 	err = os.MkdirAll("Logs", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
+		t.Fatalf(errFailedToCreateLogsDir, err)
 	}
 
 	loggers := utils.NewLogger()
@@ -286,17 +298,17 @@ func TestGitHubClientErrorScenarios(t *testing.T) {
 
 	t.Run("API Rate Limit Error", func(t *testing.T) {
 		err := errors.New("API rate limit exceeded")
-		loggers.Errorf("❌ Error fetching repositories: %v\n", err)
+		loggers.Errorf(errFetchingRepositories, err)
 	})
 
 	t.Run("Authentication Error", func(t *testing.T) {
 		err := errors.New("bad credentials")
-		loggers.Errorf("❌ Failed to create GitHub Enterprise client: %v", err)
+		loggers.Errorf(errFailedToCreateGitHubClient, err)
 	})
 
 	t.Run("Network Error", func(t *testing.T) {
 		err := errors.New("network unreachable")
-		loggers.Errorf("❌ Error when retrieving branches for repo %v: %v\n", "test-repo", err)
+		loggers.Errorf(errRetrievingBranchesForRepo, testRepoName, err)
 	})
 }
 
@@ -305,7 +317,7 @@ func TestErrorFormattingCompleteness(t *testing.T) {
 	// Create temporary logs directory
 	tempDir, err := os.MkdirTemp("", "test_completeness_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -317,7 +329,7 @@ func TestErrorFormattingCompleteness(t *testing.T) {
 	// Create Logs directory
 	err = os.MkdirAll("Logs", 0755)
 	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
+		t.Fatalf(errFailedToCreateLogsDir, err)
 	}
 
 	loggers := utils.NewLogger()
@@ -327,17 +339,17 @@ func TestErrorFormattingCompleteness(t *testing.T) {
 		pattern string
 		args    []interface{}
 	}{
-		{"❌ Error Save Result of Analysis : %v", []interface{}{errors.New("test")}},
-		{"❌ Error when retrieving branches for repo %v: %v\n", []interface{}{"repo", errors.New("test")}},
-		{"❌ Error fetching repository events: %v", []interface{}{errors.New("test")}},
+		{errSaveResultOfAnalysis, []interface{}{errors.New("test")}},
+		{errRetrievingBranchesForRepo, []interface{}{"repo", errors.New("test")}},
+		{errFetchingRepositoryEvents, []interface{}{errors.New("test")}},
 		{"❌ Error parsing payload: %v", []interface{}{errors.New("test")}},
 		{"❌ Error fetching contributors stats: %v\n", []interface{}{errors.New("test")}},
 		{"Error fetching commits for branch %s: %v\n", []interface{}{"main", errors.New("test")}},
 		{"❌ Error getting branches for repo %s: %v", []interface{}{"repo", errors.New("test")}},
 		{"❌ Error processing repo %s: %v", []interface{}{"repo", errors.New("test")}},
 		{"\n❌ Error Read Exclusion File <%s>: %v", []interface{}{"file", errors.New("test")}},
-		{"❌ Failed to create GitHub Enterprise client: %v", []interface{}{errors.New("test")}},
-		{"❌ Error fetching repositories: %v\n", []interface{}{errors.New("test")}},
+		{errFailedToCreateGitHubClient, []interface{}{errors.New("test")}},
+		{errFetchingRepositories, []interface{}{errors.New("test")}},
 		{"❌ Error fetching repository: %v\n", []interface{}{errors.New("test")}},
 	}
 

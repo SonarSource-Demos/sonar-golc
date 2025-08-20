@@ -10,6 +10,19 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
+// Constants to avoid duplicating string literals (SonarQube maintainability)
+const (
+	testOrgName                     = "test-org"
+	testProjectName                 = "test-project"
+	testRepoName                    = "test-repo"
+	errFailedToCreateTempDir        = "Failed to create temp dir: %v"
+	resultsConfigDir                = "Results/config"
+	errFailedToCreateConfigDir      = "Failed to create config dir: %v"
+	msgDetectPlatformAnalysisResult = "detectPlatformAndReadAnalysis() platform = %q, want %q"
+	analysisResultGitHubFilePath    = "Results/config/analysis_result_github.json"
+	errFailedToCreateAnalysisFile   = "Failed to create analysis file: %v"
+)
+
 func TestTruncateText(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -81,9 +94,9 @@ func TestIsMainBranch(t *testing.T) {
 
 func TestGetFirstPartForPlatform(t *testing.T) {
 	branch := ProjectBranch{
-		Org:        "test-org",
-		ProjectKey: "test-project",
-		RepoSlug:   "test-repo",
+		Org:        testOrgName,
+		ProjectKey: testProjectName,
+		RepoSlug:   testRepoName,
 	}
 
 	tests := []struct {
@@ -91,19 +104,19 @@ func TestGetFirstPartForPlatform(t *testing.T) {
 		platform string
 		expected string
 	}{
-		{"Azure platform", "azure", "test-project"},
-		{"BitBucket DC platform", "bitbucketdc", "test-project"},
-		{"BitBucket platform", "bitbucket", "test-project"},
-		{"GitLab platform", "gitlab", "test-org"},
-		{"GitHub platform", "github", "test-org"},
-		{"Unknown platform", "unknown", "test-repo"},
+		{"Azure platform", "azure", testProjectName},
+		{"BitBucket DC platform", "bitbucketdc", testProjectName},
+		{"BitBucket platform", "bitbucket", testProjectName},
+		{"GitLab platform", "gitlab", testOrgName},
+		{"GitHub platform", "github", testOrgName},
+		{"Unknown platform", "unknown", testRepoName},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getFirstPartForPlatform(tt.platform, branch, "test-repo")
+			result := getFirstPartForPlatform(tt.platform, branch, testRepoName)
 			if result != tt.expected {
-				t.Errorf("getFirstPartForPlatform(%q, branch, %q) = %q, want %q", tt.platform, "test-repo", result, tt.expected)
+				t.Errorf("getFirstPartForPlatform(%q, branch, %q) = %q, want %q", tt.platform, testRepoName, result, tt.expected)
 			}
 		})
 	}
@@ -170,7 +183,7 @@ func TestDetectPlatformAndReadAnalysis(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_analysis_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -180,10 +193,10 @@ func TestDetectPlatformAndReadAnalysis(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create Results/config directory
-	configDir := "Results/config"
+	configDir := resultsConfigDir
 	err = os.MkdirAll(configDir, 0755)
 	if err != nil {
-		t.Fatalf("Failed to create config dir: %v", err)
+		t.Fatalf(errFailedToCreateConfigDir, err)
 	}
 
 	// Test case 1: GitHub analysis file exists
@@ -193,8 +206,8 @@ func TestDetectPlatformAndReadAnalysis(t *testing.T) {
 			NumRepositories: 1,
 			ProjectBranches: []ProjectBranch{
 				{
-					Org:        "test-org",
-					RepoSlug:   "test-repo",
+					Org:        testOrgName,
+					RepoSlug:   testRepoName,
 					MainBranch: "main",
 				},
 			},
@@ -212,7 +225,7 @@ func TestDetectPlatformAndReadAnalysis(t *testing.T) {
 			t.Errorf("detectPlatformAndReadAnalysis() error = %v, want nil", err)
 		}
 		if platform != "github" {
-			t.Errorf("detectPlatformAndReadAnalysis() platform = %q, want %q", platform, "github")
+			t.Errorf(msgDetectPlatformAnalysisResult, platform, "github")
 		}
 		if len(data) == 0 {
 			t.Error("detectPlatformAndReadAnalysis() returned empty data")
@@ -235,7 +248,7 @@ func TestGenerateRepositoryCSVReport(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_csv_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -306,7 +319,7 @@ func TestGenerateRepositoryJSONReport(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_json_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -320,7 +333,7 @@ func TestGenerateRepositoryJSONReport(t *testing.T) {
 		Repositories: []RepositoryData{
 			{
 				Number:     1,
-				Repository: "test-repo",
+				Repository: testRepoName,
 				Branch:     "main",
 				Lines:      100,
 				BlankLines: 10,
@@ -368,7 +381,7 @@ func TestGenerateRepositoryPDFReport(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_pdf_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -386,7 +399,7 @@ func TestGenerateRepositoryPDFReport(t *testing.T) {
 		Repositories: []RepositoryData{
 			{
 				Number:      1,
-				Repository:  "test-repo",
+				Repository:  testRepoName,
 				Branch:      "main",
 				Lines:       100,
 				BlankLines:  10,
@@ -426,7 +439,7 @@ func TestGenerateRepositorySummaryReports_NoAnalysisFiles(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_no_analysis_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -452,7 +465,7 @@ func TestGenerateRepositorySummaryReports_WithAnalysisFiles(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_with_analysis_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -464,7 +477,7 @@ func TestGenerateRepositorySummaryReports_WithAnalysisFiles(t *testing.T) {
 	// Create necessary directory structure
 	dirs := []string{
 		"Logs",
-		"Results/config",
+		resultsConfigDir,
 		"Results/byfile-report",
 		"byfile-report/csv-report",
 		"byfile-report/pdf-report",
@@ -481,16 +494,16 @@ func TestGenerateRepositorySummaryReports_WithAnalysisFiles(t *testing.T) {
 		NumRepositories: 1,
 		ProjectBranches: []ProjectBranch{
 			{
-				Org:        "test-org",
-				RepoSlug:   "test-repo",
+				Org:        testOrgName,
+				RepoSlug:   testRepoName,
 				MainBranch: "main",
 			},
 		},
 	}
 	analysisJSON, _ := json.Marshal(analysisData)
-	err = os.WriteFile("Results/config/analysis_result_github.json", analysisJSON, 0644)
+	err = os.WriteFile(analysisResultGitHubFilePath, analysisJSON, 0644)
 	if err != nil {
-		t.Fatalf("Failed to create analysis file: %v", err)
+		t.Fatalf(errFailedToCreateAnalysisFile, err)
 	}
 
 	// Create byfile report
@@ -529,7 +542,7 @@ func TestGenerateReportWithErrorHandling(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_error_handling_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -563,7 +576,7 @@ func TestGetRepositoryData_EmptyAnalysis(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_empty_analysis_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -573,9 +586,9 @@ func TestGetRepositoryData_EmptyAnalysis(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create Results/config directory
-	err = os.MkdirAll("Results/config", 0755)
+	err = os.MkdirAll(resultsConfigDir, 0755)
 	if err != nil {
-		t.Fatalf("Failed to create config dir: %v", err)
+		t.Fatalf(errFailedToCreateConfigDir, err)
 	}
 
 	// Create analysis file with empty repositories
@@ -584,9 +597,9 @@ func TestGetRepositoryData_EmptyAnalysis(t *testing.T) {
 		ProjectBranches: []ProjectBranch{},
 	}
 	analysisJSON, _ := json.Marshal(analysisData)
-	err = os.WriteFile("Results/config/analysis_result_github.json", analysisJSON, 0644)
+	err = os.WriteFile(analysisResultGitHubFilePath, analysisJSON, 0644)
 	if err != nil {
-		t.Fatalf("Failed to create analysis file: %v", err)
+		t.Fatalf(errFailedToCreateAnalysisFile, err)
 	}
 
 	// Test with empty analysis
@@ -614,7 +627,7 @@ func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_complex_scenarios_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -625,7 +638,7 @@ func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
 
 	// Create necessary directory structure
 	dirs := []string{
-		"Results/config",
+		resultsConfigDir,
 		"Results/byfile-report",
 	}
 	for _, dir := range dirs {
@@ -637,7 +650,7 @@ func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
 
 	t.Run("Invalid JSON handling", func(t *testing.T) {
 		// Create invalid JSON file
-		err = os.WriteFile("Results/config/analysis_result_github.json", []byte("invalid json"), 0644)
+		err = os.WriteFile(analysisResultGitHubFilePath, []byte("invalid json"), 0644)
 		if err != nil {
 			t.Fatalf("Failed to create invalid JSON file: %v", err)
 		}
@@ -652,7 +665,7 @@ func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
 		}
 
 		// Clean up
-		os.Remove("Results/config/analysis_result_github.json")
+		os.Remove(analysisResultGitHubFilePath)
 	})
 
 	t.Run("Invalid byfile JSON handling", func(t *testing.T) {
@@ -661,16 +674,16 @@ func TestGetRepositoryData_ComplexScenarios(t *testing.T) {
 			NumRepositories: 1,
 			ProjectBranches: []ProjectBranch{
 				{
-					Org:        "test-org",
+					Org:        testOrgName,
 					RepoSlug:   "invalid-byfile-repo",
 					MainBranch: "main",
 				},
 			},
 		}
 		analysisJSON, _ := json.Marshal(analysisData)
-		err = os.WriteFile("Results/config/analysis_result_github.json", analysisJSON, 0644)
+		err = os.WriteFile(analysisResultGitHubFilePath, analysisJSON, 0644)
 		if err != nil {
-			t.Fatalf("Failed to create analysis file: %v", err)
+			t.Fatalf(errFailedToCreateAnalysisFile, err)
 		}
 
 		// Create invalid byfile JSON
@@ -753,7 +766,7 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_platform_detection_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -763,9 +776,9 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create Results/config directory
-	err = os.MkdirAll("Results/config", 0755)
+	err = os.MkdirAll(resultsConfigDir, 0755)
 	if err != nil {
-		t.Fatalf("Failed to create config dir: %v", err)
+		t.Fatalf(errFailedToCreateConfigDir, err)
 	}
 
 	t.Run("BitBucket DC platform with different filename", func(t *testing.T) {
@@ -792,7 +805,7 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 			t.Errorf("detectPlatformAndReadAnalysis() error = %v, want nil", err)
 		}
 		if platform != "bitbucketdc" {
-			t.Errorf("detectPlatformAndReadAnalysis() platform = %q, want %q", platform, "bitbucketdc")
+			t.Errorf(msgDetectPlatformAnalysisResult, platform, "bitbucketdc")
 		}
 		if len(data) == 0 {
 			t.Error("detectPlatformAndReadAnalysis() returned empty data for BitBucket DC")
@@ -815,8 +828,8 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 		for platform, filename := range platforms {
 			t.Run("Platform "+platform, func(t *testing.T) {
 				// Clean up previous files
-				os.RemoveAll("Results/config")
-				os.MkdirAll("Results/config", 0755)
+				os.RemoveAll(resultsConfigDir)
+				os.MkdirAll(resultsConfigDir, 0755)
 
 				analysisData := AnalysisResult{
 					NumRepositories: 1,
@@ -830,7 +843,7 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 					},
 				}
 				analysisJSON, _ := json.Marshal(analysisData)
-				err = os.WriteFile("Results/config/"+filename, analysisJSON, 0644)
+				err = os.WriteFile(resultsConfigDir+"/"+filename, analysisJSON, 0644)
 				if err != nil {
 					t.Fatalf("Failed to create %s file: %v", platform, err)
 				}
@@ -840,7 +853,7 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 					t.Errorf("detectPlatformAndReadAnalysis() for %s error = %v, want nil", platform, err)
 				}
 				if detectedPlatform != platform {
-					t.Errorf("detectPlatformAndReadAnalysis() platform = %q, want %q", detectedPlatform, platform)
+					t.Errorf(msgDetectPlatformAnalysisResult, detectedPlatform, platform)
 				}
 				if len(data) == 0 {
 					t.Errorf("detectPlatformAndReadAnalysis() returned empty data for %s", platform)

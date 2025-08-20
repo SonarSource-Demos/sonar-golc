@@ -7,12 +7,19 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
+// Constants to avoid duplicating string literals (SonarQube maintainability)
+const (
+	errFailedToCreateTempDir = "Failed to create temp dir: %v"
+	errFailedToCreateDir     = "Failed to create dir %s: %v"
+	resultsConfigDir         = "Results/config"
+)
+
 // TestRepositorySummaryIntegration tests the integration of repository summary generation in golc.go
 func TestRepositorySummaryIntegration(t *testing.T) {
 	// Create temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "test_golc_integration_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -24,7 +31,7 @@ func TestRepositorySummaryIntegration(t *testing.T) {
 	// Create necessary directory structure that golc.go expects
 	dirs := []string{
 		"Logs",
-		"Results/config",
+		resultsConfigDir,
 		"Results/byfile-report",
 		"byfile-report/csv-report",
 		"byfile-report/pdf-report",
@@ -32,7 +39,7 @@ func TestRepositorySummaryIntegration(t *testing.T) {
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
-			t.Fatalf("Failed to create dir %s: %v", dir, err)
+			t.Fatalf(errFailedToCreateDir, dir, err)
 		}
 	}
 
@@ -63,7 +70,7 @@ func TestRepositorySummaryIntegration(t *testing.T) {
 			]
 		}`
 
-		err = os.WriteFile("Results/config/analysis_result_github.json", []byte(analysisData), 0644)
+		err = os.WriteFile(resultsConfigDir+"/analysis_result_github.json", []byte(analysisData), 0644)
 		if err != nil {
 			t.Fatalf("Failed to create analysis file: %v", err)
 		}
@@ -130,7 +137,7 @@ func TestGolcRepositorySummaryCall(t *testing.T) {
 	// Create temporary directory
 	tempDir, err := os.MkdirTemp("", "test_golc_call_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -179,7 +186,7 @@ func TestGolcRepositorySummaryCall(t *testing.T) {
 			},
 			{
 				name:      "Results with config",
-				setupDirs: []string{"Results", "Results/config"},
+				setupDirs: []string{"Results", resultsConfigDir},
 				expectErr: false, // Should skip gracefully (no analysis files)
 			},
 		}
@@ -193,7 +200,7 @@ func TestGolcRepositorySummaryCall(t *testing.T) {
 				for _, dir := range tc.setupDirs {
 					err = os.MkdirAll(dir, 0755)
 					if err != nil {
-						t.Fatalf("Failed to create dir %s: %v", dir, err)
+						t.Fatalf(errFailedToCreateDir, dir, err)
 					}
 				}
 
@@ -213,7 +220,7 @@ func TestGolcMainFlowIntegration(t *testing.T) {
 	// Create temporary directory
 	tempDir, err := os.MkdirTemp("", "test_golc_main_flow_*")
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf(errFailedToCreateTempDir, err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -226,7 +233,7 @@ func TestGolcMainFlowIntegration(t *testing.T) {
 	dirs := []string{
 		"Logs",
 		"Results",
-		"Results/config",
+		resultsConfigDir,
 		"Results/byfile-report",
 		"byfile-report/csv-report",
 		"byfile-report/pdf-report",
@@ -234,7 +241,7 @@ func TestGolcMainFlowIntegration(t *testing.T) {
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
-			t.Fatalf("Failed to create dir %s: %v", dir, err)
+			t.Fatalf(errFailedToCreateDir, dir, err)
 		}
 	}
 
@@ -261,7 +268,7 @@ func TestGolcMainFlowIntegration(t *testing.T) {
 			]
 		}`
 
-		err = os.WriteFile("Results/config/analysis_result_github.json", []byte(analysisData), 0644)
+		err = os.WriteFile(resultsConfigDir+"/analysis_result_github.json", []byte(analysisData), 0644)
 		if err != nil {
 			t.Fatalf("Failed to create analysis file: %v", err)
 		}
