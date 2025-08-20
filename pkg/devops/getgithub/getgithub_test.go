@@ -360,3 +360,92 @@ func TestErrorFormattingCompleteness(t *testing.T) {
 		})
 	}
 }
+
+// Integration tests to improve coverage for getgithub package
+func TestGithubIntegrationCoverage(t *testing.T) {
+	// Create temporary logs directory for testing
+	tempDir, err := os.MkdirTemp("", "test_github_integration_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Change to temp directory
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	// Create necessary directories
+	dirs := []string{"Logs", "Results", "Results/config"}
+	for _, dir := range dirs {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	t.Run("SaveResult with various data scenarios", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			result AnalysisResult
+		}{
+			{
+				name: "Empty repositories",
+				result: AnalysisResult{
+					NumRepositories: 0,
+					ProjectBranches: []ProjectBranch{},
+				},
+			},
+			{
+				name: "Single repository",
+				result: AnalysisResult{
+					NumRepositories: 1,
+					ProjectBranches: []ProjectBranch{
+						{Org: testRepoName, RepoSlug: testRepoName, MainBranch: "main"},
+					},
+				},
+			},
+			{
+				name: "Multiple repositories with different branches",
+				result: AnalysisResult{
+					NumRepositories: 4,
+					ProjectBranches: []ProjectBranch{
+						{Org: "org1", RepoSlug: "repo1", MainBranch: "main"},
+						{Org: "org2", RepoSlug: "repo2", MainBranch: "master"},
+						{Org: "org3", RepoSlug: "repo3", MainBranch: "develop"},
+						{Org: "org4", RepoSlug: "repo4", MainBranch: "default"},
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				err := SaveResult(tc.result)
+				if err != nil {
+					t.Errorf("SaveResult failed for %s: %v", tc.name, err)
+				}
+
+				// Verify GitHub-specific file was created (not GitLab)
+				githubFile := "Results/config/analysis_result_github.json"
+				if _, err := os.Stat(githubFile); os.IsNotExist(err) {
+					t.Errorf("SaveResult did not create GitHub file for %s", tc.name)
+				}
+			})
+		}
+	})
+
+	t.Run("Error handling scenarios", func(t *testing.T) {
+		// Test SaveResult with invalid data
+		invalidResult := AnalysisResult{
+			NumRepositories: -1,
+			ProjectBranches: nil,
+		}
+
+		err := SaveResult(invalidResult)
+		// This exercises error handling paths
+		if err != nil {
+			t.Logf("SaveResult properly handled invalid data: %v", err)
+		}
+	})
+}

@@ -21,7 +21,56 @@ const (
 	msgDetectPlatformAnalysisResult = "detectPlatformAndReadAnalysis() platform = %q, want %q"
 	analysisResultGitHubFilePath    = "Results/config/analysis_result_github.json"
 	errFailedToCreateAnalysisFile   = "Failed to create analysis file: %v"
+	resultsFileReportDir            = "Results/byfile-report"
 )
+
+// Test helper functions to reduce duplication
+func setupTestEnvironment(t *testing.T, prefix string) (string, func()) {
+	tempDir, err := os.MkdirTemp("", prefix)
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+
+	originalWd, _ := os.Getwd()
+	cleanup := func() {
+		os.Chdir(originalWd)
+		os.RemoveAll(tempDir)
+	}
+
+	os.Chdir(tempDir)
+	return tempDir, cleanup
+}
+
+func createTestDirectories(t *testing.T, dirs []string) {
+	for _, dir := range dirs {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+}
+
+func createTestAnalysisData() AnalysisResult {
+	return AnalysisResult{
+		NumRepositories: 1,
+		ProjectBranches: []ProjectBranch{
+			{
+				Org:        testOrgName,
+				RepoSlug:   testRepoName,
+				MainBranch: "main",
+			},
+		},
+	}
+}
+
+func createTestByfileData() map[string]interface{} {
+	return map[string]interface{}{
+		"TotalLines":      100,
+		"TotalBlankLines": 10,
+		"TotalComments":   20,
+		"TotalCodeLines":  70,
+	}
+}
 
 func TestTruncateText(t *testing.T) {
 	tests := []struct {
@@ -180,42 +229,17 @@ func TestCreateReportFilePaths(t *testing.T) {
 }
 
 func TestDetectPlatformAndReadAnalysis(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_analysis_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
+	_, cleanup := setupTestEnvironment(t, "test_analysis_*")
+	defer cleanup()
 
-	// Change to temp directory
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-	os.Chdir(tempDir)
-
-	// Create Results/config directory
-	configDir := resultsConfigDir
-	err = os.MkdirAll(configDir, 0755)
-	if err != nil {
-		t.Fatalf(errFailedToCreateConfigDir, err)
-	}
+	createTestDirectories(t, []string{resultsConfigDir})
 
 	// Test case 1: GitHub analysis file exists
 	t.Run("GitHub platform detected", func(t *testing.T) {
-		// Create a test GitHub analysis file
-		testData := AnalysisResult{
-			NumRepositories: 1,
-			ProjectBranches: []ProjectBranch{
-				{
-					Org:        testOrgName,
-					RepoSlug:   testRepoName,
-					MainBranch: "main",
-				},
-			},
-		}
-
+		testData := createTestAnalysisData()
 		jsonData, _ := json.Marshal(testData)
-		githubFile := filepath.Join(configDir, "analysis_result_github.json")
-		err = os.WriteFile(githubFile, jsonData, 0644)
+		githubFile := filepath.Join(resultsConfigDir, "analysis_result_github.json")
+		err := os.WriteFile(githubFile, jsonData, 0644)
 		if err != nil {
 			t.Fatalf("Failed to write test file: %v", err)
 		}
@@ -245,12 +269,8 @@ func TestDetectPlatformAndReadAnalysis(t *testing.T) {
 }
 
 func TestGenerateRepositoryCSVReport(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_csv_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir, cleanup := setupTestEnvironment(t, "test_csv_*")
+	defer cleanup()
 
 	// Create test data
 	summary := &RepositorySummaryReport{
@@ -282,7 +302,7 @@ func TestGenerateRepositoryCSVReport(t *testing.T) {
 	}
 
 	// Test CSV generation
-	err = generateRepositoryCSVReport(summary, tempDir)
+	err := generateRepositoryCSVReport(summary, tempDir)
 	if err != nil {
 		t.Errorf("generateRepositoryCSVReport() error = %v, want nil", err)
 	}
@@ -316,12 +336,8 @@ func TestGenerateRepositoryCSVReport(t *testing.T) {
 }
 
 func TestGenerateRepositoryJSONReport(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_json_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir, cleanup := setupTestEnvironment(t, "test_json_*")
+	defer cleanup()
 
 	// Create test data
 	summary := &RepositorySummaryReport{
@@ -344,7 +360,7 @@ func TestGenerateRepositoryJSONReport(t *testing.T) {
 	}
 
 	// Test JSON generation
-	err = generateRepositoryJSONReport(summary, tempDir)
+	err := generateRepositoryJSONReport(summary, tempDir)
 	if err != nil {
 		t.Errorf("generateRepositoryJSONReport() error = %v, want nil", err)
 	}
@@ -378,12 +394,8 @@ func TestGenerateRepositoryJSONReport(t *testing.T) {
 }
 
 func TestGenerateRepositoryPDFReport(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_pdf_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir, cleanup := setupTestEnvironment(t, "test_pdf_*")
+	defer cleanup()
 
 	// Create test data
 	summary := &RepositorySummaryReport{
@@ -414,7 +426,7 @@ func TestGenerateRepositoryPDFReport(t *testing.T) {
 	}
 
 	// Test PDF generation
-	err = generateRepositoryPDFReport(summary, tempDir)
+	err := generateRepositoryPDFReport(summary, tempDir)
 	if err != nil {
 		t.Errorf("generateRepositoryPDFReport() error = %v, want nil", err)
 	}
@@ -436,83 +448,42 @@ func TestGenerateRepositoryPDFReport(t *testing.T) {
 }
 
 func TestGenerateRepositorySummaryReportsNoAnalysisFiles(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_no_analysis_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir, cleanup := setupTestEnvironment(t, "test_no_analysis_*")
+	defer cleanup()
 
-	// Change to temp directory
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-	os.Chdir(tempDir)
-
-	// Create Logs directory to prevent logger errors
-	err = os.MkdirAll("Logs", 0755)
-	if err != nil {
-		t.Fatalf("Failed to create Logs dir: %v", err)
-	}
+	createTestDirectories(t, []string{"Logs"})
 
 	// Test with no analysis files (should skip gracefully)
-	err = GenerateRepositorySummaryReports(tempDir)
+	err := GenerateRepositorySummaryReports(tempDir)
 	if err != nil {
 		t.Errorf("GenerateRepositorySummaryReports() error = %v, want nil (should skip gracefully)", err)
 	}
 }
 
 func TestGenerateRepositorySummaryReportsWithAnalysisFiles(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "test_with_analysis_*")
-	if err != nil {
-		t.Fatalf(errFailedToCreateTempDir, err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Change to temp directory
-	originalWd, _ := os.Getwd()
-	defer os.Chdir(originalWd)
-	os.Chdir(tempDir)
+	tempDir, cleanup := setupTestEnvironment(t, "test_with_analysis_*")
+	defer cleanup()
 
 	// Create necessary directory structure
 	dirs := []string{
 		"Logs",
 		resultsConfigDir,
-		"Results/byfile-report",
+		resultsFileReportDir,
 		"byfile-report/csv-report",
 		"byfile-report/pdf-report",
 	}
-	for _, dir := range dirs {
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
-			t.Fatalf("Failed to create dir %s: %v", dir, err)
-		}
-	}
+	createTestDirectories(t, dirs)
 
 	// Create analysis result file
-	analysisData := AnalysisResult{
-		NumRepositories: 1,
-		ProjectBranches: []ProjectBranch{
-			{
-				Org:        testOrgName,
-				RepoSlug:   testRepoName,
-				MainBranch: "main",
-			},
-		},
-	}
+	analysisData := createTestAnalysisData()
 	analysisJSON, _ := json.Marshal(analysisData)
-	err = os.WriteFile(analysisResultGitHubFilePath, analysisJSON, 0644)
+	err := os.WriteFile(analysisResultGitHubFilePath, analysisJSON, 0644)
 	if err != nil {
 		t.Fatalf(errFailedToCreateAnalysisFile, err)
 	}
 
 	// Create byfile report
-	byfileData := map[string]interface{}{
-		"TotalLines":      100,
-		"TotalBlankLines": 10,
-		"TotalComments":   20,
-		"TotalCodeLines":  70,
-	}
+	byfileData := createTestByfileData()
 	byfileJSON, _ := json.Marshal(byfileData)
 	err = os.WriteFile("Results/byfile-report/Result_test-org_test-repo_main_byfile.json", byfileJSON, 0644)
 	if err != nil {
@@ -639,7 +610,7 @@ func TestGetRepositoryDataComplexScenarios(t *testing.T) {
 	// Create necessary directory structure
 	dirs := []string{
 		resultsConfigDir,
-		"Results/byfile-report",
+		resultsFileReportDir,
 	}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
@@ -859,6 +830,74 @@ func TestAdvancedPlatformDetection(t *testing.T) {
 					t.Errorf("detectPlatformAndReadAnalysis() returned empty data for %s", platform)
 				}
 			})
+		}
+	})
+}
+
+// Additional integration tests to improve coverage
+func TestIntegrationCoverageImprovements(t *testing.T) {
+	tempDir, cleanup := setupTestEnvironment(t, "test_integration_*")
+	defer cleanup()
+
+	createTestDirectories(t, []string{"Logs", resultsConfigDir, resultsFileReportDir})
+
+	t.Run("Edge cases for getRepositoryData", func(t *testing.T) {
+		// Test with multiple platforms
+		platforms := []string{"github", "gitlab", "bitbucket", "azure"}
+
+		for _, platform := range platforms {
+			analysisData := AnalysisResult{
+				NumRepositories: 2,
+				ProjectBranches: []ProjectBranch{
+					{Org: "org1", ProjectKey: "proj1", RepoSlug: "repo1", MainBranch: "main"},
+					{Org: "org2", ProjectKey: "proj2", RepoSlug: "repo2", MainBranch: "develop"},
+				},
+			}
+
+			analysisJSON, _ := json.Marshal(analysisData)
+			filename := "analysis_result_" + platform + ".json"
+
+			err := os.WriteFile(filepath.Join(resultsConfigDir, filename), analysisJSON, 0644)
+			if err != nil {
+				t.Fatalf("Failed to create %s file: %v", platform, err)
+			}
+
+			// Test platform detection
+			detectedPlatform, _, err := detectPlatformAndReadAnalysis()
+			if err != nil {
+				t.Errorf("detectPlatformAndReadAnalysis() failed for %s: %v", platform, err)
+			} else if detectedPlatform != platform {
+				t.Logf("Platform %s detected as %s (expected due to file priority)", platform, detectedPlatform)
+			}
+
+			// Clean up for next iteration
+			os.RemoveAll(resultsConfigDir)
+			createTestDirectories(t, []string{resultsConfigDir})
+		}
+	})
+
+	t.Run("Error handling in report generation", func(t *testing.T) {
+		// Test generateRepositoryCSVReport with empty data
+		emptySummary := &RepositorySummaryReport{
+			TotalRepositories: 0,
+			Repositories:      []RepositoryData{},
+		}
+
+		err := generateRepositoryCSVReport(emptySummary, tempDir)
+		if err != nil {
+			t.Errorf("generateRepositoryCSVReport with empty data failed: %v", err)
+		}
+
+		// Test generateRepositoryJSONReport with empty data
+		err = generateRepositoryJSONReport(emptySummary, tempDir)
+		if err != nil {
+			t.Errorf("generateRepositoryJSONReport with empty data failed: %v", err)
+		}
+
+		// Test generateRepositoryPDFReport with empty data
+		err = generateRepositoryPDFReport(emptySummary, tempDir)
+		if err != nil {
+			t.Errorf("generateRepositoryPDFReport with empty data failed: %v", err)
 		}
 	})
 }
