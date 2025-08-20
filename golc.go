@@ -1,3 +1,6 @@
+//go:build golc
+// +build golc
+
 package main
 
 import (
@@ -177,14 +180,14 @@ func parseJSONFile(filePath, reponame string) int {
 	file, err := os.ReadFile(filePath)
 	if err != nil {
 		//fmt.Println("❌ Error reading file:", err)
-		logger.Errorf("❌ Error reading file:", err)
+		logger.Errorf("❌ Error reading file: %v", err)
 	}
 
 	var report Report
 	err = json.Unmarshal(file, &report)
 	if err != nil {
 		//fmt.Println("❌ Error parsing JSON:", err)
-		logger.Errorf("❌ Error parsing JSON:", err)
+		logger.Errorf("❌ Error parsing JSON: %v", err)
 	}
 
 	return report.TotalCodeLines
@@ -529,7 +532,7 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 
 	gc, err := goloc.NewGCloc(golocParams, assets.Languages)
 	if err != nil {
-		logger.Errorf(errorMessageRepo, err)
+		logger.Errorf(errorMessageRepo+"%v", err)
 		*count++
 		results <- 1
 		return
@@ -705,7 +708,7 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 
 			gc, err := goloc.NewGCloc(params, assets.Languages)
 			if err != nil {
-				logger.Errorf(errorMessageRepo, err)
+				logger.Errorf(errorMessageRepo+"%v", err)
 				return
 			} else {
 

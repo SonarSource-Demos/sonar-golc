@@ -1,31 +1,37 @@
-**/.DS_Store
-Results/*
+# Build artifacts
+golc
+ResultsAll
+ResultsAll-*
+test-*
+debug_*
+
+# Result archives
+Results.zip
 Saves/*
-mod_tests/*
-config.json
-.cloc_*_ignore 
-Release/*
-createrelease.sh 
-scan.sh
-generate_test.sh
-**/*_test.go
-pkglist.txt
-cover.sh
-ResultsAll/*
-ResultsAll/reports/*
-createreportdocker.sh
-Docker1/docker_test/*
-createrelease2.sh
-createrelease3.sh
-Docker1/dockerbuid.sh
-dockerbuild.sh
-dockerbuildR.sh
-dockerarms.sh
-createreportdocker.sh 
-coverage.out
-test/*
-Docker1/*
-Logs/*
-tests/*
-.vscode/*
+Results/
+Results/*
+
+# Logs
+*.log
+Logs/*.log
+
+# Temporary files
+temp.json
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
 .sonarlint/*
+
+# Config files
+config.json
+
+# Coverage files
+coverage-*.out
+coverage-*.xml
+
