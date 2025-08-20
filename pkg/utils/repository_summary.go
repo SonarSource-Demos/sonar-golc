@@ -70,16 +70,22 @@ func isMainBranch(branchName string) bool {
 
 // detectPlatformAndReadAnalysis detects the platform and reads the analysis file
 func detectPlatformAndReadAnalysis() (string, []byte, error) {
-	platforms := []string{"github", "azure", "bitbucket", "gitlab", "bitbucketdc"}
+	// Define platform-specific filename patterns
+	platformFiles := map[string]string{
+		"github":      "Results/config/analysis_result_github.json",
+		"azure":       "Results/config/analysis_result_azure.json",
+		"bitbucket":   "Results/config/analysis_result_bitbucket.json",
+		"gitlab":      "Results/config/analysis_result_gitlab.json",
+		"bitbucketdc": "Results/config/analysis_repos_bitbucketdc.json", // Different naming pattern
+	}
 
-	for _, platform := range platforms {
-		fileName := fmt.Sprintf("Results/config/analysis_result_%s.json", platform)
+	for platform, fileName := range platformFiles {
 		if data, err := os.ReadFile(fileName); err == nil {
 			return platform, data, nil
 		}
 	}
 
-	return "", nil, fmt.Errorf("no analysis result file found")
+	return "", nil, fmt.Errorf("no analysis result file found for any supported platform")
 }
 
 // getFirstPartForPlatform returns the first part of filename for different platforms
@@ -394,7 +400,10 @@ func GenerateRepositorySummaryReports(directory string) error {
 	// Get repository data
 	repositories, err := getRepositoryData()
 	if err != nil {
-		return fmt.Errorf("error getting repository data: %v", err)
+		// If we can't find analysis result files, this might be the File platform
+		// or no repositories were analyzed. Skip repository summary generation.
+		loggers.Infof("ℹ️ Skipping repository summary reports: %v", err)
+		return nil
 	}
 
 	if len(repositories) == 0 {
@@ -425,27 +434,25 @@ func GenerateRepositorySummaryReports(directory string) error {
 		Repositories:      repositories,
 	}
 
-	// Create output directory
-	outputPath := filepath.Join(directory, "byfile-report")
-	err = os.MkdirAll(outputPath, 0755)
-	if err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
-	}
+	// Use existing directory structure
+	baseOutputPath := filepath.Join(directory, "byfile-report")
+	csvOutputPath := filepath.Join(baseOutputPath, "csv-report")
+	pdfOutputPath := filepath.Join(baseOutputPath, "pdf-report")
 
-	// Generate CSV report
-	err = generateRepositoryCSVReport(summary, outputPath)
+	// Generate CSV report in existing csv-report directory
+	err = generateRepositoryCSVReport(summary, csvOutputPath)
 	if err != nil {
 		loggers.Errorf("❌ Error generating CSV report: %v", err)
 	}
 
-	// Generate JSON report
-	err = generateRepositoryJSONReport(summary, outputPath)
+	// Generate JSON report in main byfile-report directory
+	err = generateRepositoryJSONReport(summary, baseOutputPath)
 	if err != nil {
 		loggers.Errorf("❌ Error generating JSON report: %v", err)
 	}
 
-	// Generate PDF report
-	err = generateRepositoryPDFReport(summary, outputPath)
+	// Generate PDF report in existing pdf-report directory
+	err = generateRepositoryPDFReport(summary, pdfOutputPath)
 	if err != nil {
 		loggers.Errorf("❌ Error generating PDF report: %v", err)
 	}

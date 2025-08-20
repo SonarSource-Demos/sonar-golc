@@ -398,7 +398,7 @@ func analyzeRepoBranches(parms ParamsReposGithub, ctx context.Context, client *g
 
 	spin1.Stop()
 
-	loggers.Infof("\r\t\t\t\t✅ %d Repo: %s - Number of branches: %d - largest Branch: %s ", cpt, *repo.Name, nbrbranche, largestRepoBranch)
+	loggers.Infof("\r\t\t\t\t✅ %d Repo: %s - Targeted branches: %d - largest Branch: %s ", cpt, *repo.Name, nbrbranche, largestRepoBranch)
 
 	return largestRepoBranch, branches
 }
