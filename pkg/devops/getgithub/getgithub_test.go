@@ -6,20 +6,30 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
+	"github.com/google/go-github/v62/github"
 )
 
 // Constants to avoid duplicating string literals (SonarQube maintainability)
 const (
-	errFailedToCreateTempDir      = "Failed to create temp dir: %v"
-	errFailedToCreateLogsDir      = "Failed to create Logs dir: %v"
-	errSaveResultOfAnalysis       = "❌ Error Save Result of Analysis : %v"
-	testRepoName                  = "test-repo"
-	errRetrievingBranchesForRepo  = "❌ Error when retrieving branches for repo %v: %v\n"
-	errFetchingRepositoryEvents   = "❌ Error fetching repository events: %v"
-	errFailedToCreateGitHubClient = "❌ Failed to create GitHub Enterprise client: %v"
-	errFetchingRepositories       = "❌ Error fetching repositories: %v\n"
+	errFailedToCreateTempDir       = "Failed to create temp dir: %v"
+	errFailedToCreateLogsDir       = "Failed to create Logs dir: %v"
+	errFailedToCreateDir           = "Failed to create dir %s: %v"
+	errFailedToCreateTestExclusion = "Failed to create test exclusion file: %v"
+	errSaveResultOfAnalysis        = "❌ Error Save Result of Analysis : %v"
+	testRepoName                   = "test-repo"
+	testOrgName                    = "test-org"
+	testToken                      = "test-token"
+	testAPIVersion                 = "2022-11-28"
+	testGitHubAPIURL               = "https://api.github.com"
+	testGitHubDomain               = "github.com"
+	resultsConfigPath              = "Results/config"
+	errRetrievingBranchesForRepo   = "❌ Error when retrieving branches for repo %v: %v\n"
+	errFetchingRepositoryEvents    = "❌ Error fetching repository events: %v"
+	errFailedToCreateGitHubClient  = "❌ Failed to create GitHub Enterprise client: %v"
+	errFetchingRepositories        = "❌ Error fetching repositories: %v\n"
 )
 
 func TestLoggerErrorFormatting(t *testing.T) {
@@ -236,7 +246,7 @@ func TestSaveResultFunction(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directories
-	dirs := []string{"Logs", "Results", "Results/config"}
+	dirs := []string{"Logs", "Results", resultsConfigPath}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
@@ -251,7 +261,7 @@ func TestSaveResultFunction(t *testing.T) {
 			NumRepositories: 1,
 			ProjectBranches: []ProjectBranch{
 				{
-					Org:        "test-org",
+					Org:        testOrgName,
 					RepoSlug:   testRepoName,
 					MainBranch: "main",
 				},
@@ -376,7 +386,7 @@ func TestGithubIntegrationCoverage(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directories
-	dirs := []string{"Logs", "Results", "Results/config"}
+	dirs := []string{"Logs", "Results", resultsConfigPath}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
@@ -446,6 +456,1020 @@ func TestGithubIntegrationCoverage(t *testing.T) {
 		// This exercises error handling paths
 		if err != nil {
 			t.Logf("SaveResult properly handled invalid data: %v", err)
+		}
+	})
+}
+
+// TestSaveFunctions tests all the Save* functions in getgithub package
+func TestSaveFunctions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_save_functions_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	// Create necessary directories
+	dirs := []string{"Logs", "Results", resultsConfigPath}
+	for _, dir := range dirs {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	t.Run("SaveBranch function", func(t *testing.T) {
+		testBranch := RepoBranch{
+			ID:       12345,
+			Name:     "test-repo",
+			Branches: nil, // Can be nil for testing
+		}
+
+		err := SaveBranch(testBranch)
+		if err != nil {
+			t.Errorf("SaveBranch failed: %v", err)
+		}
+
+		// Verify file was created
+		expectedFile := "Results/config/analysis_branch_github.json"
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Errorf("SaveBranch did not create expected file: %s", expectedFile)
+		}
+	})
+
+	t.Run("SaveCommit function", func(t *testing.T) {
+		// Test with nil slice (edge case)
+		err := SaveCommit(nil)
+		if err != nil {
+			t.Errorf("SaveCommit failed with nil input: %v", err)
+		}
+
+		// Verify file was created
+		expectedFile := "Results/config/analysis_commit_github.json"
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Errorf("SaveCommit did not create expected file: %s", expectedFile)
+		}
+	})
+
+	t.Run("SaveRepos function", func(t *testing.T) {
+		// Test with nil slice
+		err := SaveRepos(nil)
+		if err != nil {
+			t.Errorf("SaveRepos failed with nil input: %v", err)
+		}
+
+		// Verify file was created
+		expectedFile := "Results/config/analysis_repos_github.json"
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Errorf("SaveRepos did not create expected file: %s", expectedFile)
+		}
+	})
+
+	t.Run("SaveLast function", func(t *testing.T) {
+		testLast := Lastanalyse{
+			LastRepos:  "test-last-repo",
+			LastBranch: "main",
+		}
+
+		err := SaveLast(testLast)
+		if err != nil {
+			t.Errorf("SaveLast failed: %v", err)
+		}
+
+		// Verify file was created
+		expectedFile := "Results/config/analysis_last_github.json"
+		if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			t.Errorf("SaveLast did not create expected file: %s", expectedFile)
+		}
+	})
+}
+
+// TestHelperFunctions tests utility and helper functions
+func TestHelperFunctions(t *testing.T) {
+	t.Run("shouldIgnore function", func(t *testing.T) {
+		exclusionMap := ExclusionRepos{
+			"ignored-repo": true,
+			"test-repo":    true,
+		}
+
+		// Test ignored repository
+		if !shouldIgnore("ignored-repo", exclusionMap) {
+			t.Error("shouldIgnore should return true for ignored repository")
+		}
+
+		// Test non-ignored repository
+		if shouldIgnore("allowed-repo", exclusionMap) {
+			t.Error("shouldIgnore should return false for non-ignored repository")
+		}
+
+		// Test with empty map
+		emptyMap := make(ExclusionRepos)
+		if shouldIgnore("any-repo", emptyMap) {
+			t.Error("shouldIgnore should return false with empty exclusion map")
+		}
+	})
+
+	t.Run("getNextPage function", func(t *testing.T) {
+		// Test with valid Link header
+		header := make(map[string][]string)
+		header["Link"] = []string{`<https://api.github.com/repos?page=2>; rel="next", <https://api.github.com/repos?page=10>; rel="last"`}
+
+		result := getNextPage(header)
+		expected := "https://api.github.com/repos?page=2"
+		if result != expected {
+			t.Errorf("getNextPage() = %s, want %s", result, expected)
+		}
+
+		// Test with no Link header
+		emptyHeader := make(map[string][]string)
+		result = getNextPage(emptyHeader)
+		if result != "" {
+			t.Errorf("getNextPage() with empty header = %s, want empty string", result)
+		}
+
+		// Test with Link header but no next rel
+		header["Link"] = []string{`<https://api.github.com/repos?page=10>; rel="last"`}
+		result = getNextPage(header)
+		if result != "" {
+			t.Errorf("getNextPage() with no next rel = %s, want empty string", result)
+		}
+	})
+
+	t.Run("sortRepositoriesByUpdatedAt function", func(t *testing.T) {
+		// This function would need actual github.Repository objects
+		// For testing purposes, we test that it doesn't panic with empty slice
+		var repos []*github.Repository
+
+		// Should not panic
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("sortRepositoriesByUpdatedAt panicked: %v", r)
+				}
+			}()
+			sortRepositoriesByUpdatedAt(repos)
+		}()
+	})
+}
+
+// TestExclusionFunctions tests exclusion file loading functions
+func TestExclusionFunctions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_exclusion_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	// Create Logs directory for logger
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	t.Run("loadExclusionRepos1 function", func(t *testing.T) {
+		// Test with non-existent file
+		_, err := loadExclusionRepos1("non-existent.txt")
+		if err == nil {
+			t.Error("loadExclusionRepos1 should return error for non-existent file")
+		}
+
+		// Test with valid file
+		exclusionContent := "repo1\nrepo2\n\n  repo3  \n"
+		exclusionFile := "test_exclusion.txt"
+		err = os.WriteFile(exclusionFile, []byte(exclusionContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test exclusion file: %v", err)
+		}
+
+		exclusionMap, err := loadExclusionRepos1(exclusionFile)
+		if err != nil {
+			t.Errorf("loadExclusionRepos1 failed: %v", err)
+		}
+
+		if !exclusionMap["repo1"] || !exclusionMap["repo2"] || !exclusionMap["repo3"] {
+			t.Error("loadExclusionRepos1 did not load all repositories correctly")
+		}
+
+		if len(exclusionMap) != 3 {
+			t.Errorf("loadExclusionRepos1 loaded %d repos, expected 3", len(exclusionMap))
+		}
+	})
+
+	t.Run("loadExclusionList function", func(t *testing.T) {
+		// Test with "0" (no exclusion file)
+		exclusionList, err := loadExclusionList("0")
+		if err != nil {
+			t.Errorf("loadExclusionList with '0' failed: %v", err)
+		}
+		if exclusionList.Repos == nil {
+			t.Error("loadExclusionList should initialize Repos map")
+		}
+
+		// Test with actual file
+		exclusionContent := "repo1\nrepo2\n"
+		exclusionFile := "test_exclusion2.txt"
+		err = os.WriteFile(exclusionFile, []byte(exclusionContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test exclusion file: %v", err)
+		}
+
+		exclusionList, err = loadExclusionList(exclusionFile)
+		if err != nil {
+			t.Errorf("loadExclusionList failed: %v", err)
+		}
+
+		if !exclusionList.Repos["repo1"] || !exclusionList.Repos["repo2"] {
+			t.Error("loadExclusionList did not load repositories correctly")
+		}
+	})
+
+	t.Run("loadExclusionFile function", func(t *testing.T) {
+		// Test with "0" (no exclusion file)
+		exclusionMap, err := loadExclusionFile("0", nil)
+		if err != nil {
+			t.Errorf("loadExclusionFile with '0' failed: %v", err)
+		}
+		if exclusionMap == nil {
+			t.Error("loadExclusionFile should return non-nil map")
+		}
+
+		// Test with valid file
+		exclusionContent := "repo1\nrepo2\n"
+		exclusionFile := "test_exclusion3.txt"
+		err = os.WriteFile(exclusionFile, []byte(exclusionContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test exclusion file: %v", err)
+		}
+
+		exclusionMap, err = loadExclusionFile(exclusionFile, nil)
+		if err != nil {
+			t.Errorf("loadExclusionFile failed: %v", err)
+		}
+
+		if !exclusionMap["repo1"] || !exclusionMap["repo2"] {
+			t.Error("loadExclusionFile did not load repositories correctly")
+		}
+	})
+}
+
+// TestUtilityFunctions tests utility functions
+func TestUtilityFunctions(t *testing.T) {
+	t.Run("findLargestRepository function", func(t *testing.T) {
+		testBranches := []ProjectBranch{
+			{Org: "org1", RepoSlug: "repo1", MainBranch: "main", LargestSize: 100},
+			{Org: "org2", RepoSlug: "repo2", MainBranch: "develop", LargestSize: 500},
+			{Org: "org3", RepoSlug: "repo3", MainBranch: "master", LargestSize: 200},
+		}
+
+		var totalSize int64
+		largestBranch, largestRepo := findLargestRepository(testBranches, &totalSize)
+
+		if largestRepo != "repo2" {
+			t.Errorf("findLargestRepository returned wrong repo: %s, expected repo2", largestRepo)
+		}
+
+		if largestBranch != "develop" {
+			t.Errorf("findLargestRepository returned wrong branch: %s, expected develop", largestBranch)
+		}
+
+		if totalSize != 800 {
+			t.Errorf("findLargestRepository calculated wrong total size: %d, expected 800", totalSize)
+		}
+
+		// Test with empty slice
+		emptyBranches := []ProjectBranch{}
+		var emptyTotal int64
+		largestBranch, largestRepo = findLargestRepository(emptyBranches, &emptyTotal)
+		if largestBranch != "" || largestRepo != "" {
+			t.Error("findLargestRepository should return empty strings for empty input")
+		}
+	})
+
+	t.Run("printSummary function", func(t *testing.T) {
+		// Create temporary logs directory
+		tempDir, err := os.MkdirTemp("", "test_print_summary_*")
+		if err != nil {
+			t.Fatalf(errFailedToCreateTempDir, err)
+		}
+		defer os.RemoveAll(tempDir)
+
+		originalWd, _ := os.Getwd()
+		defer os.Chdir(originalWd)
+		os.Chdir(tempDir)
+
+		err = os.MkdirAll("Logs", 0755)
+		if err != nil {
+			t.Fatalf(errFailedToCreateLogsDir, err)
+		}
+
+		config := PlatformConfig{
+			Organization: testOrgName,
+			URL:          "https://github.com",
+		}
+
+		stats := SummaryStats{
+			LargestRepo:       "test-repo",
+			LargestRepoBranch: "main",
+			NbRepos:           5,
+			EmptyRepo:         1,
+			TotalExclude:      2,
+			TotalArchiv:       1,
+			TotalBranches:     10,
+		}
+
+		// Should not panic
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("printSummary panicked: %v", r)
+				}
+			}()
+			printSummary(config, stats)
+		}()
+	})
+}
+
+// TestInitializeGithubClient tests GitHub client initialization
+func TestInitializeGithubClient(t *testing.T) {
+	t.Run("GitHub Cloud client", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken": testToken,
+			"Url":         "https://api.github.com/",
+		}
+
+		ctx, client := initializeGithubClient(platformConfig)
+		if ctx == nil {
+			t.Error("initializeGithubClient should return non-nil context")
+		}
+		if client == nil {
+			t.Error("initializeGithubClient should return non-nil client")
+		}
+	})
+
+	t.Run("GitHub Enterprise client", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken": testToken,
+			"Url":         "https://github.enterprise.com/",
+		}
+
+		ctx, client := initializeGithubClient(platformConfig)
+		if ctx == nil {
+			t.Error("initializeGithubClient should return non-nil context for enterprise")
+		}
+		if client == nil {
+			t.Error("initializeGithubClient should return non-nil client for enterprise")
+		}
+	})
+
+	t.Run("GitHub Enterprise with api/v3 in URL", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken": testToken,
+			"Url":         "https://github.enterprise.com/api/v3/",
+		}
+
+		ctx, client := initializeGithubClient(platformConfig)
+		if ctx == nil {
+			t.Error("initializeGithubClient should return non-nil context")
+		}
+		if client == nil {
+			t.Error("initializeGithubClient should return non-nil client")
+		}
+	})
+}
+
+// TestGetCommonParams tests parameter construction
+func TestGetCommonParams(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_common_params_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	platformConfig := map[string]interface{}{
+		"Url":           "https://api.github.com",
+		"Baseapi":       "github.com",
+		"Apiver":        "2022-11-28",
+		"AccessToken":   testToken,
+		"Organization":  testOrgName,
+		"Branch":        "main",
+		"Period":        float64(-1),
+		"Stats":         true,
+		"DefaultBranch": false,
+	}
+
+	var repositories []*github.Repository
+	exclusionList := ExclusionRepos{"excluded-repo": true}
+
+	params := getCommonParams(platformConfig, repositories, exclusionList, nil)
+
+	if params.Organization != testOrgName {
+		t.Errorf("getCommonParams wrong organization: %s", params.Organization)
+	}
+
+	if params.NBRepos != 0 {
+		t.Errorf("getCommonParams wrong repo count: %d", params.NBRepos)
+	}
+
+	if params.Branch != "main" {
+		t.Errorf("getCommonParams wrong branch: %s", params.Branch)
+	}
+
+	if params.Period != -1 {
+		t.Errorf("getCommonParams wrong period: %d", params.Period)
+	}
+
+	if !params.Stats {
+		t.Error("getCommonParams should preserve Stats setting")
+	}
+
+	if params.DefaultB {
+		t.Error("getCommonParams should preserve DefaultBranch setting")
+	}
+}
+
+// TestHTTPFunctions tests HTTP-related functions
+func TestHTTPFunctions(t *testing.T) {
+	t.Run("GithubAllBranches function", func(t *testing.T) {
+		// Test with invalid URL (this will exercise error handling)
+		_, err := GithubAllBranches("invalid-url", "fake-token", "2022-11-28")
+		if err == nil {
+			t.Error("GithubAllBranches should return error for invalid URL")
+		}
+
+		// Test with empty URL
+		_, err = GithubAllBranches("", "fake-token", "2022-11-28")
+		if err == nil {
+			t.Error("GithubAllBranches should return error for empty URL")
+		}
+	})
+}
+
+// TestComplexWorkflowFunctions tests workflow and analysis functions
+func TestComplexWorkflowFunctions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_workflow_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	t.Run("countBranchPushes function", func(t *testing.T) {
+		// Create test events with different types and times
+		now := time.Now()
+		oneMonthAgo := now.AddDate(0, -1, 0)
+		twoMonthsAgo := now.AddDate(0, -2, 0)
+
+		// Create mock events
+		events := []*github.Event{
+			{
+				Type:      github.String("PushEvent"),
+				CreatedAt: &github.Timestamp{Time: oneMonthAgo.Add(time.Hour)}, // Within period
+			},
+			{
+				Type:      github.String("PushEvent"),
+				CreatedAt: &github.Timestamp{Time: twoMonthsAgo}, // Outside period
+			},
+			{
+				Type:      github.String("IssueEvent"),
+				CreatedAt: &github.Timestamp{Time: oneMonthAgo.Add(time.Hour)}, // Different type
+			},
+		}
+
+		result := countBranchPushes(events, -1) // -1 month period
+
+		// The function should handle the events, even if payload parsing fails
+		// This exercises the error handling path
+		if result == nil {
+			t.Error("countBranchPushes should return non-nil map")
+		}
+	})
+
+	t.Run("determineLargestBranch function", func(t *testing.T) {
+		// Test with empty branch pushes
+		repo := &github.Repository{
+			DefaultBranch: github.String("main"),
+		}
+
+		emptyPushes := make(map[string]*BranchInfoEvents)
+		result := determineLargestBranch(ParamsReposGithub{Stats: false}, repo, emptyPushes)
+
+		if result != "main" {
+			t.Errorf("determineLargestBranch should return default branch when no pushes: got %s, want main", result)
+		}
+
+		// Test with branch pushes data
+		branchPushes := map[string]*BranchInfoEvents{
+			"feature": {
+				Name:      "feature",
+				Commits:   10,
+				Additions: 100,
+				Deletions: 50,
+			},
+			"develop": {
+				Name:      "develop",
+				Commits:   5,
+				Additions: 200,
+				Deletions: 100,
+			},
+		}
+
+		// Test without stats
+		result = determineLargestBranch(ParamsReposGithub{Stats: false}, repo, branchPushes)
+		if result != "feature" {
+			t.Errorf("determineLargestBranch without stats should return branch with most commits: got %s, want feature", result)
+		}
+
+		// Test with stats
+		result = determineLargestBranch(ParamsReposGithub{Stats: true}, repo, branchPushes)
+		if result != "feature" {
+			t.Errorf("determineLargestBranch with stats should return branch with most commits: got %s, want feature", result)
+		}
+
+		// Test with same commits but different additions/deletions
+		branchPushes["develop"].Commits = 10 // Same as feature
+		result = determineLargestBranch(ParamsReposGithub{Stats: true}, repo, branchPushes)
+		if result != "develop" {
+			t.Errorf("determineLargestBranch with stats and same commits should return branch with more changes: got %s, want develop", result)
+		}
+	})
+}
+
+// TestEdgeCasesAndErrorPaths tests edge cases and error handling
+func TestEdgeCasesAndErrorPaths(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_edge_cases_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	t.Run("FastAnalys function error paths", func(t *testing.T) {
+		// Test with minimal but complete config to avoid panic
+		completeConfig := map[string]interface{}{
+			"Organization": testOrgName,
+			"Url":          testGitHubAPIURL,
+			"Baseapi":      testGitHubDomain,
+			"Apiver":       testAPIVersion,
+			"AccessToken":  testToken,
+			"Branch":       "main",
+			"Period":       float64(1),
+			"Stats":        false,
+			"Repos":        "",
+			"Factor":       float64(10),
+		}
+
+		// This will exercise the error path since we don't have a real GitHub connection
+		err := FastAnalys(completeConfig, "0")
+		// Error is expected due to invalid token/network, but should not panic
+		if err != nil {
+			t.Logf("FastAnalys handled error as expected: %v", err)
+		}
+
+		// Test with valid config but invalid exclusion file
+		validConfig := map[string]interface{}{
+			"Organization": testOrgName,
+			"Url":          "https://api.github.com",
+			"Baseapi":      "github.com",
+			"Apiver":       "2022-11-28",
+			"AccessToken":  testToken,
+			"Branch":       "main",
+			"Period":       float64(1),
+			"Stats":        false,
+			"Repos":        "",
+			"Factor":       float64(10),
+		}
+
+		// This will exercise the exclusion file error path
+		err = FastAnalys(validConfig, "non-existent-exclusion.txt")
+		// Error is expected and handled gracefully in the function
+		if err != nil {
+			t.Logf("FastAnalys handled exclusion file error: %v", err)
+		}
+	})
+
+	t.Run("Repository processing edge cases", func(t *testing.T) {
+		// Test processRepositoryBranches with nil repository
+		var repo *github.Repository
+
+		// Create minimal stats structure
+		stats := &RepoProcessingStats{}
+
+		// This should handle nil gracefully
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("processRepositoryBranches properly handled nil client: %v", r)
+				}
+			}()
+			branches, err := processRepositoryBranches(nil, context.Background(), repo, testOrgName, "0", stats)
+			if err == nil {
+				t.Error("processRepositoryBranches should return error with nil client")
+			}
+
+			if len(branches) != 0 {
+				t.Error("processRepositoryBranches should return empty branches on error")
+			}
+		}()
+	})
+
+	t.Run("Fetch functions error handling", func(t *testing.T) {
+		// Test fetchUserRepositories with nil client
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("fetchUserRepositories properly handled nil client: %v", r)
+				}
+			}()
+			_, err := fetchUserRepositories(context.Background(), nil, nil)
+			if err == nil {
+				t.Error("fetchUserRepositories should return error with nil client")
+			}
+		}()
+
+		// Test fetchAllRepositories with nil client
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("fetchAllRepositories properly handled nil client: %v", r)
+				}
+			}()
+			_, err := fetchAllRepositories(context.Background(), nil, testOrgName, nil)
+			if err == nil {
+				t.Error("fetchAllRepositories should return error with nil client")
+			}
+		}()
+
+		// Test fetchSingleRepository with nil client
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("fetchSingleRepository properly handled nil client: %v", r)
+				}
+			}()
+			config := map[string]interface{}{
+				"Organization": testOrgName,
+				"Repos":        testRepoName,
+			}
+			_, err := fetchSingleRepository(context.Background(), nil, config)
+			if err == nil {
+				t.Error("fetchSingleRepository should return error with nil client")
+			}
+		}()
+	})
+}
+
+// TestBranchAnalysisFunctions tests branch analysis workflow
+func TestBranchAnalysisFunctions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_branch_analysis_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	t.Run("analyzeBranches function", func(t *testing.T) {
+		// Test with empty branch pushes
+		branchPushes := make(map[string]*BranchInfoEvents)
+
+		params := ParamsReposGithub{
+			Organization: testOrgName,
+			Period:       1,
+			Stats:        false,
+		}
+
+		// This should not panic with empty data
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("analyzeBranches panicked: %v", r)
+				}
+			}()
+			analyzeBranches(context.Background(), nil, params, "test-repo", branchPushes)
+		}()
+	})
+
+	t.Run("analyzeWithStats and analyzeWithoutStats functions", func(t *testing.T) {
+		oneMonthAgo := time.Now().AddDate(0, -1, 0)
+		info := &BranchInfoEvents{
+			Name:      "test-branch",
+			Pushes:    5,
+			Commits:   0,
+			Additions: 0,
+			Deletions: 0,
+		}
+
+		// Test analyzeWithStats with nil client (should handle gracefully)
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("analyzeWithStats panicked: %v", r)
+				}
+			}()
+			analyzeWithStats(context.Background(), nil, testOrgName, "test-repo", oneMonthAgo, info)
+		}()
+
+		// Test analyzeWithoutStats with nil client (should handle gracefully)
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("analyzeWithoutStats panicked: %v", r)
+				}
+			}()
+			analyzeWithoutStats(context.Background(), nil, testOrgName, "test-repo", oneMonthAgo, info)
+		}()
+	})
+}
+
+// TestGetAllRepositoriesFunction tests repository listing
+func TestGetAllRepositoriesFunction(t *testing.T) {
+	t.Run("getAllRepositories function", func(t *testing.T) {
+		// Test with nil client
+		_, err := getAllRepositories(nil, context.Background(), testOrgName)
+		if err == nil {
+			t.Error("getAllRepositories should return error with nil client")
+		}
+	})
+}
+
+// TestRepoEmptyCheck tests repository empty check functionality
+func TestRepoEmptyCheck(t *testing.T) {
+	t.Run("reposIfEmpty function", func(t *testing.T) {
+		// Test with nil client
+		_, err := reposIfEmpty(context.Background(), nil, "test-repo", testOrgName)
+		if err == nil {
+			t.Error("reposIfEmpty should return error with nil client")
+		}
+	})
+}
+
+// TestListFunctions tests main list functions
+func TestListFunctions(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_list_functions_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	// Create necessary directories
+	dirs := []string{"Logs", "Results", resultsConfigPath}
+	for _, dir := range dirs {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	t.Run("GetRepoGithubList function", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken":   testToken,
+			"Url":           "https://api.github.com",
+			"Organization":  testOrgName,
+			"Org":           true,
+			"Repos":         "",
+			"Baseapi":       "github.com",
+			"Apiver":        "2022-11-28",
+			"Branch":        "main",
+			"Period":        float64(1),
+			"Stats":         false,
+			"DefaultBranch": false,
+		}
+
+		// This will test the error handling path since we don't have a real GitHub client
+		branches, err := GetRepoGithubList(platformConfig, "0", false)
+
+		// Function should handle errors gracefully and return empty slice
+		if branches == nil {
+			t.Error("GetRepoGithubList should return non-nil slice even on error")
+		}
+
+		// Error is expected due to invalid token/network
+		if err != nil {
+			t.Logf("GetRepoGithubList handled error as expected: %v", err)
+		}
+	})
+
+	t.Run("GetRepoGithubListAllBranches function", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken":  testToken,
+			"Organization": testOrgName,
+		}
+
+		// This will test the error handling path
+		branches, err := GetRepoGithubListAllBranches(platformConfig, "0", false)
+
+		// Function should handle errors gracefully
+		if branches == nil {
+			t.Error("GetRepoGithubListAllBranches should return non-nil slice even on error")
+		}
+
+		// Error is expected due to invalid token/network
+		if err != nil {
+			t.Logf("GetRepoGithubListAllBranches handled error as expected: %v", err)
+		}
+	})
+
+	t.Run("GetAllBranchesForRepositories function", func(t *testing.T) {
+		platformConfig := map[string]interface{}{
+			"AccessToken": testToken,
+		}
+
+		repositories := []ProjectBranch{
+			{Org: testOrgName, RepoSlug: "test-repo", MainBranch: "main"},
+		}
+
+		// This will test the error handling path
+		branches, err := GetAllBranchesForRepositories(platformConfig, repositories)
+
+		// Function should handle errors gracefully
+		if branches == nil {
+			t.Error("GetAllBranchesForRepositories should return non-nil slice even on error")
+		}
+
+		// Error is expected due to invalid token/network
+		if err != nil {
+			t.Logf("GetAllBranchesForRepositories handled error as expected: %v", err)
+		}
+	})
+}
+
+// TestGetGithubLanguages tests language analysis functionality
+func TestGetGithubLanguages(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_github_languages_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	err = os.MkdirAll("Logs", 0755)
+	if err != nil {
+		t.Fatalf(errFailedToCreateLogsDir, err)
+	}
+
+	t.Run("GetGithubLanguages error handling", func(t *testing.T) {
+		params := ParamsReposGithub{
+			Repos:        nil, // Empty repos
+			NBRepos:      0,
+			Organization: testOrgName,
+		}
+
+		// Test with nil client and empty repos
+		nbRepos, emptyRepo, notAnalyzed, archived, err := GetGithubLanguages(params, context.Background(), nil, 10)
+
+		// Should handle gracefully
+		if nbRepos != 0 {
+			t.Errorf("GetGithubLanguages should return 0 repos for empty input: got %d", nbRepos)
+		}
+
+		if emptyRepo != 0 {
+			t.Errorf("GetGithubLanguages should return 0 empty repos for empty input: got %d", emptyRepo)
+		}
+
+		if notAnalyzed != 0 {
+			t.Errorf("GetGithubLanguages should return 0 not analyzed for empty input: got %d", notAnalyzed)
+		}
+
+		if archived != 0 {
+			t.Errorf("GetGithubLanguages should return 0 archived for empty input: got %d", archived)
+		}
+
+		// Error is expected due to nil client, but should not crash
+		if err != nil {
+			t.Logf("GetGithubLanguages handled error as expected: %v", err)
+		}
+	})
+}
+
+// TestGetAllBranchesAndEvents tests branch and event retrieval functions
+func TestGetAllBranchesAndEvents(t *testing.T) {
+	t.Run("getAllBranches error handling", func(t *testing.T) {
+		// Test with nil client
+		_, err := getAllBranches(context.Background(), nil, "test-repo", testOrgName, nil)
+		if err == nil {
+			t.Error("getAllBranches should return error with nil client")
+		}
+	})
+
+	t.Run("getAllEvents error handling", func(t *testing.T) {
+		// Test with nil client
+		_, err := getAllEvents(context.Background(), nil, "test-repo", testOrgName)
+		if err == nil {
+			t.Error("getAllEvents should return error with nil client")
+		}
+	})
+}
+
+// TestMainAnalysisWorkflow tests the main analysis workflow
+func TestMainAnalysisWorkflow(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_main_workflow_*")
+	if err != nil {
+		t.Fatalf(errFailedToCreateTempDir, err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	originalWd, _ := os.Getwd()
+	defer os.Chdir(originalWd)
+	os.Chdir(tempDir)
+
+	// Create necessary directories
+	dirs := []string{"Logs", "Results", resultsConfigPath}
+	for _, dir := range dirs {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
+		}
+	}
+
+	t.Run("GetReposGithub error handling", func(t *testing.T) {
+		params := ParamsReposGithub{
+			Repos:         nil, // Empty repos to test error path
+			NBRepos:       0,
+			Organization:  testOrgName,
+			ExclusionList: make(ExclusionRepos),
+			Period:        1,
+			Stats:         false,
+			DefaultB:      false,
+		}
+
+		// Test with nil client
+		branches, empty, total, totalBranches, excluded, archived := GetReposGithub(params, context.Background(), nil)
+
+		// Should handle gracefully with empty input
+		if len(branches) != 0 {
+			t.Error("GetReposGithub should return empty branches with nil repos")
+		}
+
+		if empty != 0 || total != 0 || totalBranches != 0 || excluded != 0 || archived != 0 {
+			t.Errorf("GetReposGithub should return zeros for empty input: empty=%d, total=%d, branches=%d, excluded=%d, archived=%d",
+				empty, total, totalBranches, excluded, archived)
+		}
+	})
+
+	t.Run("analyzeRepoBranches error handling", func(t *testing.T) {
+		params := ParamsReposGithub{
+			Organization: testOrgName,
+			DefaultB:     false,
+			Period:       1,
+			Stats:        false,
+		}
+
+		// Test with nil repository
+		largestBranch, branches := analyzeRepoBranches(params, context.Background(), nil, nil, 1, nil)
+
+		// Should handle nil gracefully
+		if largestBranch != "" {
+			t.Errorf("analyzeRepoBranches should return empty string for nil repo: got %s", largestBranch)
+		}
+
+		if branches != nil {
+			t.Error("analyzeRepoBranches should return nil branches for nil repo")
 		}
 	})
 }

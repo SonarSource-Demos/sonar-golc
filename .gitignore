@@ -26,12 +26,16 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+.sonarlint/
 .sonarlint/*
 
 # Config files
 config.json
 
 # Coverage files
+coverage.*
 coverage-*.out
 coverage-*.xml
+*-coverage.out
+coverage_*.out
 
