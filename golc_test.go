@@ -19,9 +19,7 @@ import (
 
 // Constants to avoid duplicating string literals (SonarQube maintainability)
 const (
-	errFailedToCreateTempDir = "Failed to create temp dir: %v"
 	errFailedToCreateLogsDir = "Failed to create Logs dir: %v"
-	errFailedToCreateDir     = "Failed to create dir %s: %v"
 	testConfigJSON           = "test_config.json"
 	testResultsDir           = "Results"
 	testLogsDir              = "Logs"

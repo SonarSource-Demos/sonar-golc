@@ -16,17 +16,15 @@ import (
 
 // Constants to avoid duplicating string literals (SonarQube maintainability)
 const (
-	errFailedToCreateTempDir    = "Failed to create temp dir: %v"
-	errFailedToCreateDir        = "Failed to create dir %s: %v"
-	testResultsDir              = "Results"
+	testResultsDirRA            = "Results"
 	testConfigDir               = "Results/config"
 	testByFileReportDir         = "Results/byfile-report"
 	testByLanguageReportDir     = "Results/bylanguage-report"
 	testGlobalReportFile        = "Results/GlobalReport.json"
 	testCodeLinesByLanguageFile = "Results/code_lines_by_language.json"
 	testAnalysisResultFile      = "Results/config/analysis_result_github.json"
-	testOrgName                 = "test-org"
-	testRepoName                = "test-repo"
+	testOrgNameRA               = "test-org"
+	testRepoNameRA              = "test-repo"
 	testBranchName              = "main"
 	contentTypeJSON             = "application/json"
 	contentTypeZip              = "application/zip"
@@ -123,11 +121,11 @@ func TestPlatformFunctions(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directory structure
-	dirs := []string{testResultsDir, testConfigDir}
+	dirs := []string{testResultsDirRA, testConfigDir}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
-			t.Fatalf(errFailedToCreateDir, dir, err)
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
 		}
 	}
 
@@ -178,27 +176,27 @@ func TestPlatformFunctions(t *testing.T) {
 		}{
 			{
 				"azure",
-				AnalysisResult_ProjectBranch{ProjectKey: "project-key", Org: testOrgName},
-				testRepoName,
+				AnalysisResult_ProjectBranch{ProjectKey: "project-key", Org: testOrgNameRA},
+				testRepoNameRA,
 				"project-key",
 			},
 			{
 				"github",
-				AnalysisResult_ProjectBranch{Org: testOrgName},
-				testRepoName,
-				testOrgName,
+				AnalysisResult_ProjectBranch{Org: testOrgNameRA},
+				testRepoNameRA,
+				testOrgNameRA,
 			},
 			{
 				"gitlab",
-				AnalysisResult_ProjectBranch{Org: testOrgName},
-				testRepoName,
-				testOrgName,
+				AnalysisResult_ProjectBranch{Org: testOrgNameRA},
+				testRepoNameRA,
+				testOrgNameRA,
 			},
 			{
 				"bitbucket",
-				AnalysisResult_ProjectBranch{Org: testOrgName},
-				testRepoName,
-				testOrgName,
+				AnalysisResult_ProjectBranch{Org: testOrgNameRA},
+				testRepoNameRA,
+				testOrgNameRA,
 			},
 		}
 
@@ -217,11 +215,11 @@ func TestPlatformFunctions(t *testing.T) {
 			repoName string
 			expected string
 		}{
-			{"azure", testOrgName, testRepoName, testRepoName},
-			{"github", testOrgName, testRepoName, testOrgName},
-			{"gitlab", testOrgName, testRepoName, testOrgName},
-			{"bitbucket", testOrgName, testRepoName, testOrgName},
-			{"unknown", testOrgName, testRepoName, testOrgName},
+			{"azure", testOrgNameRA, testRepoNameRA, testRepoNameRA},
+			{"github", testOrgNameRA, testRepoNameRA, testOrgNameRA},
+			{"gitlab", testOrgNameRA, testRepoNameRA, testOrgNameRA},
+			{"bitbucket", testOrgNameRA, testRepoNameRA, testOrgNameRA},
+			{"unknown", testOrgNameRA, testRepoNameRA, testOrgNameRA},
 		}
 
 		for _, tc := range testCases {
@@ -240,11 +238,11 @@ func TestPlatformFunctions(t *testing.T) {
 			expectedIcon string
 			expectedURL  string
 		}{
-			{"github", testOrgName, testRepoName, "fab fa-github", "https://github.com/test-org/test-repo"},
-			{"gitlab", testOrgName, testRepoName, "fab fa-gitlab", "https://gitlab.com/test-org/test-repo"},
-			{"bitbucket", testOrgName, testRepoName, "fab fa-bitbucket", "https://bitbucket.org/test-org/test-repo"},
-			{"azure", testOrgName, testRepoName, "fab fa-microsoft", "https://dev.azure.com/test-org/_git/test-repo"},
-			{"unknown", testOrgName, testRepoName, "fab fa-github", "https://github.com/test-org/test-repo"},
+			{"github", testOrgNameRA, testRepoNameRA, "fab fa-github", "https://github.com/test-org/test-repo"},
+			{"gitlab", testOrgNameRA, testRepoNameRA, "fab fa-gitlab", "https://gitlab.com/test-org/test-repo"},
+			{"bitbucket", testOrgNameRA, testRepoNameRA, "fab fa-bitbucket", "https://bitbucket.org/test-org/test-repo"},
+			{"azure", testOrgNameRA, testRepoNameRA, "fab fa-microsoft", "https://dev.azure.com/test-org/_git/test-repo"},
+			{"unknown", testOrgNameRA, testRepoNameRA, "fab fa-github", "https://github.com/test-org/test-repo"},
 		}
 
 		for _, tc := range testCases {
@@ -272,11 +270,11 @@ func TestDataFunctions(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directory structure
-	dirs := []string{testResultsDir, testConfigDir, testByFileReportDir, testByLanguageReportDir}
+	dirs := []string{testResultsDirRA, testConfigDir, testByFileReportDir, testByLanguageReportDir}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
-			t.Fatalf(errFailedToCreateDir, dir, err)
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
 		}
 	}
 
@@ -355,8 +353,8 @@ func TestDataFunctions(t *testing.T) {
 		}
 
 		// Verify data structure
-		if pageData.GlobalReport.Organization != testOrgName {
-			t.Errorf("loadApplicationData GlobalReport.Organization = %s, want %s", pageData.GlobalReport.Organization, testOrgName)
+		if pageData.GlobalReport.Organization != testOrgNameRA {
+			t.Errorf("loadApplicationData GlobalReport.Organization = %s, want %s", pageData.GlobalReport.Organization, testOrgNameRA)
 		}
 
 		if len(pageData.Languages) == 0 {
@@ -470,7 +468,7 @@ func TestDataFunctions(t *testing.T) {
 		}
 
 		// Test getOtherBranchesData
-		branches := getOtherBranchesData(testOrgName, testRepoName, testBranchName)
+		branches := getOtherBranchesData(testOrgNameRA, testRepoNameRA, testBranchName)
 
 		// Should find the develop branch (excluding main)
 		if len(branches) == 0 {
@@ -499,12 +497,12 @@ func TestHTTPHandlers(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create test Results directory with a test file
-	err = os.MkdirAll(testResultsDir, 0755)
+	err = os.MkdirAll(testResultsDirRA, 0755)
 	if err != nil {
-		t.Fatalf(errFailedToCreateDir, testResultsDir, err)
+		t.Fatalf("Failed to create dir %s: %v", testResultsDirRA, err)
 	}
 
-	testFile := filepath.Join(testResultsDir, "test.txt")
+	testFile := filepath.Join(testResultsDirRA, "test.txt")
 	err = os.WriteFile(testFile, []byte("test content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
@@ -674,11 +672,11 @@ func TestDetailDataFunction(t *testing.T) {
 	os.Chdir(tempDir)
 
 	// Create necessary directory structure
-	dirs := []string{testResultsDir, testConfigDir, testByFileReportDir, testByLanguageReportDir}
+	dirs := []string{testResultsDirRA, testConfigDir, testByFileReportDir, testByLanguageReportDir}
 	for _, dir := range dirs {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
-			t.Fatalf(errFailedToCreateDir, dir, err)
+			t.Fatalf("Failed to create dir %s: %v", dir, err)
 		}
 	}
 
@@ -754,7 +752,7 @@ func TestDetailDataFunction(t *testing.T) {
 		}
 
 		// Test getRepositoryDetailData
-		repoData, err := getRepositoryDetailData(testRepoName, testBranchName)
+		repoData, err := getRepositoryDetailData(testRepoNameRA, testBranchName)
 		if err != nil {
 			t.Errorf("getRepositoryDetailData failed: %v", err)
 		}
@@ -763,16 +761,16 @@ func TestDetailDataFunction(t *testing.T) {
 			t.Fatal("getRepositoryDetailData should return non-nil data")
 		}
 
-		if repoData.Repository != testRepoName {
-			t.Errorf("getRepositoryDetailData Repository = %s, want %s", repoData.Repository, testRepoName)
+		if repoData.Repository != testRepoNameRA {
+			t.Errorf("getRepositoryDetailData Repository = %s, want %s", repoData.Repository, testRepoNameRA)
 		}
 
 		if repoData.MainBranch != testBranchName {
 			t.Errorf("getRepositoryDetailData MainBranch = %s, want %s", repoData.MainBranch, testBranchName)
 		}
 
-		if repoData.Organization != testOrgName {
-			t.Errorf("getRepositoryDetailData Organization = %s, want %s", repoData.Organization, testOrgName)
+		if repoData.Organization != testOrgNameRA {
+			t.Errorf("getRepositoryDetailData Organization = %s, want %s", repoData.Organization, testOrgNameRA)
 		}
 
 		if len(repoData.Languages) == 0 {
