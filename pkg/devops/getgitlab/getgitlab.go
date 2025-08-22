@@ -271,7 +271,7 @@ func SaveResult(result AnalysisResult) error {
 
 	loggers := utils.NewLogger()
 	// Open or create the file
-	file, err := os.Create("Results/config/analysis_result_github.json")
+	file, err := os.Create("Results/config/analysis_result_gitlab.json")
 	if err != nil {
 
 		loggers.Errorf("❌ Error creating Analysis file:%v", err)
@@ -284,7 +284,7 @@ func SaveResult(result AnalysisResult) error {
 
 	// Encode the result and write it to the file
 	if err := encoder.Encode(result); err != nil {
-		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_github.json> :%v", err)
+		loggers.Errorf("❌ Error encoding JSON file <Results/config/analysis_result_gitlab.json> :%v", err)
 		return err
 	}
 

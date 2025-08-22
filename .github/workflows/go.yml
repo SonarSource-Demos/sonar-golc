@@ -17,7 +17,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -39,18 +41,34 @@ jobs:
 
       - name: Build Go apps
         run: |
-          go build -o golc ./golc.go
-          go build -o ResultsAll ./ResultsAll.go
+          go build -tags=golc -o golc ./golc.go
+          go build -tags=resultsall -o ResultsAll ./ResultsAll.go
 
-      - name: Run tests
-        run: go test -v ./pkg/...
+      - name: Generate test coverage reports
+        run: |
+          # Create config file for testing
+          cp config_sample.json config.json
+          
+          echo "📦 Testing pkg/ directory..."
+          go test -coverprofile=coverage-pkg.out ./pkg/...
+          
+          echo "🔧 Testing golc application..."
+          go test -tags=golc -coverprofile=coverage-golc.out .
+          
+          echo "🌐 Testing resultsall application..."
+          go test -tags=resultsall -coverprofile=coverage-resultsall.out .
+          
+          echo "📊 Coverage summary:"
+          echo "pkg/ directory:"
+          go tool cover -func=coverage-pkg.out | tail -1
+          echo "golc application:"
+          go tool cover -func=coverage-golc.out | tail -1
+          echo "resultsall application:"
+          go tool cover -func=coverage-resultsall.out | tail -1
 
       # SonarQube Analysis
       - name: Run SonarQube Analysis
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
