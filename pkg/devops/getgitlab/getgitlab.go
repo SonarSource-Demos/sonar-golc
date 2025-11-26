@@ -109,7 +109,8 @@ func getAllGroupProjects(client *gitlab.Client, groupName string) ([]*gitlab.Pro
 		return nil, err
 	}
 
-	subgroups, err := getSubgroups(client, group)
+	// Retrieve all descendant subgroups (recursively), not just direct children
+	subgroups, err := getAllSubgroupsRecursive(client, group)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +136,58 @@ func getGroup(client *gitlab.Client, groupName string) (*gitlab.Group, error) {
 func getSubgroups(client *gitlab.Client, group *gitlab.Group) ([]*gitlab.Group, error) {
 	subgroups, _, err := client.Groups.ListSubGroups(group.ID, nil)
 	return subgroups, err
+}
+
+// Function to Retrieves direct subgroups of a given group with pagination.
+func getDirectSubgroups(client *gitlab.Client, groupID int) ([]*gitlab.Group, error) {
+	var all []*gitlab.Group
+	page := 1
+	for {
+		opts := &gitlab.ListSubGroupsOptions{
+			ListOptions: gitlab.ListOptions{
+				Page:    page,
+				PerPage: perPage,
+			},
+		}
+		subgroups, resp, err := client.Groups.ListSubGroups(groupID, opts)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, subgroups...)
+		if resp.CurrentPage >= resp.TotalPages {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+// Function to Retrieves all descendant subgroups (recursive) of a given group.
+func getAllSubgroupsRecursive(client *gitlab.Client, root *gitlab.Group) ([]*gitlab.Group, error) {
+	var all []*gitlab.Group
+	visited := make(map[int]bool)
+	queue := []*gitlab.Group{root}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		subgroups, err := getDirectSubgroups(client, current.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, sg := range subgroups {
+			if visited[sg.ID] {
+				continue
+			}
+			visited[sg.ID] = true
+			all = append(all, sg)
+			queue = append(queue, sg)
+		}
+	}
+
+	return all, nil
 }
 
 // Function to Retrieves all projects in a given group.
