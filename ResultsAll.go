@@ -30,6 +30,28 @@ const (
 	applicationZipType  = "application/zip"
 )
 
+// sanitizePathComponent sanitizes a path component to prevent path traversal attacks
+func sanitizePathComponent(component string) string {
+	// Remove any path traversal sequences
+	component = strings.ReplaceAll(component, "..", "")
+	component = strings.ReplaceAll(component, "/", "")
+	component = strings.ReplaceAll(component, "\\", "")
+	// Remove any null bytes
+	component = strings.ReplaceAll(component, "\x00", "")
+	// Trim whitespace
+	component = strings.TrimSpace(component)
+	return component
+}
+
+// buildSecurePath safely constructs a file path with validation
+func buildSecurePath(basePath string, components ...string) string {
+	sanitizedComponents := make([]string, len(components))
+	for i, component := range components {
+		sanitizedComponents[i] = sanitizePathComponent(component)
+	}
+	return filepath.Join(basePath, filepath.Join(sanitizedComponents...))
+}
+
 type Globalinfo struct {
 	Organization           string `json:"Organization"`
 	TotalLinesOfCode       string `json:"TotalLinesOfCode"`
@@ -188,8 +210,11 @@ func getRepositoryData() ([]RepositoryData, error) {
 		i++
 		// Construct filename for byfile report using platform-specific logic
 		firstPart := getFirstPartForPlatform(platform, branch, branch.RepoSlug)
-		fileName := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-			firstPart, branch.RepoSlug, branch.MainBranch)
+		fileName := buildSecurePath("Results/byfile-report",
+			fmt.Sprintf("Result_%s_%s_%s_byfile.json",
+				sanitizePathComponent(firstPart),
+				sanitizePathComponent(branch.RepoSlug),
+				sanitizePathComponent(branch.MainBranch)))
 
 		// Read the byfile report
 		fileData, err := os.ReadFile(fileName)
@@ -311,7 +336,10 @@ func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData 
 	firstPart := getFirstPartForFilename(platform, orgName, repoName)
 
 	// Look for all byfile reports for this repository (different branches)
-	pattern := fmt.Sprintf("Results/byfile-report/Result_%s_%s_*_byfile.json", firstPart, repoName)
+	pattern := buildSecurePath("Results/byfile-report",
+		fmt.Sprintf("Result_%s_%s_*_byfile.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName)))
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		fmt.Printf("Warning: Could not search for branch files: %v\n", err)
@@ -336,7 +364,7 @@ func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData 
 
 		// Extract actual branch name - more robust parsing
 		// Remove the prefix and suffix to get the branch name
-		prefix := fmt.Sprintf("Result_%s_%s_", orgName, repoName)
+		prefix := fmt.Sprintf("Result_%s_%s_", sanitizePathComponent(orgName), sanitizePathComponent(repoName))
 		suffix := "_byfile.json"
 		branchName := strings.TrimSuffix(strings.TrimPrefix(filename, prefix), suffix)
 
@@ -427,8 +455,11 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 
 	// Read the byfile report for totals
 	firstPart := getFirstPartForFilename(platform, orgName, repoName)
-	byFileReportPath := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-		firstPart, repoName, branchName)
+	byFileReportPath := buildSecurePath("Results/byfile-report",
+		fmt.Sprintf("Result_%s_%s_%s_byfile.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName),
+			sanitizePathComponent(branchName)))
 
 	byFileData, err := os.ReadFile(byFileReportPath)
 	if err != nil {
@@ -455,8 +486,11 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	}
 
 	// Read the bylanguage report for language breakdown
-	byLanguageReportPath := fmt.Sprintf("Results/bylanguage-report/Result_%s_%s_%s.json",
-		firstPart, repoName, branchName)
+	byLanguageReportPath := buildSecurePath("Results/bylanguage-report",
+		fmt.Sprintf("Result_%s_%s_%s.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName),
+			sanitizePathComponent(branchName)))
 
 	languageData, err := os.ReadFile(byLanguageReportPath)
 	if err != nil {
