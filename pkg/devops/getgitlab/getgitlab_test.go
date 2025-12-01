@@ -7,6 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
+	"fmt"
+
 	"github.com/briandowns/spinner"
 	"github.com/xanzy/go-gitlab"
 )
@@ -302,7 +308,237 @@ func TestGitlabIntegrationCoverage(t *testing.T) {
 // ---------------- Additional tests for getgitlab.go behavior ----------------
 
 const testRepoExcluded = "ns/excluded"
+const (
+	apiCommitsPath         = "/api/v4/projects/10/repository/commits"
+	apiBranchesListPath    = "/api/v4/projects/10/repository/branches"
+	apiBranchesPrefixPath  = "/api/v4/projects/10/repository/branches/"
+	apiTreePath            = "/api/v4/projects/10/repository/tree"
+	apiProjectPath         = "/api/v4/projects/10"
+	apiGroupGPath          = "/api/v4/groups/g"
+	apiGroup1ProjectsPath  = "/api/v4/groups/1/projects"
+	apiGroup1SubgroupsPath = "/api/v4/groups/1/subgroups"
+	apiGroup2SubgroupsPath = "/api/v4/groups/2/subgroups"
+	apiGroup2ProjectsPath  = "/api/v4/groups/2/projects"
+)
 
+// set up a fake GitLab API server for client methods used in unit tests
+func newFakeGitLabServer(t *testing.T, cfg func(*http.Request) (int, any)) *httptest.Server {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		status, body := cfg(r)
+		if status == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		// minimal pagination headers so client considers loop complete
+		w.Header().Set("X-Total-Pages", "1")
+		w.Header().Set("X-Page", "1")
+		w.WriteHeader(status)
+		if body != nil {
+			enc := json.NewEncoder(w)
+			_ = enc.Encode(body)
+		}
+	})
+	return httptest.NewServer(handler)
+}
+
+func newGitLabClientForServer(t *testing.T, base string) *gitlab.Client {
+	client, err := gitlab.NewClient("test-token", gitlab.WithBaseURL(base+"/api/v4"))
+	if err != nil {
+		t.Fatalf("failed creating gitlab client: %v", err)
+	}
+	return client
+}
+
+func TestGetCommitCount(t *testing.T) {
+	commitCounts := map[string]int{
+		"main": 1,
+		"dev":  3,
+	}
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			ref := r.URL.Query().Get("ref_name")
+			n := commitCounts[ref]
+			commits := make([]map[string]any, n)
+			for i := 0; i < n; i++ {
+				commits[i] = map[string]any{"id": fmt.Sprintf("c%d", i)}
+			}
+			return http.StatusOK, commits
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+
+	client := newGitLabClientForServer(t, ts.URL)
+	since := time.Now().Add(-time.Hour)
+	until := time.Now()
+	got, err := getCommitCount(client, 10, "dev", since, until)
+	if err != nil {
+		t.Fatalf("getCommitCount error: %v", err)
+	}
+	if got != 3 {
+		t.Errorf("getCommitCount = %d, want 3", got)
+	}
+}
+
+func TestGetAllGroupProjects(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch r.URL.Path {
+		case apiGroupGPath:
+			return http.StatusOK, map[string]any{"id": 1, "name": "g"}
+		case apiGroup1ProjectsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 10, "name": "proj1", "path_with_namespace": "g/proj1", "default_branch": "main", "empty_repo": false, "archived": false},
+			}
+		case apiGroup1SubgroupsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 2, "name": "sg"},
+			}
+		case apiGroup2SubgroupsPath:
+			// subgroup without further descendants
+			return http.StatusOK, []map[string]any{}
+		case apiGroup2ProjectsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 20, "name": "subproj", "path_with_namespace": "g/subproj", "default_branch": "main", "empty_repo": false, "archived": false},
+			}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+	projs, err := getAllGroupProjects(client, "g")
+	if err != nil {
+		t.Fatalf("getAllGroupProjects error: %v", err)
+	}
+	if len(projs) != 2 {
+		t.Errorf("getAllGroupProjects len = %d, want 2", len(projs))
+	}
+}
+
+func TestGetBranchHelpers(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "dev"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiBranchesPrefixPath):
+			// return 200 only for known branches
+			name := strings.TrimPrefix(r.URL.Path, apiBranchesPrefixPath)
+			if name == "main" || name == "dev" {
+				return http.StatusOK, map[string]any{"name": name}
+			}
+			return http.StatusNotFound, map[string]any{"message": "not found"}
+		case r.URL.Path == apiTreePath:
+			return http.StatusOK, []map[string]any{
+				{"id": "1", "name": "file1"},
+				{"id": "2", "name": "file2"},
+			}
+		case r.URL.Path == apiProjectPath:
+			return http.StatusOK, map[string]any{"id": 10, "default_branch": "main"}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			// default: zero commits
+			return http.StatusOK, []any{}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	// getBranchSize
+	if size := getBranchSize(client, 10, "main"); size != 2 {
+		t.Errorf("getBranchSize = %d, want 2", size)
+	}
+
+	// branchExists
+	if !branchExists(client, 10, "main") {
+		t.Errorf("branchExists(main) = false, want true")
+	}
+	if branchExists(client, 10, "feature") {
+		t.Errorf("branchExists(feature) = true, want false")
+	}
+}
+
+func TestGetMainBranchWithCommits(t *testing.T) {
+	commitCounts := map[string]int{
+		"main": 1,
+		"dev":  3,
+	}
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "dev"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			ref := r.URL.Query().Get("ref_name")
+			n := commitCounts[ref]
+			commits := make([]map[string]any, n)
+			for i := 0; i < n; i++ {
+				commits[i] = map[string]any{"id": fmt.Sprintf("c%d", i)}
+			}
+			return http.StatusOK, commits
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	since := time.Now().Add(-24 * time.Hour)
+	until := time.Now()
+	branch, size, nbr, err := getMainBranch(client, 10, since, until)
+	if err != nil {
+		t.Fatalf("getMainBranch error: %v", err)
+	}
+	if branch != "dev" || size != 3 || nbr != 2 {
+		t.Errorf("getMainBranch = (%s,%d,%d), want (dev,3,2)", branch, size, nbr)
+	}
+}
+
+func TestGetMainBranchWithoutCommitsFallsBackToDefault(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "empty"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			// zero commits for both branches
+			return http.StatusOK, []any{}
+		case r.URL.Path == apiProjectPath:
+			return http.StatusOK, map[string]any{"id": 10, "default_branch": "main"}
+		case r.URL.Path == apiTreePath:
+			// default branch size
+			return http.StatusOK, []map[string]any{
+				{"id": "1", "name": "a"},
+				{"id": "2", "name": "b"},
+				{"id": "3", "name": "c"},
+			}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	since := time.Now().Add(-24 * time.Hour)
+	until := time.Now()
+	branch, size, nbr, err := getMainBranch(client, 10, since, until)
+	if err != nil {
+		t.Fatalf("getMainBranch error: %v", err)
+	}
+	if branch != "main" || size != 3 || nbr != 2 {
+		t.Errorf("getMainBranch = (%s,%d,%d), want (main,3,2)", branch, size, nbr)
+	}
+}
 func TestLoadExclusionReposSuccess(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "exclusions.txt")
