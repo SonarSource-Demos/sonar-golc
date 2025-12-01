@@ -276,7 +276,11 @@ This file represents the 6 supported platforms for analysis: BitBucketSRV (Bitbu
 "Users": "xxxxxxxxxxxxxx" : Your User login
 "AccessToken": "xxxxxxxxxxxxxx" : Your Token
 "Organization": "xxxxxx": Your organization
+"Organizations": ["group1","group2"] (optional): multiple GitLab groups
  ```
+
+Notes for GitLab:
+- You can specify multiple groups by providing a comma-separated list in `Organization`, e.g., `"Organization": "group1,group2"`. A single group works as `"Organization": "group1"`.
 
 If '**Projects**' and '**Repos**' are not specified, the analysis will be conducted on all repositories. You can specify a project name (PROJECT_KEY) in '**Projects**', and the analysis will be limited to the specified project. If you specify '**Repos**' (REPO_SLUG), the analysis will be limited to the specified repositories.
 ```json
