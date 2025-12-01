@@ -3,7 +3,12 @@ package getgitlab
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/briandowns/spinner"
+	"github.com/xanzy/go-gitlab"
 )
 
 // Constants to avoid duplicating string literals (SonarQube maintainability)
@@ -292,4 +297,175 @@ func TestGitlabIntegrationCoverage(t *testing.T) {
 			})
 		}
 	})
+}
+
+// ---------------- Additional tests for getgitlab.go behavior ----------------
+
+const testRepoExcluded = "ns/excluded"
+
+func TestLoadExclusionReposSuccess(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "exclusions.txt")
+	content := "repo-one\n\n repo-two \n#not-a-comment-line\nrepo-three\n"
+	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+		t.Fatalf("unable to write temp exclusion file: %v", err)
+	}
+
+	ex, err := LoadExclusionRepos(file)
+	if err != nil {
+		t.Fatalf("LoadExclusionRepos returned error: %v", err)
+	}
+
+	// Expected: non-empty trimmed lines become keys
+	if !ex["repo-one"] || !ex["repo-two"] || !ex["#not-a-comment-line"] || !ex["repo-three"] {
+		t.Errorf("unexpected exclusion map contents: %#v", ex)
+	}
+}
+
+func TestLoadExclusionReposFileNotFound(t *testing.T) {
+	_, err := LoadExclusionRepos(filepath.Join(t.TempDir(), "nope.txt"))
+	if err == nil {
+		t.Fatalf("expected error when file does not exist")
+	}
+}
+
+func TestIsExcludedExactAndPrefix(t *testing.T) {
+	ex := ExclusionRepos{
+		"org/repo":   true,
+		"org/prefix": true,
+	}
+
+	if !isExcluded("org/repo", ex) {
+		t.Errorf("expected exact match to be excluded")
+	}
+	if !isExcluded("org/prefix-sub", ex) {
+		t.Errorf("expected prefix match to be excluded")
+	}
+	if isExcluded("org/other", ex) {
+		t.Errorf("did not expect non-matching repo to be excluded")
+	}
+}
+
+func TestIsProjectExcludedOrInvalid(t *testing.T) {
+	// excluded
+	ex := ExclusionRepos{"ns/proj": true}
+	proj := &gitlab.Project{PathWithNamespace: "ns/proj"}
+	empty, archived := 0, 0
+	excluded, isEmpty, isArchived := isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if !excluded || isEmpty || isArchived {
+		t.Errorf("expected project to be excluded only")
+	}
+	if empty != 0 || archived != 0 {
+		t.Errorf("counters should not change for excluded project")
+	}
+
+	// empty repo
+	ex = ExclusionRepos{}
+	proj = &gitlab.Project{PathWithNamespace: "ns/proj2", EmptyRepo: true}
+	empty, archived = 0, 0
+	excluded, isEmpty, isArchived = isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if excluded || !isEmpty || isArchived {
+		t.Errorf("expected project to be empty only")
+	}
+	if empty != 1 || archived != 0 {
+		t.Errorf("expected empty counter incremented, got empty=%d archived=%d", empty, archived)
+	}
+
+	// archived repo
+	proj = &gitlab.Project{PathWithNamespace: "ns/proj3", Archived: true}
+	empty, archived = 0, 0
+	excluded, isEmpty, isArchived = isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if excluded || isEmpty || !isArchived {
+		t.Errorf("expected project to be archived only")
+	}
+	if empty != 0 || archived != 1 {
+		t.Errorf("expected archived counter incremented, got empty=%d archived=%d", empty, archived)
+	}
+}
+
+func TestAnalyzeProjEarlyReturns(t *testing.T) {
+	// excluded path
+	ap := AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoExcluded,
+		},
+		ExclusionList: ExclusionRepos{testRepoExcluded: true},
+	}
+	pb, excl, emp, arch := analyzeProj(ap)
+	if excl != 1 || emp != 0 || arch != 0 || (pb != ProjectBranch{}) {
+		t.Errorf("excluded path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+
+	// empty path
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: "ns/empty",
+			EmptyRepo:         true,
+		},
+	}
+	pb, excl, emp, arch = analyzeProj(ap)
+	if excl != 0 || emp != 1 || arch != 0 || (pb != ProjectBranch{}) {
+		t.Errorf("empty path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+
+	// archived path
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: "ns/archived",
+			Archived:          true,
+		},
+	}
+	pb, excl, emp, arch = analyzeProj(ap)
+	if excl != 0 || emp != 0 || arch != 1 || (pb != ProjectBranch{}) {
+		t.Errorf("archived path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+}
+
+func TestProcessProjectCounterIncrements(t *testing.T) {
+	// Setup a real spinner to avoid nil deref if used (shouldn't be used on early returns)
+	sp := spinner.New(spinner.CharSets[1], 10*time.Millisecond)
+
+	// excluded
+	excluded := 0
+	empty := 0
+	archived := 0
+	ap := AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoExcluded,
+		},
+		ExclusionList: ExclusionRepos{testRepoExcluded: true},
+		Spin1:         sp,
+	}
+	list, cpt := processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 1 || empty != 0 || archived != 0 {
+		t.Errorf("excluded: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
+
+	// empty
+	excluded, empty, archived = 0, 0, 0
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: "ns/empty",
+			EmptyRepo:         true,
+		},
+		Spin1: sp,
+	}
+	list, cpt = processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 0 || empty != 1 || archived != 0 {
+		t.Errorf("empty: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
+
+	// archived
+	excluded, empty, archived = 0, 0, 0
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: "ns/archived",
+			Archived:          true,
+		},
+		Spin1: sp,
+	}
+	list, cpt = processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 0 || empty != 0 || archived != 1 {
+		t.Errorf("archived: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
 }
