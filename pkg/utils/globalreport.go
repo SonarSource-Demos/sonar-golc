@@ -65,6 +65,11 @@ func CreateGlobalReport(directory string) error {
 
 		// If the file is not a directory and its name starts with "Result_", then
 		if !info.IsDir() && strings.HasPrefix(info.Name(), "Result_") {
+			// Skip byfile JSONs (pattern: Result_*_byfile.json) to avoid double counting
+			// These files contain per-file metrics, not per-language aggregates.
+			if strings.Contains(info.Name(), "_byfile") {
+				return nil
+			}
 			file, err := os.Open(path)
 			if err != nil {
 				return err

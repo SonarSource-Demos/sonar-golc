@@ -495,12 +495,9 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 
 // Perform repository analysis (common logic)
 func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, excludePaths []string, ResultByFile bool, ResultAll bool) {
-	var outputFileName = ""
-	if len(params.Namespace) > 0 {
-		outputFileName = fmt.Sprintf("Result_%s_%s", params.Namespace, params.MainBranch)
-	} else {
-		outputFileName = fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
-	}
+	// Always use a consistent filename pattern so downstream parsing works across platforms
+	// Format: Result_<OrgOrProjectKey>_<RepoSlug>_<Branch>
+	outputFileName := fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
 	golocParams := goloc.Params{
 		Path:         params.PathToScan,
 		ByFile:       ResultByFile,
@@ -1373,14 +1370,20 @@ func main() {
 	}
 	spin.Stop()
 
-	// Denerated Global Report
-	err = utils.CreateGlobalReport(DestinationResult)
+	// Determine base Results directory (parent of current DestinationResult)
+	baseResultsDir := filepath.Dir(filepath.Clean(DestinationResult))
+
+	// Denerated Global Report (walks the directory for Result_* files)
+	// Pass the base Results directory for consistency across platforms.
+	err = utils.CreateGlobalReport(baseResultsDir)
 	if err != nil {
 		log.Fatalf("❌ Error creating global report: %v", err)
 	}
 
 	// Generate Repository Summary Reports
-	err = utils.GenerateRepositorySummaryReports(DestinationResult)
+	// Ensure we pass the base Results directory to generate summary reports,
+	// since it creates outputs under <Results>/byfile-report/*.
+	err = utils.GenerateRepositorySummaryReports(baseResultsDir)
 	if err != nil {
 		logger.Errorf("❌ Error creating repository summary reports: %v", err)
 	}
