@@ -422,6 +422,11 @@ func TestAnalyzeProjEarlyReturns(t *testing.T) {
 }
 
 func TestProcessProjectCounterIncrements(t *testing.T) {
+	// Ensure isolated environment and logging directory exist to avoid logger fatal
+	_, cleanup := setupTestEnvironment(t, "test_gitlab_process_project_*")
+	defer cleanup()
+	createTestDirectories(t, []string{"Logs"})
+
 	// Setup a real spinner to avoid nil deref if used (shouldn't be used on early returns)
 	sp := spinner.New(spinner.CharSets[1], 10*time.Millisecond)
 
