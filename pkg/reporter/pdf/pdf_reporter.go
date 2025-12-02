@@ -13,6 +13,8 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
+const logoImagePath = "imgs/Logob.png"
+
 type PdfReporter struct {
 	OutputName string
 	OutputPath string
@@ -143,8 +145,7 @@ func (p PdfReporter) writePdf(pdfReport *report) error {
 	pdf.Cell(0, 10, "Analysis Report")
 	pdf.Ln(20)
 
-	logoPath := "imgs/Logob.png"
-	pdf.Image(logoPath, 10, 20, 50, 0, false, "", 0, "")
+	pdf.Image(logoImagePath, 10, 20, 50, 0, false, "", 0, "")
 
 	pdf.Ln(10)
 
@@ -235,8 +236,7 @@ func (p PdfReporter) GenerateGlobalReportByFile() error {
 	pdf.Cell(0, 10, "Full Analysis Report")
 	pdf.Ln(20)
 
-	logoPath := "imgs/Logob.png"
-	pdf.Image(logoPath, 10, 20, 50, 0, false, "", 0, "")
+	pdf.Image(logoImagePath, 10, 20, 50, 0, false, "", 0, "")
 
 	pdf.Ln(10)
 
@@ -294,8 +294,7 @@ func (p PdfReporter) GenerateGlobalReportByFile() error {
 				// Check if we need to add a new page
 				if tableCount >= maxTablesPerPage {
 					pdf.AddPage()
-					logoPath := "imgs/Logob.png"
-					pdf.Image(logoPath, 10, 5, 50, 0, false, "", 0, "")
+					pdf.Image(logoImagePath, 10, 5, 50, 0, false, "", 0, "")
 
 					pdf.Ln(10)
 					pdf.SetFont("Times", "B", 12)

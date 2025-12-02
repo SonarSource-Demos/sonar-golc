@@ -307,7 +307,11 @@ func TestGitlabIntegrationCoverage(t *testing.T) {
 
 // ---------------- Additional tests for getgitlab.go behavior ----------------
 
-const testRepoExcluded = "ns/excluded"
+const (
+	testRepoExcluded = "ns/excluded"
+	testRepoEmpty    = "ns/empty"
+	testRepoArchived = "ns/archived"
+)
 const (
 	apiCommitsPath         = "/api/v4/projects/10/repository/commits"
 	apiBranchesListPath    = "/api/v4/projects/10/repository/branches"
@@ -635,7 +639,7 @@ func TestAnalyzeProjEarlyReturns(t *testing.T) {
 	// empty path
 	ap = AnalyzeProject{
 		Project: &gitlab.Project{
-			PathWithNamespace: "ns/empty",
+			PathWithNamespace: testRepoEmpty,
 			EmptyRepo:         true,
 		},
 	}
@@ -647,7 +651,7 @@ func TestAnalyzeProjEarlyReturns(t *testing.T) {
 	// archived path
 	ap = AnalyzeProject{
 		Project: &gitlab.Project{
-			PathWithNamespace: "ns/archived",
+			PathWithNamespace: testRepoArchived,
 			Archived:          true,
 		},
 	}
@@ -686,7 +690,7 @@ func TestProcessProjectCounterIncrements(t *testing.T) {
 	excluded, empty, archived = 0, 0, 0
 	ap = AnalyzeProject{
 		Project: &gitlab.Project{
-			PathWithNamespace: "ns/empty",
+			PathWithNamespace: testRepoEmpty,
 			EmptyRepo:         true,
 		},
 		Spin1: sp,
@@ -700,7 +704,7 @@ func TestProcessProjectCounterIncrements(t *testing.T) {
 	excluded, empty, archived = 0, 0, 0
 	ap = AnalyzeProject{
 		Project: &gitlab.Project{
-			PathWithNamespace: "ns/archived",
+			PathWithNamespace: testRepoArchived,
 			Archived:          true,
 		},
 		Spin1: sp,
@@ -765,7 +769,7 @@ func TestFilterValidProjects(t *testing.T) {
 	ex := ExclusionRepos{"ns/ex": true}
 	projects := []*gitlab.Project{
 		{PathWithNamespace: "ns/ex", ID: 1},
-		{PathWithNamespace: "ns/empty", EmptyRepo: true, ID: 2},
+		{PathWithNamespace: testRepoEmpty, EmptyRepo: true, ID: 2},
 		{PathWithNamespace: "ns/arch", Archived: true, ID: 3},
 		{PathWithNamespace: "ns/ok", ID: 4},
 	}
