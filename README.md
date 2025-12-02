@@ -358,7 +358,7 @@ For GitLab Self-Managed (on-premises), modify the URL configuration
 }
 ```
 
-- **Url**: Your GitHub Enterprise Server URL (e.g., `https://github.yourcompany.com/`)
+- **Url**: Your GitLab Self-Managed Server URL (e.g., `https://gitlab.yourcompany.com/`)
 
 **File Mode Configuration:**
 
