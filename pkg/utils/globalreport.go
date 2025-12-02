@@ -84,7 +84,7 @@ func CreateGlobalReport(directory string) error {
 		return err
 	}
 
-	loggers.Infof("✅ Gobal PDF report exported to %s", "Results/GlobalReport.pdf")
+	loggers.Infof("✅ Global PDF report exported to %s", "Results/GlobalReport.pdf")
 	return nil
 }
 
