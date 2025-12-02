@@ -1373,7 +1373,7 @@ func main() {
 	// Determine base Results directory (parent of current DestinationResult)
 	baseResultsDir := filepath.Dir(filepath.Clean(DestinationResult))
 
-	// Denerated Global Report (walks the directory for Result_* files)
+	// Generated Global Report (walks the directory for Result_* files)
 	// Pass the base Results directory for consistency across platforms.
 	err = utils.CreateGlobalReport(baseResultsDir)
 	if err != nil {
