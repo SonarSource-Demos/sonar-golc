@@ -582,11 +582,11 @@ Report By file :
 
 ✅ Pull Images
 
-There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.8** and **amd64-1.0.8** .
+There are two types of docker images: one for amd64 and one for arm64.The tags are **arm64-1.0.9** and **amd64-1.0.9** .
 
  ```bash
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.8
-:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.8
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/golc:arm64-1.0.9
+:> docker pull ghcr.io/sonarsource-demos/sonar-golc/resultsall:arm64-1.0.9
 ```
 
 ✅ Create volumes to persist data or map a local directory
@@ -597,7 +597,7 @@ You need a persistent volume or to map a local directory to store the analysis r
 
 ✅ Running the container: 
  ```bash
-:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.8 -devops Github -docker
+:> docker run --rm -v /custom/Results_volume:/app/Results -v /custom/config.json:/app/config.json golc:arm64-1.0.9 -devops Github -docker
 
 ✅ Using configuration for DevOps platform 'Github'
 Running in Docker mode
@@ -642,7 +642,7 @@ Running in Docker mode
  The default port is 8091.
 
 ```
-:> docker run --rm -p 8091:8091 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.8
+:> docker run --rm -p 8091:8091 -v /custom_Results_volume:/app/Results resultsall:arm64-1.0.9
 
 
 ✅ Launching web visualization...
