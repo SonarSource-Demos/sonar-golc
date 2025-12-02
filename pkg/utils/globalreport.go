@@ -95,36 +95,48 @@ func collectLanguageTotals(directory string) (map[string]int, error) {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() || !strings.HasPrefix(info.Name(), "Result_") {
+		if !isEligibleResultFile(info, path) {
 			return nil
 		}
-		// Skip file-level reports to avoid double counting
-		if strings.Contains(info.Name(), "_byfile") {
-			return nil
-		}
-		if filepath.Ext(path) != ".json" {
-			return nil
-		}
-		fileData, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		var data FileData
-		if err := json.Unmarshal(fileData, &data); err != nil {
-			return err
-		}
-		for _, result := range data.Results {
-			if strings.TrimSpace(result.Language) == "" {
-				continue
-			}
-			ligneDeCodeParLangage[result.Language] += result.CodeLines
-		}
-		return nil
+		return accumulateLanguageTotalsFromFile(path, ligneDeCodeParLangage)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return ligneDeCodeParLangage, nil
+}
+
+// isEligibleResultFile returns true for top-level Result_*.json files that are not _byfile.
+func isEligibleResultFile(info os.FileInfo, path string) bool {
+	if info.IsDir() {
+		return false
+	}
+	name := info.Name()
+	if !strings.HasPrefix(name, "Result_") {
+		return false
+	}
+	if strings.Contains(name, "_byfile") {
+		return false
+	}
+	return filepath.Ext(path) == ".json"
+}
+
+// accumulateLanguageTotalsFromFile parses a file and updates the totals map.
+func accumulateLanguageTotalsFromFile(path string, totals map[string]int) error {
+	fileData, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var data FileData
+	if err := json.Unmarshal(fileData, &data); err != nil {
+		return err
+	}
+	for _, result := range data.Results {
+		if lang := strings.TrimSpace(result.Language); lang != "" {
+			totals[lang] += result.CodeLines
+		}
+	}
+	return nil
 }
 
 // writeLanguageTotalsJSON writes Results/code_lines_by_language.json and returns the serialized bytes.
