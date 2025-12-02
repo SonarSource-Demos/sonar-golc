@@ -50,104 +50,26 @@ func getTotalCodeLines(languages []LanguageData) int {
 func CreateGlobalReport(directory string) error {
 
 	//directory := "Results"
-	var unit string = "%"
 	loggers := NewLogger()
 
-	ligneDeCodeParLangage := make(map[string]int)
-
-	/*--------------------------------------------------------------------------------*/
-	// Results/code_lines_by_language.json file generation
-
-	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// If the file is not a directory and its name starts with "Result_", then
-		if !info.IsDir() && strings.HasPrefix(info.Name(), "Result_") {
-			// Skip byfile JSONs (pattern: Result_*_byfile.json) to avoid double counting
-			// These files contain per-file metrics, not per-language aggregates.
-			if strings.Contains(info.Name(), "_byfile") {
-				return nil
-			}
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			if filepath.Ext(path) == ".json" {
-				// Reading the JSON file
-				fileData, err := os.ReadFile(path)
-				if err != nil {
-					return err
-				}
-
-				// JSON data decoding
-				var data FileData
-				err = json.Unmarshal(fileData, &data)
-				if err != nil {
-					return err
-				}
-
-				// Browse results for each file
-				for _, result := range data.Results {
-					language := result.Language
-					codeLines := result.CodeLines
-					ligneDeCodeParLangage[language] += codeLines
-				}
-			}
-		}
-		return nil
-	})
+	totals, err := collectLanguageTotals(directory)
 	if err != nil {
 		loggers.Errorf("❌ Error reading files : %v", err)
 		return err
 	}
 
-	// Create output structure
-	var resultats []LanguageData1
-	for lang, total := range ligneDeCodeParLangage {
-		resultats = append(resultats, LanguageData1{
-			Language:  lang,
-			CodeLines: total,
-		})
-	}
-	// Writing results to a JSON file
-	outputData, err := json.MarshalIndent(resultats, "", "  ")
+	// Persist code_lines_by_language.json and keep marshaled bytes for later
+	outputData, err := writeLanguageTotalsJSON(totals)
 	if err != nil {
 		loggers.Errorf("❌ Error creating output JSON file : %v", err)
 		return err
 	}
-	outputFile := "Results/code_lines_by_language.json"
-	err = os.WriteFile(outputFile, outputData, 0644)
-	if err != nil {
-		loggers.Errorf("❌ Error writing to output JSON file : %v", err)
-		return err
-	}
-
-	loggers.Infof("✅ Results analysis recorded in %s", outputFile)
 
 	// Reading data from the GlobalReport JSON file
-	data0, err := os.ReadFile("Results/GlobalReport.json")
+	ginfo, err := readGlobalInfoFromFile("Results/GlobalReport.json")
 	if err != nil {
-		loggers.Errorf("❌ Error reading GlobalReport.json file : %v", err)
 		return err
 	}
-
-	// JSON data decoding
-	var Ginfo Globalinfo
-
-	err = json.Unmarshal(data0, &Ginfo)
-	if err != nil {
-		loggers.Errorf("❌ Error decoding JSON GlobalReport.json file : %v", err)
-		return err
-	}
-	Org := "Organization : " + Ginfo.Organization
-	Tloc := "Total lines Of code : " + Ginfo.TotalLinesOfCode
-	Lrepos := "Largest Repository : " + Ginfo.LargestRepository
-	Lrepoloc := "Lines of code largest Repository : " + Ginfo.LinesOfCodeLargestRepo
-	NBrepos := fmt.Sprintf("Number of Repositories analyzed : %d", Ginfo.NumberRepos)
 
 	// JSON data decoding
 	var languages []LanguageData
@@ -158,6 +80,100 @@ func CreateGlobalReport(directory string) error {
 	}
 
 	// Create a PDF
+	if err := renderGlobalPDF(languages, ginfo); err != nil {
+		return err
+	}
+
+	loggers.Infof("✅ Gobal PDF report exported to %s", "Results/GlobalReport.pdf")
+	return nil
+}
+
+// collectLanguageTotals walks result files and aggregates language totals.
+func collectLanguageTotals(directory string) (map[string]int, error) {
+	ligneDeCodeParLangage := make(map[string]int)
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasPrefix(info.Name(), "Result_") {
+			return nil
+		}
+		// Skip file-level reports to avoid double counting
+		if strings.Contains(info.Name(), "_byfile") {
+			return nil
+		}
+		if filepath.Ext(path) != ".json" {
+			return nil
+		}
+		fileData, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		var data FileData
+		if err := json.Unmarshal(fileData, &data); err != nil {
+			return err
+		}
+		for _, result := range data.Results {
+			if strings.TrimSpace(result.Language) == "" {
+				continue
+			}
+			ligneDeCodeParLangage[result.Language] += result.CodeLines
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ligneDeCodeParLangage, nil
+}
+
+// writeLanguageTotalsJSON writes Results/code_lines_by_language.json and returns the serialized bytes.
+func writeLanguageTotalsJSON(totals map[string]int) ([]byte, error) {
+	loggers := NewLogger()
+	var resultats []LanguageData1
+	for lang, total := range totals {
+		resultats = append(resultats, LanguageData1{
+			Language:  lang,
+			CodeLines: total,
+		})
+	}
+	outputData, err := json.MarshalIndent(resultats, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	const outputFile = "Results/code_lines_by_language.json"
+	if err := os.WriteFile(outputFile, outputData, 0644); err != nil {
+		return nil, err
+	}
+	loggers.Infof("✅ Results analysis recorded in %s", outputFile)
+	return outputData, nil
+}
+
+// readGlobalInfoFromFile reads Results/GlobalReport.json into Globalinfo.
+func readGlobalInfoFromFile(path string) (Globalinfo, error) {
+	loggers := NewLogger()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		loggers.Errorf("❌ Error reading GlobalReport.json file : %v", err)
+		return Globalinfo{}, err
+	}
+	var g Globalinfo
+	if err := json.Unmarshal(data, &g); err != nil {
+		loggers.Errorf("❌ Error decoding JSON GlobalReport.json file : %v", err)
+		return Globalinfo{}, err
+	}
+	return g, nil
+}
+
+// renderGlobalPDF generates the GlobalReport.pdf from languages and global info.
+func renderGlobalPDF(languages []LanguageData, ginfo Globalinfo) error {
+	var unit = "%"
+	loggers := NewLogger()
+	Org := "Organization : " + ginfo.Organization
+	Tloc := "Total lines Of code : " + ginfo.TotalLinesOfCode
+	Lrepos := "Largest Repository : " + ginfo.LargestRepository
+	Lrepoloc := "Lines of code largest Repository : " + ginfo.LinesOfCodeLargestRepo
+	NBrepos := fmt.Sprintf("Number of Repositories analyzed : %d", ginfo.NumberRepos)
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
@@ -212,14 +228,9 @@ func CreateGlobalReport(directory string) error {
 		rowCount++
 	}
 
-	err = pdf.OutputFileAndClose("Results/GlobalReport.pdf")
-	if err != nil {
+	if err := pdf.OutputFileAndClose("Results/GlobalReport.pdf"); err != nil {
 		loggers.Errorf("❌ Error saving PDF file: %v", err)
-		os.Exit(1)
+		return err
 	}
-
-	loggers.Infof("✅ Gobal PDF report exported to %s", "Results/GlobalReport.pdf")
-
 	return nil
-
 }

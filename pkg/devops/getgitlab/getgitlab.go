@@ -582,22 +582,10 @@ type nonDefaultCtx struct {
 
 // nonDefaultAllProjectsAllBranches analyzes main branches for all projects across orgs.
 func nonDefaultAllProjectsAllBranches(ctx nonDefaultCtx) ([]ProjectBranch, int) {
-	var projectBranches []ProjectBranch
-	totalBranches := 0
-	loggers := utils.NewLogger()
-
-	for _, org := range ctx.orgs {
-		projects, _, spin1, err := getProjectsAndAnalyze(ctx.client, org, ctx.spin)
-		if err != nil {
-			loggers.Errorf(err.Error())
-			continue
-		}
+	return analyzeOrgsWithProjects(ctx, func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
 		valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
-		branches, totalB := analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
-		projectBranches = append(projectBranches, branches...)
-		totalBranches += totalB
-	}
-	return projectBranches, totalBranches
+		return analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
+	})
 }
 
 // nonDefaultSpecificProjectAllBranches analyzes main branch for a single project across orgs.
@@ -666,19 +654,25 @@ func nonDefaultSpecificProjectSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch
 
 // nonDefaultAllProjectsSpecificBranch analyzes a specific branch for all projects across orgs.
 func nonDefaultAllProjectsSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	branch := ctx.config["Branch"].(string)
+	return analyzeOrgsWithProjects(ctx, func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
+		valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
+		return analyzeSpecificBranchForProjects(ctx.client, valid, org, branch, spin1)
+	})
+}
+
+// analyzeOrgsWithProjects is a generic iterator over orgs+projects to reduce duplication.
+func analyzeOrgsWithProjects(ctx nonDefaultCtx, perOrg func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int)) ([]ProjectBranch, int) {
 	var projectBranches []ProjectBranch
 	totalBranches := 0
-	branch := ctx.config["Branch"].(string)
 	loggers := utils.NewLogger()
-
 	for _, org := range ctx.orgs {
 		projects, _, spin1, err := getProjectsAndAnalyze(ctx.client, org, ctx.spin)
 		if err != nil {
 			loggers.Errorf(err.Error())
 			continue
 		}
-		valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
-		branches, totalB := analyzeSpecificBranchForProjects(ctx.client, valid, org, branch, spin1)
+		branches, totalB := perOrg(org, projects, spin1)
 		projectBranches = append(projectBranches, branches...)
 		totalBranches += totalB
 	}
