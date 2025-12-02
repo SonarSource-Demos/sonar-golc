@@ -492,12 +492,12 @@ func filterValidProjects(projects []*gitlab.Project, exclusionList ExclusionRepo
 	valid := make([]*gitlab.Project, 0, len(projects))
 	for _, p := range projects {
 		excluded, empty, archived := isProjectExcludedOrInvalid(p, exclusionList, emptyRepos, archivedRepos)
-		if excluded {
+				if excluded {
 			(*excludedProjects)++
-			continue
-		}
-		if empty || archived {
-			continue
+					continue
+				}
+				if empty || archived {
+					continue
 		}
 		valid = append(valid, p)
 	}
@@ -511,27 +511,27 @@ func analyzeMainBranchForProjects(client *gitlab.Client, projects []*gitlab.Proj
 	loggers := utils.NewLogger()
 	cpt := 1
 	for _, project := range projects {
-		messageB := fmt.Sprintf(Message2, project.Name)
-		spin1.Prefix = messageB
-		spin1.Start()
+				messageB := fmt.Sprintf(Message2, project.Name)
+				spin1.Prefix = messageB
+				spin1.Start()
 
 		mainBranch, largestSize, nbrsize, err := getMainBranchDetails(client, project, since, until)
-		if err != nil {
-			spin1.Stop()
+				if err != nil {
+					spin1.Stop()
 			loggers.Errorf(err.Error())
 			continue
-		}
+				}
 		result = append(result, ProjectBranch{
 			Org:         org,
-			Namespace:   project.PathWithNamespace,
-			RepoSlug:    project.Name,
-			MainBranch:  mainBranch,
-			LargestSize: largestSize,
-		})
+					Namespace:   project.PathWithNamespace,
+					RepoSlug:    project.Name,
+					MainBranch:  mainBranch,
+					LargestSize: largestSize,
+				})
 		totalBranches += nbrsize
-		spin1.Stop()
-		loggers.Infof(Message3, cpt, project.Name, nbrsize, mainBranch)
-		cpt++
+				spin1.Stop()
+				loggers.Infof(Message3, cpt, project.Name, nbrsize, mainBranch)
+				cpt++
 	}
 	return result, totalBranches
 }
@@ -565,6 +565,31 @@ func analyzeSpecificBranchForProjects(client *gitlab.Client, projects []*gitlab.
 		totalBranches++
 	}
 	return result, totalBranches
+}
+
+// findValidProjectAcrossOrgs searches each org for the named project and
+// returns the first valid (non-excluded, non-empty, non-archived) project with its org.
+func findValidProjectAcrossOrgs(client *gitlab.Client, orgs []string, projectName string, exclusions ExclusionRepos, emptyRepos, archivedRepos, excludedProjects *int) (*gitlab.Project, string, bool) {
+	for _, org := range orgs {
+		namespase := org + "/" + projectName
+		project, _, err := client.Projects.GetProject(namespase, nil)
+		if err != nil {
+			continue
+		}
+		valid := filterValidProjects([]*gitlab.Project{project}, exclusions, emptyRepos, archivedRepos, excludedProjects)
+		if len(valid) == 0 {
+			continue
+		}
+		return valid[0], org, true
+	}
+	return nil, "", false
+}
+
+// newSpin1 builds a configured spinner instance for inner loops.
+func newSpin1() *spinner.Spinner {
+			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+			spin1.Color("green", "bold")
+	return spin1
 }
 
 // nonDefaultCtx groups parameters for non-default branch analysis to keep signatures small.
@@ -601,7 +626,7 @@ func nonDefaultSpecificProjectAllBranches(ctx nonDefaultCtx) ([]ProjectBranch, i
 	for _, org := range ctx.orgs {
 		namespase := org + "/" + ctx.config["Project"].(string)
 		project, _, err := ctx.client.Projects.GetProject(namespase, nil)
-		if err != nil {
+			if err != nil {
 			continue
 		}
 		valid := filterValidProjects([]*gitlab.Project{project}, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
@@ -623,18 +648,8 @@ func nonDefaultSpecificProjectAllBranches(ctx nonDefaultCtx) ([]ProjectBranch, i
 func nonDefaultSpecificProjectSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch, int) {
 	var projectBranches []ProjectBranch
 	totalBranches := 0
-	found := false
 	branch := ctx.config["Branch"].(string)
-
-	for _, org := range ctx.orgs {
-		namespase := org + "/" + ctx.config["Project"].(string)
-		project, _, err := ctx.client.Projects.GetProject(namespase, nil)
-		if err != nil {
-			continue
-		}
-		if isExcluded(project.PathWithNamespace, ctx.exclusions) || project.EmptyRepo || project.Archived {
-			continue
-		}
+	if project, org, ok := findValidProjectAcrossOrgs(ctx.client, ctx.orgs, ctx.config["Project"].(string), ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects); ok {
 		projectBranches = append(projectBranches, ProjectBranch{
 			Org:         org,
 			Namespace:   project.PathWithNamespace,
@@ -643,10 +658,7 @@ func nonDefaultSpecificProjectSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch
 			LargestSize: 1,
 		})
 		totalBranches = 1
-		found = true
-		break
-	}
-	if !found {
+	} else {
 		utils.NewLogger().Fatalf(MessageError2b, ctx.config["Project"].(string))
 	}
 	return projectBranches, totalBranches
@@ -668,7 +680,7 @@ func analyzeOrgsWithProjects(ctx nonDefaultCtx, perOrg func(org string, projects
 	loggers := utils.NewLogger()
 	for _, org := range ctx.orgs {
 		projects, _, spin1, err := getProjectsAndAnalyze(ctx.client, org, ctx.spin)
-		if err != nil {
+			if err != nil {
 			loggers.Errorf(err.Error())
 			continue
 		}
@@ -724,8 +736,7 @@ func handleDefaultBranchCase(ctx defaultCtx) ([]ProjectBranch, int) {
 				continue
 			}
 			ctx.spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
+			spin1 := newSpin1()
 			loggers.Infof(Message1, Message4, len(projects))
 
 			valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
@@ -738,25 +749,12 @@ func handleDefaultBranchCase(ctx defaultCtx) ([]ProjectBranch, int) {
 
 	// Specific project with default branch: try across all groups
 	ctx.spin.Stop()
-	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-	spin1.Color("green", "bold")
-	found := false
-	for _, org := range ctx.orgs {
-		namespase := org + "/" + ctx.config["Project"].(string)
-		project, _, err := ctx.client.Projects.GetProject(namespase, nil)
-		if err != nil {
-			continue
-		}
-		valid := filterValidProjects([]*gitlab.Project{project}, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
-		if len(valid) == 0 {
-			continue
-		}
-		branches, totalB := analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
+	spin1 := newSpin1()
+	if project, org, ok := findValidProjectAcrossOrgs(ctx.client, ctx.orgs, ctx.config["Project"].(string), ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects); ok {
+		branches, totalB := analyzeMainBranchForProjects(ctx.client, []*gitlab.Project{project}, org, ctx.since, ctx.until, spin1)
 		projectBranches = append(projectBranches, branches...)
 		totalBranches += totalB
-		found = true
-	}
-	if !found {
+	} else {
 		loggers.Fatalf(MessageError2b, ctx.config["Project"].(string))
 	}
 	return projectBranches, totalBranches
