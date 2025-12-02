@@ -30,6 +30,37 @@ const (
 	applicationZipType  = "application/zip"
 )
 
+// Path constants for report directories
+const (
+	byFileReportDir       = "Results/byfile-report"
+	byLanguageReportDir   = "Results/bylanguage-report"
+	configResultsDir      = "Results/config"
+	globalReportFile      = "Results/GlobalReport.json"
+	codeLinesLanguageFile = "Results/code_lines_by_language.json"
+)
+
+// sanitizePathComponent sanitizes a path component to prevent path traversal attacks
+func sanitizePathComponent(component string) string {
+	// Remove any path traversal sequences
+	component = strings.ReplaceAll(component, "..", "")
+	component = strings.ReplaceAll(component, "/", "")
+	component = strings.ReplaceAll(component, "\\", "")
+	// Remove any null bytes
+	component = strings.ReplaceAll(component, "\x00", "")
+	// Trim whitespace
+	component = strings.TrimSpace(component)
+	return component
+}
+
+// buildSecurePath safely constructs a file path with validation
+func buildSecurePath(basePath string, components ...string) string {
+	sanitizedComponents := make([]string, len(components))
+	for i, component := range components {
+		sanitizedComponents[i] = sanitizePathComponent(component)
+	}
+	return filepath.Join(basePath, filepath.Join(sanitizedComponents...))
+}
+
 type Globalinfo struct {
 	Organization           string `json:"Organization"`
 	TotalLinesOfCode       string `json:"TotalLinesOfCode"`
@@ -188,8 +219,11 @@ func getRepositoryData() ([]RepositoryData, error) {
 		i++
 		// Construct filename for byfile report using platform-specific logic
 		firstPart := getFirstPartForPlatform(platform, branch, branch.RepoSlug)
-		fileName := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-			firstPart, branch.RepoSlug, branch.MainBranch)
+		fileName := buildSecurePath(byFileReportDir,
+			fmt.Sprintf("Result_%s_%s_%s_byfile.json",
+				sanitizePathComponent(firstPart),
+				sanitizePathComponent(branch.RepoSlug),
+				sanitizePathComponent(branch.MainBranch)))
 
 		// Read the byfile report
 		fileData, err := os.ReadFile(fileName)
@@ -249,14 +283,14 @@ func detectPlatformAndReadAnalysis() (string, []byte, error) {
 	platforms := []string{"github", "gitlab", "bitbucket", "bitbucket_dc", "azure", "file"}
 
 	for _, platform := range platforms {
-		filePath := fmt.Sprintf("Results/config/analysis_result_%s.json", platform)
+		filePath := fmt.Sprintf("%s/analysis_result_%s.json", configResultsDir, platform)
 		if data, err := os.ReadFile(filePath); err == nil {
 			return platform, data, nil
 		}
 	}
 
 	// Default fallback to github if no specific file found
-	data, err := os.ReadFile("Results/config/analysis_result_github.json")
+	data, err := os.ReadFile(fmt.Sprintf("%s/analysis_result_github.json", configResultsDir))
 	if err != nil {
 		return "", nil, fmt.Errorf("no analysis result file found")
 	}
@@ -311,7 +345,10 @@ func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData 
 	firstPart := getFirstPartForFilename(platform, orgName, repoName)
 
 	// Look for all byfile reports for this repository (different branches)
-	pattern := fmt.Sprintf("Results/byfile-report/Result_%s_%s_*_byfile.json", firstPart, repoName)
+	pattern := buildSecurePath(byFileReportDir,
+		fmt.Sprintf("Result_%s_%s_*_byfile.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName)))
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		fmt.Printf("Warning: Could not search for branch files: %v\n", err)
@@ -336,7 +373,7 @@ func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData 
 
 		// Extract actual branch name - more robust parsing
 		// Remove the prefix and suffix to get the branch name
-		prefix := fmt.Sprintf("Result_%s_%s_", orgName, repoName)
+		prefix := fmt.Sprintf("Result_%s_%s_", sanitizePathComponent(orgName), sanitizePathComponent(repoName))
 		suffix := "_byfile.json"
 		branchName := strings.TrimSuffix(strings.TrimPrefix(filename, prefix), suffix)
 
@@ -427,8 +464,11 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 
 	// Read the byfile report for totals
 	firstPart := getFirstPartForFilename(platform, orgName, repoName)
-	byFileReportPath := fmt.Sprintf("Results/byfile-report/Result_%s_%s_%s_byfile.json",
-		firstPart, repoName, branchName)
+	byFileReportPath := buildSecurePath(byFileReportDir,
+		fmt.Sprintf("Result_%s_%s_%s_byfile.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName),
+			sanitizePathComponent(branchName)))
 
 	byFileData, err := os.ReadFile(byFileReportPath)
 	if err != nil {
@@ -455,8 +495,11 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	}
 
 	// Read the bylanguage report for language breakdown
-	byLanguageReportPath := fmt.Sprintf("Results/bylanguage-report/Result_%s_%s_%s.json",
-		firstPart, repoName, branchName)
+	byLanguageReportPath := buildSecurePath(byLanguageReportDir,
+		fmt.Sprintf("Result_%s_%s_%s.json",
+			sanitizePathComponent(firstPart),
+			sanitizePathComponent(repoName),
+			sanitizePathComponent(branchName)))
 
 	languageData, err := os.ReadFile(byLanguageReportPath)
 	if err != nil {
@@ -478,7 +521,7 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	}
 
 	// Read global report
-	globalData, err := os.ReadFile("Results/GlobalReport.json")
+	globalData, err := os.ReadFile(globalReportFile)
 	if err != nil {
 		return nil, fmt.Errorf("error reading GlobalReport.json: %v", err)
 	}
@@ -616,7 +659,7 @@ func loadApplicationData() (PageData, error) {
 	ligneDeCodeParLangage := make(map[string]int)
 
 	// Reading data from the code_lines_by_language.json file
-	inputFileData, err := os.ReadFile("Results/code_lines_by_language.json")
+	inputFileData, err := os.ReadFile(codeLinesLanguageFile)
 	if err != nil {
 		return pageData, fmt.Errorf("error reading code_lines_by_language.json file: %v", err)
 	}
@@ -648,7 +691,7 @@ func loadApplicationData() (PageData, error) {
 		languages[i].Percentage = float64(languages[i].CodeLines) / float64(totalLines) * 100
 	}
 
-	data0, err := os.ReadFile("Results/GlobalReport.json")
+	data0, err := os.ReadFile(globalReportFile)
 	if err != nil {
 		return pageData, fmt.Errorf("error reading GlobalReport.json file: %v", err)
 	}

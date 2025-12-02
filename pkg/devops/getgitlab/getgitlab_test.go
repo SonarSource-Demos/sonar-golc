@@ -3,7 +3,18 @@ package getgitlab
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
+	"fmt"
+
+	"github.com/briandowns/spinner"
+	"github.com/xanzy/go-gitlab"
 )
 
 // Constants to avoid duplicating string literals (SonarQube maintainability)
@@ -292,4 +303,536 @@ func TestGitlabIntegrationCoverage(t *testing.T) {
 			})
 		}
 	})
+}
+
+// ---------------- Additional tests for getgitlab.go behavior ----------------
+
+const (
+	testRepoExcluded = "ns/excluded"
+	testRepoEmpty    = "ns/empty"
+	testRepoArchived = "ns/archived"
+)
+const (
+	apiCommitsPath         = "/api/v4/projects/10/repository/commits"
+	apiBranchesListPath    = "/api/v4/projects/10/repository/branches"
+	apiBranchesPrefixPath  = "/api/v4/projects/10/repository/branches/"
+	apiTreePath            = "/api/v4/projects/10/repository/tree"
+	apiProjectPath         = "/api/v4/projects/10"
+	apiGroupGPath          = "/api/v4/groups/g"
+	apiGroup1ProjectsPath  = "/api/v4/groups/1/projects"
+	apiGroup1SubgroupsPath = "/api/v4/groups/1/subgroups"
+	apiGroup2SubgroupsPath = "/api/v4/groups/2/subgroups"
+	apiGroup2ProjectsPath  = "/api/v4/groups/2/projects"
+)
+
+// set up a fake GitLab API server for client methods used in unit tests
+func newFakeGitLabServer(t *testing.T, cfg func(*http.Request) (int, any)) *httptest.Server {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		status, body := cfg(r)
+		if status == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		// minimal pagination headers so client considers loop complete
+		w.Header().Set("X-Total-Pages", "1")
+		w.Header().Set("X-Page", "1")
+		w.WriteHeader(status)
+		if body != nil {
+			enc := json.NewEncoder(w)
+			_ = enc.Encode(body)
+		}
+	})
+	return httptest.NewServer(handler)
+}
+
+func newGitLabClientForServer(t *testing.T, base string) *gitlab.Client {
+	client, err := gitlab.NewClient("test-token", gitlab.WithBaseURL(base+"/api/v4"))
+	if err != nil {
+		t.Fatalf("failed creating gitlab client: %v", err)
+	}
+	return client
+}
+
+func TestGetCommitCount(t *testing.T) {
+	commitCounts := map[string]int{
+		"main": 1,
+		"dev":  3,
+	}
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			ref := r.URL.Query().Get("ref_name")
+			n := commitCounts[ref]
+			commits := make([]map[string]any, n)
+			for i := 0; i < n; i++ {
+				commits[i] = map[string]any{"id": fmt.Sprintf("c%d", i)}
+			}
+			return http.StatusOK, commits
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+
+	client := newGitLabClientForServer(t, ts.URL)
+	since := time.Now().Add(-time.Hour)
+	until := time.Now()
+	got, err := getCommitCount(client, 10, "dev", since, until)
+	if err != nil {
+		t.Fatalf("getCommitCount error: %v", err)
+	}
+	if got != 3 {
+		t.Errorf("getCommitCount = %d, want 3", got)
+	}
+}
+
+func TestGetAllGroupProjects(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch r.URL.Path {
+		case apiGroupGPath:
+			return http.StatusOK, map[string]any{"id": 1, "name": "g"}
+		case apiGroup1ProjectsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 10, "name": "proj1", "path_with_namespace": "g/proj1", "default_branch": "main", "empty_repo": false, "archived": false},
+			}
+		case apiGroup1SubgroupsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 2, "name": "sg"},
+			}
+		case apiGroup2SubgroupsPath:
+			// subgroup without further descendants
+			return http.StatusOK, []map[string]any{}
+		case apiGroup2ProjectsPath:
+			return http.StatusOK, []map[string]any{
+				{"id": 20, "name": "subproj", "path_with_namespace": "g/subproj", "default_branch": "main", "empty_repo": false, "archived": false},
+			}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+	projs, err := getAllGroupProjects(client, "g")
+	if err != nil {
+		t.Fatalf("getAllGroupProjects error: %v", err)
+	}
+	if len(projs) != 2 {
+		t.Errorf("getAllGroupProjects len = %d, want 2", len(projs))
+	}
+}
+
+func TestGetBranchHelpers(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "dev"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiBranchesPrefixPath):
+			// return 200 only for known branches
+			name := strings.TrimPrefix(r.URL.Path, apiBranchesPrefixPath)
+			if name == "main" || name == "dev" {
+				return http.StatusOK, map[string]any{"name": name}
+			}
+			return http.StatusNotFound, map[string]any{"message": "not found"}
+		case r.URL.Path == apiTreePath:
+			return http.StatusOK, []map[string]any{
+				{"id": "1", "name": "file1"},
+				{"id": "2", "name": "file2"},
+			}
+		case r.URL.Path == apiProjectPath:
+			return http.StatusOK, map[string]any{"id": 10, "default_branch": "main"}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			// default: zero commits
+			return http.StatusOK, []any{}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	// getBranchSize
+	if size := getBranchSize(client, 10, "main"); size != 2 {
+		t.Errorf("getBranchSize = %d, want 2", size)
+	}
+
+	// branchExists
+	if !branchExists(client, 10, "main") {
+		t.Errorf("branchExists(main) = false, want true")
+	}
+	if branchExists(client, 10, "feature") {
+		t.Errorf("branchExists(feature) = true, want false")
+	}
+}
+
+func TestGetMainBranchWithCommits(t *testing.T) {
+	commitCounts := map[string]int{
+		"main": 1,
+		"dev":  3,
+	}
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "dev"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			ref := r.URL.Query().Get("ref_name")
+			n := commitCounts[ref]
+			commits := make([]map[string]any, n)
+			for i := 0; i < n; i++ {
+				commits[i] = map[string]any{"id": fmt.Sprintf("c%d", i)}
+			}
+			return http.StatusOK, commits
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	since := time.Now().Add(-24 * time.Hour)
+	until := time.Now()
+	branch, size, nbr, err := getMainBranch(client, 10, since, until)
+	if err != nil {
+		t.Fatalf("getMainBranch error: %v", err)
+	}
+	if branch != "dev" || size != 3 || nbr != 2 {
+		t.Errorf("getMainBranch = (%s,%d,%d), want (dev,3,2)", branch, size, nbr)
+	}
+}
+
+func TestGetMainBranchWithoutCommitsFallsBackToDefault(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case r.URL.Path == apiBranchesListPath:
+			return http.StatusOK, []map[string]any{
+				{"name": "main"},
+				{"name": "empty"},
+			}
+		case strings.HasPrefix(r.URL.Path, apiCommitsPath):
+			// zero commits for both branches
+			return http.StatusOK, []any{}
+		case r.URL.Path == apiProjectPath:
+			return http.StatusOK, map[string]any{"id": 10, "default_branch": "main"}
+		case r.URL.Path == apiTreePath:
+			// default branch size
+			return http.StatusOK, []map[string]any{
+				{"id": "1", "name": "a"},
+				{"id": "2", "name": "b"},
+				{"id": "3", "name": "c"},
+			}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+
+	since := time.Now().Add(-24 * time.Hour)
+	until := time.Now()
+	branch, size, nbr, err := getMainBranch(client, 10, since, until)
+	if err != nil {
+		t.Fatalf("getMainBranch error: %v", err)
+	}
+	if branch != "main" || size != 3 || nbr != 2 {
+		t.Errorf("getMainBranch = (%s,%d,%d), want (main,3,2)", branch, size, nbr)
+	}
+}
+func TestLoadExclusionReposSuccess(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "exclusions.txt")
+	content := "repo-one\n\n repo-two \n#not-a-comment-line\nrepo-three\n"
+	if err := os.WriteFile(file, []byte(content), 0644); err != nil {
+		t.Fatalf("unable to write temp exclusion file: %v", err)
+	}
+
+	ex, err := LoadExclusionRepos(file)
+	if err != nil {
+		t.Fatalf("LoadExclusionRepos returned error: %v", err)
+	}
+
+	// Expected: non-empty trimmed lines become keys
+	if !ex["repo-one"] || !ex["repo-two"] || !ex["#not-a-comment-line"] || !ex["repo-three"] {
+		t.Errorf("unexpected exclusion map contents: %#v", ex)
+	}
+}
+
+func TestLoadExclusionReposFileNotFound(t *testing.T) {
+	_, err := LoadExclusionRepos(filepath.Join(t.TempDir(), "nope.txt"))
+	if err == nil {
+		t.Fatalf("expected error when file does not exist")
+	}
+}
+
+func TestIsExcludedExactAndPrefix(t *testing.T) {
+	ex := ExclusionRepos{
+		"org/repo":   true,
+		"org/prefix": true,
+	}
+
+	if !isExcluded("org/repo", ex) {
+		t.Errorf("expected exact match to be excluded")
+	}
+	if !isExcluded("org/prefix-sub", ex) {
+		t.Errorf("expected prefix match to be excluded")
+	}
+	if isExcluded("org/other", ex) {
+		t.Errorf("did not expect non-matching repo to be excluded")
+	}
+}
+
+func TestIsProjectExcludedOrInvalid(t *testing.T) {
+	// excluded
+	ex := ExclusionRepos{"ns/proj": true}
+	proj := &gitlab.Project{PathWithNamespace: "ns/proj"}
+	empty, archived := 0, 0
+	excluded, isEmpty, isArchived := isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if !excluded || isEmpty || isArchived {
+		t.Errorf("expected project to be excluded only")
+	}
+	if empty != 0 || archived != 0 {
+		t.Errorf("counters should not change for excluded project")
+	}
+
+	// empty repo
+	ex = ExclusionRepos{}
+	proj = &gitlab.Project{PathWithNamespace: "ns/proj2", EmptyRepo: true}
+	empty, archived = 0, 0
+	excluded, isEmpty, isArchived = isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if excluded || !isEmpty || isArchived {
+		t.Errorf("expected project to be empty only")
+	}
+	if empty != 1 || archived != 0 {
+		t.Errorf("expected empty counter incremented, got empty=%d archived=%d", empty, archived)
+	}
+
+	// archived repo
+	proj = &gitlab.Project{PathWithNamespace: "ns/proj3", Archived: true}
+	empty, archived = 0, 0
+	excluded, isEmpty, isArchived = isProjectExcludedOrInvalid(proj, ex, &empty, &archived)
+	if excluded || isEmpty || !isArchived {
+		t.Errorf("expected project to be archived only")
+	}
+	if empty != 0 || archived != 1 {
+		t.Errorf("expected archived counter incremented, got empty=%d archived=%d", empty, archived)
+	}
+}
+
+func TestAnalyzeProjEarlyReturns(t *testing.T) {
+	// excluded path
+	ap := AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoExcluded,
+		},
+		ExclusionList: ExclusionRepos{testRepoExcluded: true},
+	}
+	pb, excl, emp, arch := analyzeProj(ap)
+	if excl != 1 || emp != 0 || arch != 0 || (pb != ProjectBranch{}) {
+		t.Errorf("excluded path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+
+	// empty path
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoEmpty,
+			EmptyRepo:         true,
+		},
+	}
+	pb, excl, emp, arch = analyzeProj(ap)
+	if excl != 0 || emp != 1 || arch != 0 || (pb != ProjectBranch{}) {
+		t.Errorf("empty path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+
+	// archived path
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoArchived,
+			Archived:          true,
+		},
+	}
+	pb, excl, emp, arch = analyzeProj(ap)
+	if excl != 0 || emp != 0 || arch != 1 || (pb != ProjectBranch{}) {
+		t.Errorf("archived path invalid result: pb=%+v excl=%d emp=%d arch=%d", pb, excl, emp, arch)
+	}
+}
+
+func TestProcessProjectCounterIncrements(t *testing.T) {
+	// Ensure isolated environment and logging directory exist to avoid logger fatal
+	_, cleanup := setupTestEnvironment(t, "test_gitlab_process_project_*")
+	defer cleanup()
+	createTestDirectories(t, []string{"Logs"})
+
+	// Setup a real spinner to avoid nil deref if used (shouldn't be used on early returns)
+	sp := spinner.New(spinner.CharSets[1], 10*time.Millisecond)
+
+	// excluded
+	excluded := 0
+	empty := 0
+	archived := 0
+	ap := AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoExcluded,
+		},
+		ExclusionList: ExclusionRepos{testRepoExcluded: true},
+		Spin1:         sp,
+	}
+	list, cpt := processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 1 || empty != 0 || archived != 0 {
+		t.Errorf("excluded: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
+
+	// empty
+	excluded, empty, archived = 0, 0, 0
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoEmpty,
+			EmptyRepo:         true,
+		},
+		Spin1: sp,
+	}
+	list, cpt = processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 0 || empty != 1 || archived != 0 {
+		t.Errorf("empty: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
+
+	// archived
+	excluded, empty, archived = 0, 0, 0
+	ap = AnalyzeProject{
+		Project: &gitlab.Project{
+			PathWithNamespace: testRepoArchived,
+			Archived:          true,
+		},
+		Spin1: sp,
+	}
+	list, cpt = processProject(ap, 1, sp, nil, &empty, &archived, &excluded)
+	if len(list) != 0 || cpt != 1 || excluded != 0 || empty != 0 || archived != 1 {
+		t.Errorf("archived: list=%v cpt=%d excl=%d empty=%d arch=%d", list, cpt, excluded, empty, archived)
+	}
+}
+
+// ---------------- Tests added to improve coverage for new helpers ----------------
+
+func TestGetOrganizationsFromConfigVariants(t *testing.T) {
+	cases := []struct {
+		name   string
+		config map[string]interface{}
+		want   []string
+	}{
+		{
+			name:   "single Organization string",
+			config: map[string]interface{}{"Organization": "org1"},
+			want:   []string{"org1"},
+		},
+		{
+			name:   "CSV Organization string",
+			config: map[string]interface{}{"Organization": "org1, org2 ,org3"},
+			want:   []string{"org1", "org2", "org3"},
+		},
+		{
+			name:   "Organizations array",
+			config: map[string]interface{}{"Organizations": []string{"a", "b", "c"}},
+			want:   []string{"a", "b", "c"},
+		},
+		{
+			name:   "Organizations []interface{}",
+			config: map[string]interface{}{"Organizations": []interface{}{"x", " y ", ""}},
+			want:   []string{"x", "y"},
+		},
+		{
+			name:   "empty returns nil",
+			config: map[string]interface{}{},
+			want:   nil,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := getOrganizationsFromConfig(tc.config)
+			if len(got) != len(tc.want) {
+				t.Fatalf("len mismatch: got=%v want=%v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("value mismatch: got=%v want=%v", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestFilterValidProjects(t *testing.T) {
+	empty, archived, excluded := 0, 0, 0
+	ex := ExclusionRepos{"ns/ex": true}
+	projects := []*gitlab.Project{
+		{PathWithNamespace: "ns/ex", ID: 1},
+		{PathWithNamespace: testRepoEmpty, EmptyRepo: true, ID: 2},
+		{PathWithNamespace: "ns/arch", Archived: true, ID: 3},
+		{PathWithNamespace: "ns/ok", ID: 4},
+	}
+	valid := filterValidProjects(projects, ex, &empty, &archived, &excluded)
+	if len(valid) != 1 || valid[0].PathWithNamespace != "ns/ok" {
+		t.Fatalf("filterValidProjects unexpected valid: %+v", valid)
+	}
+	if empty != 1 || archived != 1 || excluded != 1 {
+		t.Fatalf("counters wrong: empty=%d archived=%d excluded=%d", empty, archived, excluded)
+	}
+}
+
+func TestFindValidProjectAcrossOrgs(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		// only org2/test returns a valid project (RawPath may be empty; Path is decoded)
+		if strings.HasPrefix(r.URL.Path, "/api/v4/projects/") &&
+			(strings.HasSuffix(r.URL.Path, "/org2/test") || strings.Contains(r.URL.Path, "/org2/test")) {
+			return http.StatusOK, map[string]any{
+				"id":                  42,
+				"name":                "test",
+				"path_with_namespace": "org2/test",
+				"empty_repo":          false,
+				"archived":            false,
+			}
+		}
+		return http.StatusNotFound, map[string]any{"message": "not found"}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+	ex := ExclusionRepos{}
+	empty, archived, excl := 0, 0, 0
+	proj, org, ok := findValidProjectAcrossOrgs(client, []string{"org1", "org2", "org3"}, "test", ex, &empty, &archived, &excl)
+	if !ok || proj == nil || org != "org2" || proj.ID != 42 {
+		t.Fatalf("findValidProjectAcrossOrgs unexpected: ok=%v org=%s proj=%+v", ok, org, proj)
+	}
+}
+
+func TestAnalyzeSpecificBranchForProjects(t *testing.T) {
+	ts := newFakeGitLabServer(t, func(r *http.Request) (int, any) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, apiBranchesPrefixPath):
+			return http.StatusOK, map[string]any{"name": "main"}
+		case r.URL.Path == apiTreePath:
+			return http.StatusOK, []map[string]any{
+				{"id": "1"},
+			}
+		default:
+			return 0, nil
+		}
+	})
+	defer ts.Close()
+	client := newGitLabClientForServer(t, ts.URL)
+	// ensure Logs dir for logger
+	_ = os.MkdirAll("Logs", 0755)
+	sp := spinner.New(spinner.CharSets[1], 10*time.Millisecond)
+	projects := []*gitlab.Project{
+		{ID: 10, PathWithNamespace: "g/p", Name: "p"},
+	}
+	branches, total := analyzeSpecificBranchForProjects(client, projects, "g", "main", sp)
+	if len(branches) != 1 || total != 1 {
+		t.Fatalf("analyzeSpecificBranchForProjects unexpected: branches=%+v total=%d", branches, total)
+	}
+	if branches[0].Org != "g" || branches[0].RepoSlug != "p" || branches[0].MainBranch != "main" {
+		t.Fatalf("branch data mismatch: %+v", branches[0])
+	}
 }

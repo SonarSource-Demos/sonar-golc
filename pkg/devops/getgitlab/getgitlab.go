@@ -44,6 +44,7 @@ type ExclusionRepos map[string]bool
 const PrefixMsg = "Get Project(s)..."
 const MessageErro1 = "/\n❌ Failed to list projects for group %s: %v\n"
 const MessageError2 = "\n ❌ Failed to get project %s: %v\n"
+const MessageError2b = "\n ❌ Failed to get project %s in any configured group\n"
 const MessageError3 = "\n❗️ Project %s is in exclude file \n"
 const MessageError4 = "\n❗️ Project %s is empty \n"
 const MessageError5 = "\n❗️ Project %s is archived \n"
@@ -109,7 +110,8 @@ func getAllGroupProjects(client *gitlab.Client, groupName string) ([]*gitlab.Pro
 		return nil, err
 	}
 
-	subgroups, err := getSubgroups(client, group)
+	// Retrieve all descendant subgroups (recursively), not just direct children
+	subgroups, err := getAllSubgroupsRecursive(client, group)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +137,58 @@ func getGroup(client *gitlab.Client, groupName string) (*gitlab.Group, error) {
 func getSubgroups(client *gitlab.Client, group *gitlab.Group) ([]*gitlab.Group, error) {
 	subgroups, _, err := client.Groups.ListSubGroups(group.ID, nil)
 	return subgroups, err
+}
+
+// Function to Retrieves direct subgroups of a given group with pagination.
+func getDirectSubgroups(client *gitlab.Client, groupID int) ([]*gitlab.Group, error) {
+	var all []*gitlab.Group
+	page := 1
+	for {
+		opts := &gitlab.ListSubGroupsOptions{
+			ListOptions: gitlab.ListOptions{
+				Page:    page,
+				PerPage: perPage,
+			},
+		}
+		subgroups, resp, err := client.Groups.ListSubGroups(groupID, opts)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, subgroups...)
+		if resp.CurrentPage >= resp.TotalPages {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+// Function to Retrieves all descendant subgroups (recursive) of a given group.
+func getAllSubgroupsRecursive(client *gitlab.Client, root *gitlab.Group) ([]*gitlab.Group, error) {
+	var all []*gitlab.Group
+	visited := make(map[int]bool)
+	queue := []*gitlab.Group{root}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		subgroups, err := getDirectSubgroups(client, current.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, sg := range subgroups {
+			if visited[sg.ID] {
+				continue
+			}
+			visited[sg.ID] = true
+			all = append(all, sg)
+			queue = append(queue, sg)
+		}
+	}
+
+	return all, nil
 }
 
 // Function to Retrieves all projects in a given group.
@@ -377,9 +431,347 @@ func isProjectExcludedOrInvalid(project *gitlab.Project, exclusionList Exclusion
 func getMainBranchDetails(gitlabClient *gitlab.Client, project *gitlab.Project, since, until time.Time) (string, int, int, error) {
 	mainBranch, largestSize, nbrsize, err := getMainBranch(gitlabClient, project.ID, since, until)
 	if err != nil {
-		return "", 0, 0, fmt.Errorf("❌ Failed to get main branch for project %s: %v\n", project.Name, err)
+		return "", 0, 0, fmt.Errorf("failed to get main branch for project %s: %v", project.Name, err)
 	}
 	return mainBranch, largestSize, nbrsize, nil
+}
+
+// splitAndTrimCSV splits by comma and returns non-empty trimmed values.
+func splitAndTrimCSV(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if v := strings.TrimSpace(p); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// trimAndFilter returns a copy with all items trimmed and empty removed.
+func trimAndFilter(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if v := strings.TrimSpace(s); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// toStringSlice attempts to normalize various JSON-decoded representations to []string.
+func toStringSlice(raw interface{}) []string {
+	switch v := raw.(type) {
+	case nil:
+		return nil
+	case []string:
+		return trimAndFilter(v)
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, it := range v {
+			if s, ok := it.(string); ok {
+				if vs := strings.TrimSpace(s); vs != "" {
+					out = append(out, vs)
+				}
+			}
+		}
+		return out
+	case string:
+		return splitAndTrimCSV(v)
+	default:
+		return nil
+	}
+}
+
+// filterValidProjects removes excluded, empty or archived projects and updates counters.
+func filterValidProjects(projects []*gitlab.Project, exclusionList ExclusionRepos, emptyRepos, archivedRepos, excludedProjects *int) []*gitlab.Project {
+	valid := make([]*gitlab.Project, 0, len(projects))
+	for _, p := range projects {
+		excluded, empty, archived := isProjectExcludedOrInvalid(p, exclusionList, emptyRepos, archivedRepos)
+				if excluded {
+			(*excludedProjects)++
+					continue
+				}
+				if empty || archived {
+					continue
+		}
+		valid = append(valid, p)
+	}
+	return valid
+}
+
+// analyzeMainBranchForProjects computes the main branch and size for each project.
+func analyzeMainBranchForProjects(client *gitlab.Client, projects []*gitlab.Project, org string, since, until time.Time, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
+	var result []ProjectBranch
+	totalBranches := 0
+	loggers := utils.NewLogger()
+	cpt := 1
+	for _, project := range projects {
+				messageB := fmt.Sprintf(Message2, project.Name)
+				spin1.Prefix = messageB
+				spin1.Start()
+
+		mainBranch, largestSize, nbrsize, err := getMainBranchDetails(client, project, since, until)
+				if err != nil {
+					spin1.Stop()
+			loggers.Errorf(err.Error())
+			continue
+				}
+		result = append(result, ProjectBranch{
+			Org:         org,
+					Namespace:   project.PathWithNamespace,
+					RepoSlug:    project.Name,
+					MainBranch:  mainBranch,
+					LargestSize: largestSize,
+				})
+		totalBranches += nbrsize
+				spin1.Stop()
+				loggers.Infof(Message3, cpt, project.Name, nbrsize, mainBranch)
+				cpt++
+	}
+	return result, totalBranches
+}
+
+// analyzeSpecificBranchForProjects computes the size for a given branch across projects.
+func analyzeSpecificBranchForProjects(client *gitlab.Client, projects []*gitlab.Project, org, branch string, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
+	var result []ProjectBranch
+	loggers := utils.NewLogger()
+	cpt := 1
+	totalBranches := 0
+	for _, project := range projects {
+		messageB := fmt.Sprintf(Message2, project.Name)
+		spin1.Prefix = messageB
+		spin1.Start()
+
+		if !branchExists(client, project.ID, branch) {
+			spin1.Stop()
+			continue
+		}
+		largestSize := getBranchSize(client, project.ID, branch)
+		result = append(result, ProjectBranch{
+			Org:         org,
+			Namespace:   project.PathWithNamespace,
+			RepoSlug:    project.Name,
+			MainBranch:  branch,
+			LargestSize: largestSize,
+		})
+		spin1.Stop()
+		loggers.Infof(Message3, cpt, project.Name, 1, branch)
+		cpt++
+		totalBranches++
+	}
+	return result, totalBranches
+}
+
+// findValidProjectAcrossOrgs searches each org for the named project and
+// returns the first valid (non-excluded, non-empty, non-archived) project with its org.
+func findValidProjectAcrossOrgs(client *gitlab.Client, orgs []string, projectName string, exclusions ExclusionRepos, emptyRepos, archivedRepos, excludedProjects *int) (*gitlab.Project, string, bool) {
+	for _, org := range orgs {
+		namespase := org + "/" + projectName
+		project, _, err := client.Projects.GetProject(namespase, nil)
+		if err != nil {
+			continue
+		}
+		valid := filterValidProjects([]*gitlab.Project{project}, exclusions, emptyRepos, archivedRepos, excludedProjects)
+		if len(valid) == 0 {
+			continue
+		}
+		return valid[0], org, true
+	}
+	return nil, "", false
+}
+
+// newSpin1 builds a configured spinner instance for inner loops.
+func newSpin1() *spinner.Spinner {
+			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+			spin1.Color("green", "bold")
+	return spin1
+}
+
+// nonDefaultCtx groups parameters for non-default branch analysis to keep signatures small.
+type nonDefaultCtx struct {
+	client           *gitlab.Client
+	config           map[string]interface{}
+	exclusions       ExclusionRepos
+	orgs             []string
+	since, until     time.Time
+	spin             *spinner.Spinner
+	emptyRepos       *int
+	archivedRepos    *int
+	excludedProjects *int
+}
+
+// nonDefaultAllProjectsAllBranches analyzes main branches for all projects across orgs.
+func nonDefaultAllProjectsAllBranches(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	return analyzeOrgsWithProjects(ctx, func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
+		valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
+		return analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
+	})
+}
+
+// nonDefaultSpecificProjectAllBranches analyzes main branch for a single project across orgs.
+func nonDefaultSpecificProjectAllBranches(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	var projectBranches []ProjectBranch
+	totalBranches := 0
+
+	ctx.spin.Stop()
+	spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+	spin1.Color("green", "bold")
+	found := false
+
+	for _, org := range ctx.orgs {
+		namespase := org + "/" + ctx.config["Project"].(string)
+		project, _, err := ctx.client.Projects.GetProject(namespase, nil)
+			if err != nil {
+			continue
+		}
+		valid := filterValidProjects([]*gitlab.Project{project}, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
+		if len(valid) == 0 {
+			continue
+		}
+		branches, totalB := analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
+		projectBranches = append(projectBranches, branches...)
+		totalBranches += totalB
+		found = true
+	}
+	if !found {
+		utils.NewLogger().Fatalf(MessageError2b, ctx.config["Project"].(string))
+	}
+	return projectBranches, totalBranches
+}
+
+// nonDefaultSpecificProjectSpecificBranch analyzes a specific branch for a single project across orgs.
+func nonDefaultSpecificProjectSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	var projectBranches []ProjectBranch
+	totalBranches := 0
+	branch := ctx.config["Branch"].(string)
+	if project, org, ok := findValidProjectAcrossOrgs(ctx.client, ctx.orgs, ctx.config["Project"].(string), ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects); ok {
+		projectBranches = append(projectBranches, ProjectBranch{
+			Org:         org,
+			Namespace:   project.PathWithNamespace,
+			RepoSlug:    ctx.config["Project"].(string),
+			MainBranch:  branch,
+			LargestSize: 1,
+		})
+		totalBranches = 1
+	} else {
+		utils.NewLogger().Fatalf(MessageError2b, ctx.config["Project"].(string))
+	}
+	return projectBranches, totalBranches
+}
+
+// nonDefaultAllProjectsSpecificBranch analyzes a specific branch for all projects across orgs.
+func nonDefaultAllProjectsSpecificBranch(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	branch := ctx.config["Branch"].(string)
+	return analyzeOrgsWithProjects(ctx, func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int) {
+		valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
+		return analyzeSpecificBranchForProjects(ctx.client, valid, org, branch, spin1)
+	})
+}
+
+// analyzeOrgsWithProjects is a generic iterator over orgs+projects to reduce duplication.
+func analyzeOrgsWithProjects(ctx nonDefaultCtx, perOrg func(org string, projects []*gitlab.Project, spin1 *spinner.Spinner) ([]ProjectBranch, int)) ([]ProjectBranch, int) {
+	var projectBranches []ProjectBranch
+	totalBranches := 0
+	loggers := utils.NewLogger()
+	for _, org := range ctx.orgs {
+		projects, _, spin1, err := getProjectsAndAnalyze(ctx.client, org, ctx.spin)
+			if err != nil {
+			loggers.Errorf(err.Error())
+			continue
+		}
+		branches, totalB := perOrg(org, projects, spin1)
+		projectBranches = append(projectBranches, branches...)
+		totalBranches += totalB
+	}
+	return projectBranches, totalBranches
+}
+
+// getOrganizationsFromConfig returns the list of GitLab groups to analyze.
+// Supports:
+// - Organizations: array or mixed []interface{}
+// - Organization: string (comma-separated) or array-like
+func getOrganizationsFromConfig(platformConfig map[string]interface{}) []string {
+	// Prefer explicit Organizations if available
+	if raw, ok := platformConfig["Organizations"]; ok {
+		if orgs := toStringSlice(raw); len(orgs) > 0 {
+			return orgs
+		}
+	}
+	// Fallback to Organization (string csv or array-like)
+	if raw, ok := platformConfig["Organization"]; ok {
+		return toStringSlice(raw)
+	}
+	return nil
+}
+
+// defaultCtx groups parameters for default branch analysis to keep signatures small.
+type defaultCtx struct {
+	client           *gitlab.Client
+	config           map[string]interface{}
+	exclusions       ExclusionRepos
+	orgs             []string
+	since, until     time.Time
+	spin             *spinner.Spinner
+	emptyRepos       *int
+	archivedRepos    *int
+	excludedProjects *int
+}
+
+// handleDefaultBranchCase processes analysis when DefaultBranch is true.
+func handleDefaultBranchCase(ctx defaultCtx) ([]ProjectBranch, int) {
+	var projectBranches []ProjectBranch
+	totalBranches := 0
+	loggers := utils.NewLogger()
+
+	if ctx.config["Project"].(string) == "" {
+		for _, org := range ctx.orgs {
+			projects, err := getAllGroupProjects(ctx.client, org)
+			if err != nil {
+				loggers.Errorf(MessageErro1, org, err)
+				continue
+			}
+			ctx.spin.Stop()
+			spin1 := newSpin1()
+			loggers.Infof(Message1, Message4, len(projects))
+
+			valid := filterValidProjects(projects, ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects)
+			branches, totalB := analyzeMainBranchForProjects(ctx.client, valid, org, ctx.since, ctx.until, spin1)
+			projectBranches = append(projectBranches, branches...)
+			totalBranches += totalB
+		}
+		return projectBranches, totalBranches
+	}
+
+	// Specific project with default branch: try across all groups
+	ctx.spin.Stop()
+	spin1 := newSpin1()
+	if project, org, ok := findValidProjectAcrossOrgs(ctx.client, ctx.orgs, ctx.config["Project"].(string), ctx.exclusions, ctx.emptyRepos, ctx.archivedRepos, ctx.excludedProjects); ok {
+		branches, totalB := analyzeMainBranchForProjects(ctx.client, []*gitlab.Project{project}, org, ctx.since, ctx.until, spin1)
+		projectBranches = append(projectBranches, branches...)
+		totalBranches += totalB
+	} else {
+		loggers.Fatalf(MessageError2b, ctx.config["Project"].(string))
+	}
+	return projectBranches, totalBranches
+}
+
+// handleNonDefaultBranchCase processes analysis when DefaultBranch is false.
+func handleNonDefaultBranchCase(ctx nonDefaultCtx) ([]ProjectBranch, int) {
+	switch {
+	case ctx.config["Project"].(string) == "" && ctx.config["Branch"].(string) == "":
+		return nonDefaultAllProjectsAllBranches(ctx)
+	case ctx.config["Project"].(string) != "" && ctx.config["Branch"].(string) == "":
+		return nonDefaultSpecificProjectAllBranches(ctx)
+	case ctx.config["Project"].(string) != "" && ctx.config["Branch"].(string) != "":
+		return nonDefaultSpecificProjectSpecificBranch(ctx)
+	default: // ctx.config["Project"] == "" && ctx.config["Branch"] != ""
+		return nonDefaultAllProjectsSpecificBranch(ctx)
+	}
 }
 
 func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile string) ([]ProjectBranch, error) {
@@ -427,279 +819,45 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 		loggers.Fatalf("❌ Failed to create client: %v", err)
 	}
 
-	/* --------------------- Analysis a default branche  ---------------------  */
+	orgs := getOrganizationsFromConfig(platformConfig)
+	if len(orgs) == 0 {
+		spin.Stop()
+		loggers.Fatalf("❌ No GitLab group configured. Please set 'Organization' or 'Organizations'.")
+	}
+
+	// Delegate to specialized handlers to keep complexity low
 	if platformConfig["DefaultBranch"].(bool) {
-		cpt := 1
-		//switch {
-
-		/* --------------------- Analysis all projects with a default branche  ---------------------  */
-		if platformConfig["Project"].(string) == "" {
-
-			projects, err := getAllGroupProjects(gitlabClient, platformConfig["Organization"].(string))
-			if err != nil {
-				loggers.Fatalf(MessageErro1, platformConfig["Organization"].(string), err)
-			}
-
-			spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
-
-			loggers.Infof(Message1, Message4, len(projects))
-
-			for _, project := range projects {
-				//largestSize := 0
-
-				parmsproject := AnalyzeProject{
-
-					Project:       project,
-					GitlabClient:  gitlabClient,
-					ExclusionList: exclusionList,
-					Spin1:         spin1,
-					Org:           platformConfig["Organization"].(string),
-				}
-
-				projectBranches, cpt = processProject(parmsproject, cpt, spin1, projectBranches, &emptyRepos, &archivedRepos, &excludedProjects)
-				TotalBranches++
-			}
-			/* --------------------- End Analysis all projects with a default branche  ---------------------  */
-		} else {
-			/* --------------------- Analysis a specific projects with a default branche  ---------------------  */
-			cpt := 1
-			spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
-			//	largestSize := 0
-
-			namespase := platformConfig["Organization"].(string) + "/" + platformConfig["Project"].(string)
-
-			project, _, err := gitlabClient.Projects.GetProject(namespase, nil)
-			if err != nil {
-				loggers.Fatalf(MessageError2, platformConfig["Project"].(string), err)
-			}
-
-			parmsproject := AnalyzeProject{
-
-				Project:       project,
-				GitlabClient:  gitlabClient,
-				ExclusionList: exclusionList,
-				Spin1:         spin1,
-				Org:           platformConfig["Organization"].(string),
-			}
-
-			projectBranches, _ = processProject(parmsproject, cpt, spin1, projectBranches, &emptyRepos, &archivedRepos, &excludedProjects)
-			TotalBranches++
-
+		dctx := defaultCtx{
+			client:           gitlabClient,
+			config:           platformConfig,
+			exclusions:       exclusionList,
+			orgs:             orgs,
+			since:            since,
+			until:            until,
+			spin:             spin,
+			emptyRepos:       &emptyRepos,
+			archivedRepos:    &archivedRepos,
+			excludedProjects: &excludedProjects,
 		}
-		/* --------------------- End Analysis a specific projects with a default branche  ---------------------  */
-
-		/* --------------------- End Analysis a default branche  ---------------------  */
-
+		branches, totalB := handleDefaultBranchCase(dctx)
+		projectBranches = append(projectBranches, branches...)
+		TotalBranches += totalB
 	} else {
-
-		/* --------------------- Analysis all Project and All Branches if not if you do not specify a specific project or branch ---------------------  */
-		switch {
-		case platformConfig["Project"].(string) == "" && platformConfig["Branch"].(string) == "":
-			/*cpt := 1
-
-			projects, err := getAllGroupProjects(gitlabClient, platformConfig["Organization"].(string))
-			if err != nil {
-				spin.Stop()
-				log.Fatalf(MessageErro1, platformConfig["Organization"].(string), err)
-			}
-
-			spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
-
-			fmt.Printf(Message1, Message4, len(projects))*/
-
-			projects, cpt, spin1, err := getProjectsAndAnalyze(gitlabClient, platformConfig["Organization"].(string), spin)
-			if err != nil {
-				loggers.Fatalf(err.Error())
-			}
-
-			for _, project := range projects {
-				//	branches := make([]*gitlab.Branch, 0)
-				TotalRepoBranches := 0
-
-				excluded, empty, archived := isProjectExcludedOrInvalid(project, exclusionList, &emptyRepos, &archivedRepos)
-				if excluded {
-					excludedProjects++
-					continue
-				}
-				if empty || archived {
-					continue
-				}
-
-				messageB := fmt.Sprintf(Message2, project.Name)
-				spin1.Prefix = messageB
-				spin1.Start()
-
-				mainBranch, largestSize, nbrsize, err := getMainBranchDetails(gitlabClient, project, since, until)
-				if err != nil {
-					spin1.Stop()
-					loggers.Fatalf(err.Error())
-				}
-
-				projectBranches = append(projectBranches, ProjectBranch{
-					Org:         platformConfig["Organization"].(string),
-					Namespace:   project.PathWithNamespace,
-					RepoSlug:    project.Name,
-					MainBranch:  mainBranch,
-					LargestSize: largestSize,
-				})
-				TotalRepoBranches = nbrsize
-
-				spin1.Stop()
-				loggers.Infof(Message3, cpt, project.Name, nbrsize, mainBranch)
-				cpt++
-				TotalBranches += TotalRepoBranches
-			}
-		// Repeat similar extraction for other cases
-
-		/* ---------------------End Analysis all Project and All Branches if not if you do not specify a specific project or branch ---------------------  */
-
-		/* --------------------- Analysis a specific Project and All Branches  ---------------------  */
-
-		case platformConfig["Project"].(string) != "" && platformConfig["Branch"].(string) == "":
-
-			spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
-
-			namespase := platformConfig["Organization"].(string) + "/" + platformConfig["Project"].(string)
-
-			project, _, err := gitlabClient.Projects.GetProject(namespase, nil)
-			if err != nil {
-				loggers.Fatalf(MessageError2, platformConfig["Project"].(string), err)
-			}
-
-			excluded, empty, archived := isProjectExcludedOrInvalid(project, exclusionList, &emptyRepos, &archivedRepos)
-			if excluded || empty || archived {
-				loggers.Fatalf(MessageError6, platformConfig["Project"].(string))
-
-			}
-
-			messageB := fmt.Sprintf("\t   Analysis top branch(es) in repository <%s> ...", project.Name)
-			spin1.Prefix = messageB
-			spin1.Start()
-
-			mainBranch, largestSize, nbrsize, err := getMainBranchDetails(gitlabClient, project, since, until)
-			if err != nil {
-				loggers.Fatalf("\n ❌ Failed to get main branch for project %s: %v\n", platformConfig["Project"].(string), err)
-			}
-
-			spin1.Stop()
-			loggers.Infof("\r\t\t✅ 1 Project: %s - Number of branches: %d - largest Branch: %s", project.Name, nbrsize, mainBranch)
-
-			projectBranches = append(projectBranches, ProjectBranch{
-				Org:         platformConfig["Organization"].(string),
-				Namespace:   project.PathWithNamespace,
-				RepoSlug:    platformConfig["Project"].(string),
-				MainBranch:  mainBranch,
-				LargestSize: largestSize,
-			})
-
-			TotalBranches = nbrsize
-
-		/* --------------------- End Analysis a specific Project and All Branches  ---------------------  */
-
-		/* --------------------- Analysis a specific Project with a Branche  ---------------------  */
-
-		case platformConfig["Project"].(string) != "" && platformConfig["Organization"].(string) != "":
-
-			namespase := platformConfig["Organization"].(string) + "/" + platformConfig["Project"].(string)
-
-			project, _, err := gitlabClient.Projects.GetProject(namespase, nil)
-			if err != nil {
-				loggers.Fatalf(MessageError2, platformConfig["Project"].(string), err)
-			}
-			if isExcluded(project.PathWithNamespace, exclusionList) {
-				//excludedProjects++
-				loggers.Fatalf(MessageError3, platformConfig["Project"].(string))
-
-			}
-			// Check if the project is empty or archived
-			if project.EmptyRepo || project.Archived {
-				if project.EmptyRepo {
-					loggers.Fatalf(MessageError4, platformConfig["Project"].(string))
-				}
-				if project.Archived {
-					loggers.Fatalf(MessageError5, platformConfig["Project"].(string))
-				}
-			}
-
-			projectBranches = append(projectBranches, ProjectBranch{
-				Org:         platformConfig["Organization"].(string),
-				Namespace:   project.PathWithNamespace,
-				RepoSlug:    platformConfig["Project"].(string),
-				MainBranch:  platformConfig["Branch"].(string),
-				LargestSize: 1,
-			})
-			TotalBranches = 1
-		/* --------------------- End Analysis a specific Project with a Branche  ---------------------  */
-
-		/* --------------------- Analysis all Project with a specific Branche  ---------------------  */
-		case platformConfig["Project"].(string) == "" && platformConfig["Branch"].(string) != "":
-
-			/*cpt := 1
-
-			projects, err := getAllGroupProjects(gitlabClient, platformConfig["Organization"].(string))
-			if err != nil {
-				spin.Stop()
-				log.Fatalf(MessageErro1, platformConfig["Organization"].(string), err)
-			}
-
-			spin.Stop()
-			spin1 := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-			spin1.Color("green", "bold")
-
-			fmt.Printf(Message1, Message4, len(projects))*/
-
-			projects, cpt, spin1, err := getProjectsAndAnalyze(gitlabClient, platformConfig["Organization"].(string), spin)
-			if err != nil {
-				loggers.Fatalf(err.Error())
-			}
-
-			for _, project := range projects {
-				//largestSize := 0
-
-				excluded, empty, archived := isProjectExcludedOrInvalid(project, exclusionList, &emptyRepos, &archivedRepos)
-				if excluded {
-					excludedProjects++
-					continue
-				}
-				if empty || archived {
-					continue
-				}
-				messageB := fmt.Sprintf(Message2, project.Name)
-				spin1.Prefix = messageB
-				spin1.Start()
-
-				largestBranch := platformConfig["Branch"].(string)
-				if !branchExists(gitlabClient, project.ID, largestBranch) {
-					spin1.Stop()
-					continue
-				}
-
-				largestSize := getBranchSize(gitlabClient, project.ID, largestBranch)
-
-				projectBranches = append(projectBranches, ProjectBranch{
-					Org:         platformConfig["Organization"].(string),
-					Namespace:   project.PathWithNamespace,
-					RepoSlug:    project.Name,
-					MainBranch:  largestBranch,
-					LargestSize: largestSize,
-				})
-
-				spin1.Stop()
-				loggers.Infof(Message3, cpt, project.Name, 1, largestBranch)
-				cpt++
-				TotalBranches++
-			}
-
+		ctx := nonDefaultCtx{
+			client:           gitlabClient,
+			config:           platformConfig,
+			exclusions:       exclusionList,
+			orgs:             orgs,
+			since:            since,
+			until:            until,
+			spin:             spin,
+			emptyRepos:       &emptyRepos,
+			archivedRepos:    &archivedRepos,
+			excludedProjects: &excludedProjects,
 		}
-		/* --------------------- End Analysis all Project with a specific Branche  ---------------------  */
+		branches, totalB := handleNonDefaultBranchCase(ctx)
+		projectBranches = append(projectBranches, branches...)
+		TotalBranches += totalB
 	}
 	largestRepoSize := 0
 	largestRepoBranch := ""
@@ -729,7 +887,7 @@ func GetRepoGitLabList(platformConfig map[string]interface{}, exclusionfile stri
 	//fmt.Printf("\r✅ Total Branches that will be analyzed: %d\n", TotalBranches)
 
 	fmt.Print("\n")
-	loggers.Infof("✅ The largest Repository is <%s> in the Organizationa <%s> with the branch <%s>", largesRepo, platformConfig["Organization"].(string), largestRepoBranch)
+	loggers.Infof("✅ The largest Repository is <%s> with the branch <%s>", largesRepo, largestRepoBranch)
 	loggers.Infof("✅ TotalProject(s) that will be analyzed: %d - Find empty : %d - Excluded : %d - Archived : %d", len(projectBranches), emptyRepos, excludedProjects, archivedRepos)
 	loggers.Infof("✅ Total Branches that will be analyzed: %d\n", TotalBranches)
 	return projectBranches, nil
