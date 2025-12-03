@@ -53,6 +53,11 @@ var Languages = language.Languages{
 		MultiLineComments: [][]string{{"/*", "*/"}},
 		Extensions:        []string{".css"},
 	},
+	"Dart": {
+		LineComments:      []string{"//"},
+		MultiLineComments: [][]string{{"/*", "*/"}},
+		Extensions:        []string{".dart"},
+	},
 	"Golang": {
 		LineComments:      []string{"//"},
 		MultiLineComments: [][]string{{"/*", "*/"}},
@@ -91,7 +96,22 @@ var Languages = language.Languages{
 	"Objective-C": {
 		LineComments:      []string{"//"},
 		MultiLineComments: [][]string{{"/*", "*/"}},
-		Extensions:        []string{".m"},
+		Extensions:        []string{".m", ".mm"},
+	},
+	"JSON": {
+		LineComments:      []string{},
+		MultiLineComments: [][]string{},
+		Extensions:        []string{".json"},
+	},
+	"Shell": {
+		LineComments:      []string{"#"},
+		MultiLineComments: [][]string{},
+		Extensions:        []string{".sh", ".bash", ".zsh", ".ksh"},
+	},
+	"Docker": {
+		LineComments:      []string{"#"},
+		MultiLineComments: [][]string{},
+		Extensions:        []string{"Dockerfile", "dockerfile"},
 	},
 	"Oracle PL/SQL": {
 		LineComments:      []string{"--"},
@@ -123,6 +143,11 @@ var Languages = language.Languages{
 		LineComments:      []string{"//"},
 		MultiLineComments: [][]string{{"/*", "*/"}},
 		Extensions:        []string{".scala"},
+	},
+	"Rust": {
+		LineComments:      []string{"//"},
+		MultiLineComments: [][]string{{"/*", "*/"}},
+		Extensions:        []string{".rs"},
 	},
 	"Scss": {
 		LineComments:      []string{"//"},
@@ -158,6 +183,11 @@ var Languages = language.Languages{
 		LineComments:      []string{"'"},
 		MultiLineComments: [][]string{},
 		Extensions:        []string{".vb"},
+	},
+	"VB6": {
+		LineComments:      []string{"'"},
+		MultiLineComments: [][]string{},
+		Extensions:        []string{".bas", ".frm", ".cls"},
 	},
 	"XML": {
 		LineComments:      []string{"<!--"},
