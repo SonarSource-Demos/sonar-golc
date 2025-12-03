@@ -915,7 +915,6 @@ type ApplicationFlags struct {
 	Help        bool
 	Languages   bool
 	Version     bool
-	Docker      bool
 }
 
 // parseAndValidateFlags processes command line arguments and validates them
@@ -927,7 +926,6 @@ func parseAndValidateFlags() (ApplicationFlags, map[string]interface{}) {
 	helpFlag := flag.Bool("help", false, "Show help message")
 	languagesFlag := flag.Bool("languages", false, "Show all supported languages")
 	versionflag := flag.Bool("version", false, "Show version")
-	docker := flag.Bool("docker", false, "Run in Docker mode")
 
 	flag.Parse()
 
@@ -975,7 +973,6 @@ func parseAndValidateFlags() (ApplicationFlags, map[string]interface{}) {
 		Help:        *helpFlag,
 		Languages:   *languagesFlag,
 		Version:     *versionflag,
-		Docker:      *docker,
 	}, platformConfig
 }
 
@@ -988,12 +985,6 @@ func setupResultsDirectory(flags ApplicationFlags) string {
 	DestinationResult := pwd + "/Results"
 
 	logger.Infof("✅ Using configuration for DevOps platform '%s'\n", flags.DevOps)
-
-	if flags.Docker {
-		fmt.Println("Running in Docker mode")
-		createDirectories(DestinationResult, directoriesToCreate)
-		return DestinationResult
-	}
 
 	_, err = os.Stat(DestinationResult)
 	if err == nil {

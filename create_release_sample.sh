@@ -16,7 +16,6 @@ Added the ability to generate both reports (by language and by file) at the same
 Added REST API, available when web report start.\n\
 Added support for analyzing user (non-organization) repositories for GitHub. The boolean parameter Org (in config.json), if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The Organization parameter should be set to your personal account.\n\
 Correction for extracting the package from the command line into the golc_version_os_platform directory.\n\
-Correct issue Docker ReportsAll.\n\
 Added Exclude directories\n\
 Added Test Release version"
 
