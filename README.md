@@ -69,7 +69,7 @@ Kotlin             | .kt, .kts                                | //              
 Objective-C        | .m, .mm                                  | //              | /* */ 
 Oracle PL/SQL      | .pkb                                     | --              | /* */ 
 PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
-PL/I               | .pl1                                     |                 | /* */ 
+PL/I               | .pl1, .pli                               |                 | /* */ 
 Python             | .py                                      | #               | """ """, ''' ''' 
 RPG                | .rpg                                     | *               | 
 Ruby               | .rb                                      | #               | =begin =end 
