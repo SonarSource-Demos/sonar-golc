@@ -96,7 +96,7 @@ var Languages = language.Languages{
 	"Objective-C": {
 		LineComments:      []string{"//"},
 		MultiLineComments: [][]string{{"/*", "*/"}},
-		Extensions:        []string{".m", ".mm"},
+		Extensions:        []string{".m"},
 	},
 	"JSON": {
 		LineComments:      []string{},
