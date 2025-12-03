@@ -9,9 +9,9 @@ var Languages = language.Languages{
 		Extensions:        []string{".as"},
 	},
 	"Abap": {
-		LineComments:      []string{"\""},
-		MultiLineComments: [][]string{{"/*", "*/"}},
-		Extensions:        []string{".abap", ".ab4", ".flow"},
+		LineComments:      []string{"*", "\""},
+		MultiLineComments: [][]string{},
+		Extensions:        []string{".abap", ".ab4", ".flow", ".asprog"},
 	},
 	"Apex": {
 		LineComments:      []string{"//"},
@@ -39,7 +39,7 @@ var Languages = language.Languages{
 		Extensions:        []string{".hh", ".hpp"},
 	},
 	"COBOL": {
-		LineComments:      []string{"*", "/"},
+		LineComments:      []string{"*"},
 		MultiLineComments: [][]string{},
 		Extensions:        []string{".cbl", ".ccp", ".cob", ".cobol", ".cpy"},
 	},
@@ -49,7 +49,7 @@ var Languages = language.Languages{
 		Extensions:        []string{".cs"},
 	},
 	"CSS": {
-		LineComments:      []string{"//"},
+		LineComments:      []string{},
 		MultiLineComments: [][]string{{"/*", "*/"}},
 		Extensions:        []string{".css"},
 	},
@@ -66,7 +66,7 @@ var Languages = language.Languages{
 	"HTML": {
 		LineComments:      []string{},
 		MultiLineComments: [][]string{{"<!--", "-->"}},
-		Extensions:        []string{".html", ".htm", ".cshtml", ".vbhtml", ".aspx", ".ascx", ".rhtml", ".erb", ".shtml", ".shtm", "cmp"},
+		Extensions:        []string{".html", ".htm", ".cshtml", ".vbhtml", ".aspx", ".ascx", ".rhtml", ".erb", ".shtml", ".shtm", ".cmp"},
 	},
 	"Java": {
 		LineComments:      []string{"//"},
@@ -96,7 +96,7 @@ var Languages = language.Languages{
 	"Objective-C": {
 		LineComments:      []string{"//"},
 		MultiLineComments: [][]string{{"/*", "*/"}},
-		Extensions:        []string{".m"},
+		Extensions:        []string{".m", ".mm"},
 	},
 	"JSON": {
 		LineComments:      []string{},
@@ -119,18 +119,18 @@ var Languages = language.Languages{
 		Extensions:        []string{".pkb"},
 	},
 	"PL/I": {
-		LineComments:      []string{"--"},
+		LineComments:      []string{},
 		MultiLineComments: [][]string{{"/*", "*/"}},
-		Extensions:        []string{".pl1"},
+		Extensions:        []string{".pl1", ".pli"},
 	},
 	"Python": {
 		LineComments:      []string{"#"},
-		MultiLineComments: [][]string{{"\"\"\"", "\"\"\""}},
+		MultiLineComments: [][]string{{"\"\"\"", "\"\"\""}, {"'''", "'''"}},
 		Extensions:        []string{".py"},
 	},
 
 	"RPG": {
-		LineComments:      []string{"#"},
+		LineComments:      []string{"*"},
 		MultiLineComments: [][]string{},
 		Extensions:        []string{".rpg"},
 	},
@@ -171,11 +171,11 @@ var Languages = language.Languages{
 	},
 	"T-SQL": {
 		LineComments:      []string{"--"},
-		MultiLineComments: [][]string{},
+		MultiLineComments: [][]string{{"/*", "*/"}},
 		Extensions:        []string{".tsql"},
 	},
 	"Vue": {
-		LineComments:      []string{"<!--"},
+		LineComments:      []string{},
 		MultiLineComments: [][]string{{"<!--", "-->"}},
 		Extensions:        []string{".vue"},
 	},
@@ -190,12 +190,12 @@ var Languages = language.Languages{
 		Extensions:        []string{".bas", ".frm", ".cls"},
 	},
 	"XML": {
-		LineComments:      []string{"<!--"},
+		LineComments:      []string{},
 		MultiLineComments: [][]string{{"<!--", "-->"}},
 		Extensions:        []string{".xml", ".XML"},
 	},
 	"XHTML": {
-		LineComments:      []string{"<!--"},
+		LineComments:      []string{},
 		MultiLineComments: [][]string{{"<!--", "-->"}},
 		Extensions:        []string{".xhtml"},
 	},
@@ -205,13 +205,13 @@ var Languages = language.Languages{
 		Extensions:        []string{".yaml", ".yml"},
 	},
 	"Terraform": {
-		LineComments:      []string{},
-		MultiLineComments: [][]string{},
+		LineComments:      []string{"#", "//"},
+		MultiLineComments: [][]string{{"/*", "*/"}},
 		Extensions:        []string{".tf"},
 	},
 	"JCL": {
-		LineComments:      []string{"//"},
-		MultiLineComments: [][]string{{"/*", "*/"}},
+		LineComments:      []string{"//*"},
+		MultiLineComments: [][]string{},
 		Extensions:        []string{".jcl", ".JCL"},
 	},
 }
