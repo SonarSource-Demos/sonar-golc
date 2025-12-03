@@ -45,43 +45,49 @@ $:> golc.go -languages
 Language           | Extensions                               | Single Comments | Multi Line
                     |                                          |                 | Comments
 -------------------+------------------------------------------+-----------------+--------------
-Objective-C        | .m                                       | //              | /* */ 
-Ruby               | .rb                                      | #               | =begin =end 
-Visual Basic .NET  | .vb                                      | '               | 
-YAML               | .yaml, .yml                              | #               | 
-C#                 | .cs                                      | //              | /* */ 
-Flex               | .as                                      | //              | /* */ 
-C++ Header         | .hh, .hpp                                | //              | /* */ 
-CSS                | .css                                     | //              | /* */ 
-Abap               | .abap, .ab4, .flow                       | "               | /* */ 
-PL/I               | .pl1                                     | --              | /* */ 
-RPG                | .rpg                                     | #               | 
-Swift              | .swift                                   | //              | /* */ 
-JCL                | .jcl, .JCL                               | //              | /* */ 
+Abap               | .abap, .ab4, .flow, .asprog              | *, "            | 
+ActionScript       | .as                                      | //              | /* */ 
 Apex               | .cls, .trigger                           | //              | /* */ 
-PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
-TypeScript         | .ts, .tsx                                | //              | /* */ 
-XML                | .xml, .XML                               | <!--            | <!-- --> 
-XHTML              | .xhtml                                   | <!--            | <!-- --> 
-Terraform          | .tf                                      |                 | 
-T-SQL              | .tsql                                    | --              | 
-Vue                | .vue                                     | <!--            | <!-- --> 
-COBOL              | .cbl, .ccp, .cob, .cobol, .cpy           | *, /            | 
-HTML               | .html, .htm, .cshtml, .vbhtml, .aspx,    |                 | <!-- --> 
-                    | .ascx, .rhtml, .erb, .shtml, .shtm, cmp  |                 | <!-- -->
-JavaScript         | .js, .jsx, .jsp, .jspf                   | //              | /* */ 
-Python             | .py                                      | #               | """ """ 
-Scss               | .scss                                    | //              | /* */ 
-SQL                | .sql                                     | --              | /* */ 
+C                  | .c                                       | //              | /* */ 
 C Header           | .h                                       | //              | /* */ 
 C++                | .cpp, .cc                                | //              | /* */ 
+C++ Header         | .hh, .hpp                                | //              | /* */ 
+C#                 | .cs                                      | //              | /* */ 
+COBOL              | .cbl, .ccp, .cob, .cobol, .cpy           | *               | 
+CSS                | .css                                     |                 | /* */ 
+Dart               | .dart                                    | //              | /* */ 
+Docker             | Dockerfile, dockerfile                   | #               | 
+Flex               | .as                                      | //              | /* */ 
 Golang             | .go                                      | //              | /* */ 
-Oracle PL/SQL      | .pkb                                     | --              | /* */ 
-ActionScript       | .as                                      | //              | /* */ 
-C                  | .c                                       | //              | /* */ 
+HTML               | .html, .htm, .cshtml, .vbhtml, .aspx,    |                 | <!-- --> 
+                    | .ascx, .rhtml, .erb, .shtml, .shtm, cmp  |                 | <!-- -->
 Java               | .java, .jav                              | //              | /* */ 
+JavaScript         | .js, .jsx, .jsp, .jspf                   | //              | /* */ 
+JCL                | .jcl, .JCL                               | //*             | 
+JSON               | .json                                    |                 | 
 Kotlin             | .kt, .kts                                | //              | /* */ 
+Objective-C        | .m, .mm                                  | //              | /* */ 
+Oracle PL/SQL      | .pkb                                     | --              | /* */ 
+PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
+PL/I               | .pl1, .pli                               |                 | /* */ 
+Python             | .py                                      | #               | """ """, ''' ''' 
+RPG                | .rpg                                     | *               | 
+Ruby               | .rb                                      | #               | =begin =end 
+Rust               | .rs                                      | //              | /* */ 
 Scala              | .scala                                   | //              | /* */ 
+Scss               | .scss                                    | //              | /* */ 
+Shell              | .sh, .bash, .zsh, .ksh                   | #               | 
+SQL                | .sql                                     | --              | /* */ 
+Swift              | .swift                                   | //              | /* */ 
+Terraform          | .tf                                      | #, //           | /* */ 
+T-SQL              | .tsql                                    | --              | /* */ 
+TypeScript         | .ts, .tsx                                | //              | /* */ 
+VB6                | .bas, .frm, .cls                         | '               | 
+Visual Basic .NET  | .vb                                      | '               | 
+Vue                | .vue                                     |                 | <!-- --> 
+XML                | .xml, .XML                               |                 | <!-- --> 
+XHTML              | .xhtml                                   |                 | <!-- --> 
+YAML               | .yaml, .yml                              | #               | 
 
  ```
 
