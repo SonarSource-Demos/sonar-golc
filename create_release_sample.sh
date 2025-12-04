@@ -103,9 +103,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -121,9 +128,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 
 mkdir -p $DEST
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -139,9 +153,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 
 mkdir -p $DEST
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -158,9 +179,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 
 mkdir -p $DEST
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -176,9 +204,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 
 mkdir -p $DEST
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -194,9 +229,16 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 
 mkdir -p $DEST
 
-go build -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-go build -o ${DEST}/ResultsAll ResultsAll.go
+# Build with proper tags and handle Windows .exe extension
+if [ "${GOOS}" = "windows" ]; then
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+else
+    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+fi
 cp README.md  ${DEST}/
+cp LICENSE ${DEST}/
 cp -r imgs ${DEST}/
 cp -r dist ${DEST}/
 cp config_sample.json ${DEST}/config.json
@@ -205,6 +247,31 @@ zip -r ${FILE_DEST}.zip ${FILE_DEST}
 cd $CMD
 
 #------------------------------ End Build ------------------------------------#
+
+# Create source code archives
+echo "Creating source code archives..."
+
+SOURCE_DIR="${buildpath}${Release1}/source"
+mkdir -p ${SOURCE_DIR}
+
+# Use git archive for clean source (excludes .gitignore files)
+if command -v git &> /dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
+    git archive HEAD --prefix=sonar-golc-${Release1}/ | tar -x -C ${SOURCE_DIR}
+    
+    # Create source.zip
+    cd ${SOURCE_DIR}
+    zip -r ../source.zip sonar-golc-${Release1}/
+    cd $CMD
+    
+    # Create source.tar.gz
+    cd ${SOURCE_DIR}
+    tar -czf ../source.tar.gz sonar-golc-${Release1}/
+    cd $CMD
+    
+    echo "✓ Created source.zip and source.tar.gz"
+else
+    echo "Warning: Not a git repository, skipping source archives"
+fi
 
 # Begin to push Releae in GitHub Repository
 
@@ -252,6 +319,28 @@ for GOARCH in "${GOARCH_VALUES[@]}"; do
         upload_asset "$UPLOAD_URL" "$zip_file"
     done
 done
+
+# Upload source code archives
+if [ -f "${buildpath}${Release1}/source.zip" ]; then
+    EXISTING_ASSET_ID=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.name == \"source.zip\") | .id")
+    if [ ! -z "$EXISTING_ASSET_ID" ]; then
+        delete_asset "$EXISTING_ASSET_ID"
+    fi
+    upload_asset "$UPLOAD_URL" "${buildpath}${Release1}/source.zip"
+fi
+
+if [ -f "${buildpath}${Release1}/source.tar.gz" ]; then
+    EXISTING_ASSET_ID=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.name == \"source.tar.gz\") | .id")
+    if [ ! -z "$EXISTING_ASSET_ID" ]; then
+        delete_asset "$EXISTING_ASSET_ID"
+    fi
+    # Note: GitHub API expects correct Content-Type for tar.gz
+    curl -s -X POST "$UPLOAD_URL?name=source.tar.gz" \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Content-Type: application/gzip" \
+        --data-binary @"${buildpath}${Release1}/source.tar.gz"
+    echo "Source code (tar.gz) uploaded to release successfully."
+fi
 
 cd $CMD
 
