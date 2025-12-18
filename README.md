@@ -2,6 +2,28 @@
 
 [![Quality Gate Status](https://nautilus.sonarqube.org/api/project_badges/measure?project=SonarSource-Demos_sonar-golc&metric=alert_status&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)[![Lines of Code](https://nautilus.sonarqube.org/api/project_badges/measure?project=SonarSource-Demos_sonar-golc&metric=ncloc&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)[![Reliability Issues](https://nautilus.sonarqube.org/api/project_badges/measure?project=SonarSource-Demos_sonar-golc&metric=software_quality_reliability_issues&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)[![Maintainability Rating](https://nautilus.sonarqube.org/api/project_badges/measure?project=SonarSource-Demos_sonar-golc&metric=software_quality_maintainability_rating&token=sqb_44cfc298b697f0c4fcbb32de1de67db5ca2c341f)](https://nautilus.sonarqube.org/dashboard?id=SonarSource-Demos_sonar-golc)
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+  - [Environment Configuration](#environment-configuration)
+  - [GitHub.com (Cloud) Basic Configuration](#githubcom-cloud-basic-configuration)
+  - [GitHub Enterprise Server (on-premises) Basic Configuration](#github-enterprise-server-on-premises-basic-configuration)
+  - [GitLab (Cloud and On-premises) Basic Configuration](#gitlab-cloud-and-on-premises-basic-configuration)
+  - [Bitbucket Cloud Basic Configuration](#bitbucket-cloud-basic-configuration)
+  - [Bitbucket Data Center (on-premises) Basic Configuration](#bitbucket-data-center-on-premises-basic-configuration)
+  - [Azure DevOps Services (Cloud) Basic Configuration](#azure-devops-services-cloud-basic-configuration)
+  - [File Mode Basic Configuration](#file-mode-basic-configuration)
+  - [Optional Parameters](#optional-parameters)
+  - [Run GoLC](#run-golc)
+- [Reports](#reports)
+- [Web UI](#web-ui)
+- [Supported languages](#supported-languages)
+- [Execution Log](#execution-log)
+- [Future Features](#future-features)
+
 
 ## Introduction
 
@@ -35,279 +57,141 @@ You can install from the stable release by clicking [here](https://github.com/So
 * [Go language installed](https://go.dev/) : If you want to use the sources...
 
 
-## Supported languages
-
-To show all supported languages use the subcommand languages :
-
- ```
-$:> golc.go -languages
-
-Language           | Extensions                               | Single Comments | Multi Line
-                    |                                          |                 | Comments
--------------------+------------------------------------------+-----------------+--------------
-Abap               | .abap, .ab4, .flow, .asprog              | *, "            | 
-ActionScript       | .as                                      | //              | /* */ 
-Apex               | .cls, .trigger                           | //              | /* */ 
-C                  | .c                                       | //              | /* */ 
-C Header           | .h                                       | //              | /* */ 
-C++                | .cpp, .cc                                | //              | /* */ 
-C++ Header         | .hh, .hpp                                | //              | /* */ 
-C#                 | .cs                                      | //              | /* */ 
-COBOL              | .cbl, .ccp, .cob, .cobol, .cpy           | *               | 
-CSS                | .css                                     |                 | /* */ 
-Dart               | .dart                                    | //              | /* */ 
-Docker             | Dockerfile, dockerfile                   | #               | 
-Flex               | .as                                      | //              | /* */ 
-Golang             | .go                                      | //              | /* */ 
-HTML               | .html, .htm, .cshtml, .vbhtml, .aspx,    |                 | <!-- --> 
-                    | .ascx, .rhtml, .erb, .shtml, .shtm, cmp  |                 | <!-- -->
-Java               | .java, .jav                              | //              | /* */ 
-JavaScript         | .js, .jsx, .jsp, .jspf                   | //              | /* */ 
-JCL                | .jcl, .JCL                               | //*             | 
-JSON               | .json                                    |                 | 
-Kotlin             | .kt, .kts                                | //              | /* */ 
-Objective-C        | .m, .mm                                  | //              | /* */ 
-Oracle PL/SQL      | .pkb                                     | --              | /* */ 
-PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
-PL/I               | .pl1, .pli                               |                 | /* */ 
-Python             | .py                                      | #               | """ """, ''' ''' 
-RPG                | .rpg                                     | *               | 
-Ruby               | .rb                                      | #               | =begin =end 
-Rust               | .rs                                      | //              | /* */ 
-Scala              | .scala                                   | //              | /* */ 
-Scss               | .scss                                    | //              | /* */ 
-Shell              | .sh, .bash, .zsh, .ksh                   | #               | 
-SQL                | .sql                                     | --              | /* */ 
-Swift              | .swift                                   | //              | /* */ 
-Terraform          | .tf                                      | #, //           | /* */ 
-T-SQL              | .tsql                                    | --              | /* */ 
-TypeScript         | .ts, .tsx                                | //              | /* */ 
-VB6                | .bas, .frm, .cls                         | '               | 
-Visual Basic .NET  | .vb                                      | '               | 
-Vue                | .vue                                     |                 | <!-- --> 
-XML                | .xml, .XML                               |                 | <!-- --> 
-XHTML              | .xhtml                                   |                 | <!-- --> 
-YAML               | .yaml, .yml                              | #               | 
-
- ```
-
- ❗️ To add a new language, you need to add an entry to the Languages structure defined in the file [assets/languages.go](assets/languages.go).
-
-
  ## Usage
 
- ✅ Environment Configuration
+ ### Environment Configuration
 
  Before running GoLC, you need to configure your environment by initializing the various values in the config.json file.
- Copy the **config_sample.json** file to **config.json** and modify the various entries.
+ If using the sources, copy the **config_sample.json** file to **config.json** and modify the various entries.
+
+
+## GitHub.com (Cloud) Basic Configuration:
+
+Specify the following parameters in the config.json file:
 
  ```json
-{
-    "platforms": {
-      "BitBucketSRV": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX",
-        "Organization": "XXXXX",
-        "DevOps": "bitbucket_dc",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "http://ec2-18-194-139-24.eu-central-1.compute.amazonaws.com:7990/",
-        "Apiver": "1.0",
-        "Baseapi": "rest/api/",
-        "Protocol": "http",
-        "FileExclusion":".cloc_bitbucketdc_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-5,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-      "BitBucket": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX",
-        "Organization": "XXXXX",
-        "DevOps": "bitbucket",
-        "Workspace":"XXXXX",
-        "Project":"",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "https://api.bitbucket.org/",
-        "Apiver": "2.0",
-        "Baseapi": "bitbucket.org",
-        "Protocol": "https",
-        "FileExclusion":".cloc_bitbucket_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-1,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-      
-      "Github": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX", 
-        "Organization": "XXXXX",
-        "DevOps": "github",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "https://api.github.com/",
-        "Apiver": "2022-11-28",
-        "Baseapi": "github.com",
-        "Protocol": "https",
-        "FileExclusion":".cloc_github_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-1,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10 ,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-      "GithubEnterprise": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX", 
-        "Organization": "XXXXX",
-        "DevOps": "github",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "https://github-enterprise.yourcompany.com/",
-        "Apiver": "2022-11-28",
-        "Baseapi": "github-enterprise.yourcompany.com",
-        "Protocol": "https",
-        "FileExclusion":".cloc_github_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-1,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10 ,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-
-      "Gitlab": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX",
-        "Organization":"XXXXX",
-        "DevOps": "gitlab",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "https://gitlab.com/",
-        "Apiver": "v4",
-        "Baseapi": "api/",
-        "Protocol": "https",
-        "FileExclusion":".cloc_gitlab_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-1,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-      "Azure": {
-        "Users": "XXXXX",
-        "AccessToken": "XXXXX",
-        "Organization": "XXXXX",
-        "DevOps": "azure",
-        "Project": "",
-        "Repos": "",
-        "Branch": "",
-        "DefaultBranch": true,
-        "Url": "https://dev.azure.com/",
-        "Apiver": "7.1",
-        "Baseapi": "_apis/git/",
-        "Protocol": "https",
-        "FileExclusion":".cloc_azure_ignore",
-        "ExtExclusion":[],
-        "ExcludePaths":[],
-        "Period":-1,
-        "Factor":33,
-        "Multithreading":true,
-        "Stats": false,
-        "Workers": 10,
-        "NumberWorkerRepos":10,
-        "ResultByFile": false,
-        "ResultAll": true,
-        "Org":true
-      },
-      "File": {
-        "Organization": "XXXXX",
-        "DevOps": "file",
-        "Directory":"../gcloc_m/.",
-        "FileExclusion":".cloc_file_ignore",
-        "ExtExclusion":[""],
-        "FileLoad":".cloc_file_load",
-        "ResultByFile": false,
-        "ResultAll": true
-
-      }
-    },
-    "Logging": {
-      "Level": "debug"
-    },
-    "Release":  {
-      "Version": "1.0.9"
-    }
-  }
-    
- ```
-This file represents the 6 supported platforms for analysis: Bitbucket Cloud, Bitbucket Data Center (on-premises), GitHub.com (Cloud), GitHub Enterprise Server (on-premises), GitLab.com (Cloud), GitLab Self-Managed (on-premises), and Azure DevOps Services (Cloud) repositories, and File. Depending on your platform, for example, Bitbucket DC (enter BitBucketSRV), specify the parameters:
-
- ```json
-"Users": "xxxxxxxxxxxxxx" : Your User login
-"AccessToken": "xxxxxxxxxxxxxx" : Your Token
-"Organization": "xxxxxx": Your organization
+"Github": { 
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Organization": "xxxxxx": Your organization
  ```
 
-Notes for GitLab:
-- You can specify multiple groups by providing a comma-separated list in `Organization`, e.g., `"Organization": "group1,group2"`. A single group works as `"Organization": "group1"`.
+Save the config.json file and [Run GoLC](#run-golc)
 
-If '**Projects**' and '**Repos**' are not specified, the analysis will be conducted on all repositories. You can specify a project name (PROJECT_KEY) in '**Projects**', and the analysis will be limited to the specified project. If you specify '**Repos**' (REPO_SLUG), the analysis will be limited to the specified repositories.
+## GitHub Enterprise Server (on-premises) Basic Configuration:
+
+Specify the following parameters in the config.json file:
+
 ```json
-"Project": "",
-"Repos": "",
+"GithubEnterprise": {
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Organization": "xxxxxx": Your organization
+  "Url": "https://github.yourcompany.com/": Your GitHub Enterprise Server URL
+  "Baseapi": "github.yourcompany.com", Your GitHub Enterprise Server hostname
+  "Protocol": "https" Adjust the protocol used if needed
+}
 ```
-❗️ The '**Projects**' entry is supported exclusively on the BitBucket and AzureDevops platform.
 
-**Bitbucket DC Configuration:**
+Save the config.json file and [Run GoLC](#run-golc)
 
-For Bitbucket DC, you must provide the URL with your server address and change the '**Protocol**' entry if you are using an https connection , ending with '**/**'. The '**Branch**' input allows you to select a specific branch for all repositories within an organization or project, or for a single repository. For example, if you only want all branches to be "main", '**"Branch":"main"**' .
-```json
- "Url": "http://X.X.X.X/"
+
+## GitLab (Cloud and On-premises) Basic Configuration:
+
+
+For GitLab (Cloud and On-premises), specify the following parameters in the config.json file:
+
+ ```json
+"Gitlab": { 
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Organization": "xxxxxx": Your group
  ```
+
+You can specify multiple groups by providing a comma-separated list in `Organization`, e.g., `"Organization": "group1,group2"`. A single group works as `"Organization": "group1"`.
+
+
+For **GitLab Self-Managed (on-premises)**, also modify the URL configuration:
+
+```json
+"Gitlab": {
+  "Url": "https://gitlab.yourcompany.com/": Your GitLab Self-Managed Server URL
+  "Protocol": "https": Adjust the protocol used if needed
+}
+```
+
+Save the config.json file and [Run GoLC](#run-golc)
+
+## Bitbucket Cloud Basic Configuration:
+
+For Bitbucket Cloud, specify the following parameters in the config.json file:
+
+```json
+"BitBucket": { 
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Workspace": "xxxxxx": Your workspace name 
+  "Organization": "xxxxxx": Your organization/workspace name
+}
+```
+
+❗️ **Note**: The **Workspace** parameter is required and is used for all Bitbucket Cloud API operations. The **Organization** parameter is used for reporting purposes and should typically be set to the same value as your workspace name.
+
+Save the config.json file and [Run GoLC](#run-golc)
+
+## Bitbucket Data Center (on-premises) Basic Configuration:
+
+For Bitbucket Data Center (on-premises), specify the following parameters in the config.json file:
+
+```json
+"BitBucketSRV": {
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Organization": "xxxxxx": Your organization
+  "Url": "https://bitbucket.yourcompany.com/": Your Bitbucket Data Center Server URL (ending with a '/')
+  "Protocol": "https": Adjust the protocol used if needed
+}
+```
+
+Save the config.json file and [Run GoLC](#run-golc)
+
+## Azure DevOps Services (Cloud) Basic Configuration:
+
+For Azure DevOps Services (Cloud), specify the following parameters in the config.json file:
+
+```json
+"Azure": { 
+  "Users": "xxxxxxxxxxxxxx" : Your User login
+  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
+  "Organization": "xxxxxx": Your organization
+}
+```
+
+Save the config.json file and [Run GoLC](#run-golc)
+
+
+ ## File Mode Basic Configuration
+
+For the **File** mode, if you want to have a list of directories to analyze, you create a **.cloc_file_load** file and add the directories to be analyzed line by line.If the **.cloc_file_load**. file is provided, its contents will override the **Directory** parameter.
+
+## Optional Parameters
+
+❗️ The parameters **'Period'**, **'Factor'**, and **'Stats'** should not be modified as they will be used in a future version.
+
+❗️ The parameters **'Multithreading'** and **'Workers'** initialize whether multithreading is enabled or not, allowing parallel analysis. You can disable it by setting **'Multithreading'** to **false**. **'Workers'** corresponds to the number of concurrent analyses.These parameters can be adjusted according to the performance of the compute running GoLC.
+
+❗️ The boolean parameter **DefaultBranch**, if set to true, specifies that only the default branch of each repository should be analyzed. If set to false, it will analyze all branches of each repository to determine the most important one.
+
+❗️ Exclude extensions.
+If you want to exclude files by their extensions, use the parameter **'ExtExclusion'**. For example, if you want to exclude all CSS or JS files : 'ExtExclusion':[".css",".js"],
+
+❗️ Results By File.
+If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
+
+❗️Selecting a specific branch.
+The '**Branch**' input allows you to select a specific branch for all repositories within an organization or project, or for a single repository. For example, if you only want all branches to be "main", '**"Branch":"main"**' .
+
+❗️ File Exclusions.
 You can create a **.cloc_'your_platform'_ignore** file to ignore projects or repositories in the analysis. 
 ```json
    "FileExclusion":".cloc_bitbucketdc_ignore"
@@ -338,34 +222,6 @@ REPO2_SLUG
 - REPO1_SLUG = for one Repository
 ```
 
-**GitHub Enterprise Server Configuration:**
-
-For GitHub Enterprise Server (on-premises), modify the URL configuration:
-
-```json
-"GithubEnterprise": {
-  "Url": "https://github.yourcompany.com/",
-  "Baseapi": "github.yourcompany.com",
-  "Protocol": "https"
-}
-```
-
-- **Url**: Your GitHub Enterprise Server URL (e.g., `https://github.yourcompany.com/`)
-- **Baseapi**: Your GitHub Enterprise Server hostname (e.g., `github.yourcompany.com`)
-
-**GitLab Enterprise Server Configuration:**
-
-For GitLab Self-Managed (on-premises), modify the URL configuration
-
-```json
-"Gitlab": {
-  "Url": "https://gitlab.yourcompany.com/",
-  "Protocol": "https"
-}
-```
-
-- **Url**: Your GitLab Self-Managed Server URL (e.g., `https://gitlab.yourcompany.com/`)
-
 **File Mode Configuration:**
 
 The syntax of this file is as follows for File:
@@ -376,41 +232,31 @@ FILE_NAME
 ...
 ```
 
-**Azure Devops Configuration:**
+**Azure DevOps Ignore File Configuration:**
 
-The syntax of this file is as follows for Azure Devops :
+The syntax of this file is as follows for Azure DevOps:
 
 ```
 PROJECT_KEY/REPO_SLUG
 PROJECT_KEY
 ```
 
- ✅  Config.json File Settings
-
-❗️ For the **File** mode, if you want to have a list of directories to analyze, you create a **.cloc_file_load** file and add the directories to be analyzed line by line.If the **.cloc_file_load**. file is provided, its contents will override the **Directory** parameter."
-
-❗️ The parameters **'Period'**, **'Factor'**, and **'Stats'** should not be modified as they will be used in a future version.
-
-❗️ The parameters **'Multithreading'** and **'Workers'** initialize whether multithreading is enabled or not, allowing parallel analysis. You can disable it by setting **'Multithreading'** to **false**. **'Workers'** corresponds to the number of concurrent analyses.These parameters can be adjusted according to the performance of the compute running GoLC.
-
-❗️ The boolean parameter **DefaultBranch**, if set to true, specifies that only the default branch of each repository should be analyzed. If set to false, it will analyze all branches of each repository to determine the most important one.
-
-❗️ Exclude extensions.
-If you want to exclude files by their extensions, use the parameter **'ExtExclusion'**. For example, if you want to exclude all CSS or JS files : 'ExtExclusion':[".css",".js"],
-
-❗️ Results By File.
-If you want results by file rather than globally by language, you need to set the **'ResultByFile'** parameter to true in the **config.json** file. In the **Results** directory, you will then have a JSON file for each analyzed repository containing a list of files with details such as the number of lines of code, comments, etc. Additionally, a PDF file named **complete_report.pdf** will be available in the **Results/reports** directory. To generate this report, you need to run the **ResultByfiles** program.
-
 ❗️ Results All.
-Results ALL is the default report format.It generates a report for by language and a report for by file. The variable to initialize this mode is **'ResultAll'**, which is set to true in the configuration file **config.json.**"
+Results ALL is the default report format. It generates a report for by language and a report for by file. The variable to initialize this mode is **'ResultAll'**, which is set to true in the configuration file **config.json.**"
 
 ❗️ The boolean parameter **Org**, if set to true, will run the analysis on an organization. If set to false, it will run on a user account. The **Organization** parameter should be set to your personal account. This functionality is available for GitHub.
 
 ❗️ Exclude directories.
 To exclude directories from your repository from the analysis, initialize the variable **'ExcludePaths': ['']**. For example, to exclude two directories: **'ExcludePaths': ['test1', 'pkg/test2']**.
 
+❗️ If '**Projects**' and '**Repos**' are not specified, the analysis will be conducted on all repositories. You can specify a project name (PROJECT_KEY) in '**Projects**', and the analysis will be limited to the specified project. If you specify '**Repos**' (REPO_SLUG), the analysis will be limited to the specified repositories.
+```json
+"Project": "",
+"Repos": "",
+```
+❗️ The '**Projects**' entry is supported exclusively on the BitBucket and AzureDevops platform.
 
- ✅ Run GoLC
+ ## Run GoLC
 
  To launch GoLC with the following command, you must specify your DevOps platform. In this example, we analyze repositories hosted on Bitbucket Cloud. The supported flags for -devops are :
  ```bash
@@ -527,7 +373,7 @@ PS C:\Users\ecadmin\sonar-golc>
 ```
 
 
-✅ Reports
+## Reports
 
 The report files are created in PDF, JSON, and CSV formats for the report by files.
 
@@ -568,11 +414,11 @@ $:>
 
 From the web interface, you have the option to download the report files in ZIP format.
 
-✅  Web UI
+## Web UI
 
 ![webui](imgs/webui.png)
 
-✅  Report example
+### Report example
 
 ![report](imgs/report.png)
 
@@ -580,6 +426,63 @@ Report By file :
 
 ![report](imgs/reportbyfiles.png)
 
+## Supported languages
+
+To show all supported languages use the subcommand languages :
+
+ ```
+$:> golc.go -languages
+
+Language           | Extensions                               | Single Comments | Multi Line
+                    |                                          |                 | Comments
+-------------------+------------------------------------------+-----------------+--------------
+Abap               | .abap, .ab4, .flow, .asprog              | *, "            | 
+ActionScript       | .as                                      | //              | /* */ 
+Apex               | .cls, .trigger                           | //              | /* */ 
+C                  | .c                                       | //              | /* */ 
+C Header           | .h                                       | //              | /* */ 
+C++                | .cpp, .cc                                | //              | /* */ 
+C++ Header         | .hh, .hpp                                | //              | /* */ 
+C#                 | .cs                                      | //              | /* */ 
+COBOL              | .cbl, .ccp, .cob, .cobol, .cpy           | *               | 
+CSS                | .css                                     |                 | /* */ 
+Dart               | .dart                                    | //              | /* */ 
+Docker             | Dockerfile, dockerfile                   | #               | 
+Flex               | .as                                      | //              | /* */ 
+Golang             | .go                                      | //              | /* */ 
+HTML               | .html, .htm, .cshtml, .vbhtml, .aspx,    |                 | <!-- --> 
+                    | .ascx, .rhtml, .erb, .shtml, .shtm, cmp  |                 | <!-- -->
+Java               | .java, .jav                              | //              | /* */ 
+JavaScript         | .js, .jsx, .jsp, .jspf                   | //              | /* */ 
+JCL                | .jcl, .JCL                               | //*             | 
+JSON               | .json                                    |                 | 
+Kotlin             | .kt, .kts                                | //              | /* */ 
+Objective-C        | .m, .mm                                  | //              | /* */ 
+Oracle PL/SQL      | .pkb                                     | --              | /* */ 
+PHP                | .php, .php3, .php4, .php5, .phtml, .inc  | //, #           | /* */ 
+PL/I               | .pl1, .pli                               |                 | /* */ 
+Python             | .py                                      | #               | """ """, ''' ''' 
+RPG                | .rpg                                     | *               | 
+Ruby               | .rb                                      | #               | =begin =end 
+Rust               | .rs                                      | //              | /* */ 
+Scala              | .scala                                   | //              | /* */ 
+Scss               | .scss                                    | //              | /* */ 
+Shell              | .sh, .bash, .zsh, .ksh                   | #               | 
+SQL                | .sql                                     | --              | /* */ 
+Swift              | .swift                                   | //              | /* */ 
+Terraform          | .tf                                      | #, //           | /* */ 
+T-SQL              | .tsql                                    | --              | /* */ 
+TypeScript         | .ts, .tsx                                | //              | /* */ 
+VB6                | .bas, .frm, .cls                         | '               | 
+Visual Basic .NET  | .vb                                      | '               | 
+Vue                | .vue                                     |                 | <!-- --> 
+XML                | .xml, .XML                               |                 | <!-- --> 
+XHTML              | .xhtml                                   |                 | <!-- --> 
+YAML               | .yaml, .yml                              | #               | 
+
+ ```
+
+ ❗️ To add a new language, you need to add an entry to the Languages structure defined in the file [assets/languages.go](assets/languages.go).
 
 
 ## Execution Log
