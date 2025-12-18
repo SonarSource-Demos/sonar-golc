@@ -410,12 +410,33 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
 
+	// Determine git clone URL format
+	// For git operations with API tokens, use x-bitbucket-api-token-auth (static username for API tokens)
+	// For API calls, we use email:token (Basic Auth)
+	// For git clone, we use x-bitbucket-api-token-auth:token format for API tokens
+	workspace := platformConfig["Workspace"].(string)
+	users := ""
+	if usersVal, ok := platformConfig["Users"]; ok && usersVal != nil {
+		users = usersVal.(string)
+	}
+
+	var pathToScan string
+	if users != "" && users != "XXXXX" {
+		// For git operations with API tokens, use x-bitbucket-api-token-auth as the username
+		// This is a static username that Bitbucket provides for API token authentication
+		// The actual Bitbucket username field in the API is the workspace ID, not suitable for git
+		pathToScan = fmt.Sprintf("%s://x-bitbucket-api-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), workspace, p.RepoSlug)
+	} else {
+		// Use x-token-auth format for App Passwords (legacy)
+		pathToScan = fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), workspace, p.RepoSlug)
+	}
+
 	params := RepoParams{
 		ProjectKey: p.ProjectKey,
 		Namespace:  "",
 		RepoSlug:   p.RepoSlug,
 		MainBranch: p.MainBranch,
-		PathToScan: fmt.Sprintf("%s://x-token-auth:%s@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), platformConfig["Workspace"].(string), p.RepoSlug),
+		PathToScan: pathToScan,
 	}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
@@ -1203,7 +1224,6 @@ func main() {
 			os.Exit(1)
 
 		} else {
-
 			// Run scanning repositories
 			NumberRepos = AnalyseReposListBitC(DestinationResult, platformConfig, projects1)
 		}
