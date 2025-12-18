@@ -128,14 +128,47 @@ For Bitbucket Cloud, specify the following parameters in the config.json file:
 
 ```json
 "BitBucket": { 
-  "Users": "xxxxxxxxxxxxxx" : Your User login
-  "AccessToken": "xxxxxxxxxxxxxx" : Your Token
-  "Workspace": "xxxxxx": Your workspace name 
-  "Organization": "xxxxxx": Your organization/workspace name
+  "Users": "your.email@example.com": Your Atlassian account email address
+  "AccessToken": "ATATT3x...": Your Bitbucket API token
+  "Workspace": "your-workspace-slug": Your workspace slug/ID
+  "Organization": "your-workspace-slug": Your organization/workspace name (typically same as Workspace)
 }
 ```
 
-❗️ **Note**: The **Workspace** parameter is required and is used for all Bitbucket Cloud API operations. The **Organization** parameter is used for reporting purposes and should typically be set to the same value as your workspace name.
+### Token Requirements
+
+**Important**: Bitbucket Cloud requires **API Tokens** (not App Passwords) for authentication. App Passwords have been deprecated as of June 2025.
+
+Grant the following scopes to the API Token:
+   - **Repositories: Read** - Required to list and access repositories
+   - **Projects: Read** - Required to list projects
+   - **Account: Read** - Required for user information
+
+
+The token will start with `ATATT3x...` and is a long string.
+
+#### Finding Your Workspace
+
+Your workspace slug can be found in your Bitbucket URL:
+- If your Bitbucket URL is `https://bitbucket.org/your-workspace/`, then `your-workspace` is your workspace slug
+- You can also find it in your workspace settings
+
+#### Configuration Example
+
+```json
+"BitBucket": { 
+  "Users": "john.doe@example.com",
+  "AccessToken": "ATATT3x...your-token-here",
+  "Workspace": "my-workspace",
+  "Organization": "my-workspace"
+}
+```
+
+❗️ **Important Notes**:
+- The **Workspace** parameter is required and is used for all Bitbucket Cloud API operations
+- The **Organization** parameter is used for reporting purposes and should typically be set to the same value as your workspace name
+- The **Users** field must contain your **email address** (not username) for proper authentication
+- API tokens are required - App Passwords are no longer supported
 
 Save the config.json file and [Run GoLC](#run-golc)
 
