@@ -132,6 +132,7 @@ For Bitbucket Cloud, specify the following parameters in the config.json file:
   "AccessToken": "ATATT3x...": Your Bitbucket API token
   "Workspace": "your-workspace-slug": Your workspace slug/ID
   "Organization": "your-workspace-slug": Your organization/workspace name (typically same as Workspace)
+  "Project": "your-project-slug1,your-project-slug2": (Optional) comma seperated list of project slugs
 }
 ```
 
