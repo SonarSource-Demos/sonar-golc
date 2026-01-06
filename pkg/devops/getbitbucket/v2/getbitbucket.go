@@ -871,6 +871,12 @@ func isRepositoryEmpty(workspace, repoSlug, mainbranch, accessToken, users, bitb
 		}
 	}
 
+	// Check if filesResp is still nil after both attempts
+	if filesResp == nil {
+		// If both main branch and master branch calls returned nil, consider repository as empty or inaccessible
+		return true, nil
+	}
+
 	if len(filesResp.Values) == 0 {
 		return true, nil
 	}
@@ -945,10 +951,6 @@ func analyzeRepoBranches(parms ParamsProjectBitbucket, repo *bitbucket.Repositor
 
 		// Determine the largest branch based on the number of commits
 		largestRepoBranch, brsize = determineLargestBranch(parms, repo, repoBranches)
-		if err != nil {
-			spin1.Stop()
-			return "", nil, 1, err
-		}
 		nbrbranche = len(repoBranches)
 
 	}
