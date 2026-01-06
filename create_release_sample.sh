@@ -99,12 +99,13 @@ mkdir -p $DEST
 
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
@@ -124,12 +125,13 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
@@ -149,12 +151,13 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
@@ -175,12 +178,13 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
@@ -200,12 +204,13 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
@@ -225,12 +230,13 @@ export FILE_DEST=golc_${Release1}_${GOOS}_${GOARCH}
 mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
+# -trimpath removes file system paths from binaries for security/privacy
 if [ "${GOOS}" = "windows" ]; then
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
-    go build -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
-    go build -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
+    go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc golc.go
+    go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll ResultsAll.go
 fi
 cp README.md  ${DEST}/
 cp LICENSE ${DEST}/
