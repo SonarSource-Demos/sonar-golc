@@ -3,11 +3,8 @@ name: Go Build, SonarQube Analysis
 on:
   push:
     branches:
-      # - FoxDev  # Only run on changes to the FoxDev branch
-      - '**'
+      - main
   pull_request:
-    # branches:
-    #   - FoxDev  # Also runs on pull requests targeting FoxDev
     types: [opened, synchronize, reopened]
   workflow_dispatch: # Allows manual triggers
 
@@ -24,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21' # Specify your Go version
+          go-version: '1.21'
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -41,8 +38,8 @@ jobs:
 
       - name: Build Go apps
         run: |
-          go build -tags=golc -o golc ./golc.go
-          go build -tags=resultsall -o ResultsAll ./ResultsAll.go
+          go build -trimpath -tags=golc -o golc ./golc.go
+          go build -trimpath -tags=resultsall -o ResultsAll ./ResultsAll.go
 
       - name: Generate test coverage reports
         run: |
@@ -68,7 +65,7 @@ jobs:
 
       # SonarQube Analysis
       - name: Run SonarQube Analysis
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v7.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
