@@ -38,8 +38,8 @@ jobs:
 
       - name: Build Go apps
         run: |
-          go build -tags=golc -o golc ./golc.go
-          go build -tags=resultsall -o ResultsAll ./ResultsAll.go
+          go build -trimpath -tags=golc -o golc ./golc.go
+          go build -trimpath -tags=resultsall -o ResultsAll ./ResultsAll.go
 
       - name: Generate test coverage reports
         run: |
