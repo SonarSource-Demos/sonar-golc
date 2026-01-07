@@ -3,7 +3,7 @@ name: Go Build, SonarQube Analysis
 on:
   push:
     branches:
-      - '**'
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch: # Allows manual triggers
