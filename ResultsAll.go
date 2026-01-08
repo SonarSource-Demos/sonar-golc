@@ -307,8 +307,15 @@ func getFirstPartForPlatform(platform string, branch AnalysisResult_ProjectBranc
 		}
 		// Fallback to repoName if ProjectKey is not available
 		return repoName
-	case "bitbucket", "bitbucket_dc", "github", "gitlab", "file":
-		// All other platforms use Org
+	case "bitbucket", "bitbucket_dc":
+		// Bitbucket uses ProjectKey for filenames
+		if branch.ProjectKey != "" {
+			return branch.ProjectKey
+		}
+		// Fallback to Org if ProjectKey is not available
+		return branch.Org
+	case "github", "gitlab", "file":
+		// GitHub, GitLab, and file use Org
 		return branch.Org
 	default:
 		// Default fallback to Org
@@ -322,8 +329,27 @@ func getFirstPartForFilename(platform, orgName, repoName string) string {
 	case "azure":
 		// Azure uses ProjectKey (equals repoName) for filenames
 		return repoName
-	case "bitbucket", "bitbucket_dc", "github", "gitlab", "file":
-		// All other platforms use Org
+	case "bitbucket", "bitbucket_dc":
+		// Bitbucket uses ProjectKey for filenames - need to look it up from analysis results
+		_, analysisFile, err := detectPlatformAndReadAnalysis()
+		if err == nil {
+			var analysisResult AnalysisResult
+			if err := json.Unmarshal(analysisFile, &analysisResult); err == nil {
+				// Find the repository and get its ProjectKey
+				for _, branch := range analysisResult.ProjectBranches {
+					if branch.RepoSlug == repoName {
+						if branch.ProjectKey != "" {
+							return branch.ProjectKey
+						}
+						break
+					}
+				}
+			}
+		}
+		// Fallback to orgName if ProjectKey lookup fails
+		return orgName
+	case "github", "gitlab", "file":
+		// GitHub, GitLab, and file use Org
 		return orgName
 	default:
 		// Default fallback to Org
@@ -373,7 +399,8 @@ func getOtherBranchesData(orgName, repoName, currentBranch string) []BranchData 
 
 		// Extract actual branch name - more robust parsing
 		// Remove the prefix and suffix to get the branch name
-		prefix := fmt.Sprintf("Result_%s_%s_", sanitizePathComponent(orgName), sanitizePathComponent(repoName))
+		// Use firstPart (which is ProjectKey for Bitbucket, Org for others) instead of orgName
+		prefix := fmt.Sprintf("Result_%s_%s_", sanitizePathComponent(firstPart), sanitizePathComponent(repoName))
 		suffix := "_byfile.json"
 		branchName := strings.TrimSuffix(strings.TrimPrefix(filename, prefix), suffix)
 
@@ -451,9 +478,11 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 
 	// Find the repository in analysis results
 	var orgName string
+	var foundBranch *ProjectBranch
 	for _, branch := range analysisResult.ProjectBranches {
 		if branch.RepoSlug == repoName {
 			orgName = branch.Org
+			foundBranch = &branch
 			break
 		}
 	}
@@ -463,7 +492,13 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	}
 
 	// Read the byfile report for totals
-	firstPart := getFirstPartForFilename(platform, orgName, repoName)
+	// Use getFirstPartForPlatform with the branch object to get correct ProjectKey for Bitbucket
+	var firstPart string
+	if foundBranch != nil {
+		firstPart = getFirstPartForPlatform(platform, *foundBranch, repoName)
+	} else {
+		firstPart = getFirstPartForFilename(platform, orgName, repoName)
+	}
 	byFileReportPath := buildSecurePath(byFileReportDir,
 		fmt.Sprintf("Result_%s_%s_%s_byfile.json",
 			sanitizePathComponent(firstPart),
