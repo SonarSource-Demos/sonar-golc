@@ -334,7 +334,8 @@ func getFirstPartForFilename(platform, orgName, repoName string) string {
 		_, analysisFile, err := detectPlatformAndReadAnalysis()
 		if err == nil {
 			var analysisResult AnalysisResult
-			if err := json.Unmarshal(analysisFile, &analysisResult); err == nil {
+			err = json.Unmarshal(analysisFile, &analysisResult)
+			if err == nil {
 				// Find the repository and get its ProjectKey
 				for _, branch := range analysisResult.ProjectBranches {
 					if branch.RepoSlug == repoName {
