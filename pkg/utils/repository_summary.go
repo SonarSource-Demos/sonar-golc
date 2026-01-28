@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/jung-kurt/gofpdf"
 )
@@ -168,7 +169,28 @@ func getRepositoryData() ([]RepositoryData, error) {
 			continue
 		}
 
-		// Create repository data entry
+		// Code lines for report total: exclude JSON to match SonarQube behavior
+		codeLinesForReport := reportData.TotalCodeLines
+		byLanguagePath := fmt.Sprintf("Results/bylanguage-report/Result_%s_%s_%s.json",
+			firstPart, branch.RepoSlug, branch.MainBranch)
+		if langData, err := os.ReadFile(byLanguagePath); err == nil {
+			var byLang struct {
+				Results []struct {
+					Language  string `json:"Language"`
+					CodeLines int    `json:"CodeLines"`
+				} `json:"Results"`
+			}
+			if json.Unmarshal(langData, &byLang) == nil {
+				for _, r := range byLang.Results {
+					if strings.TrimSpace(r.Language) == LanguageExcludedFromTotalLOC {
+						codeLinesForReport = reportData.TotalCodeLines - r.CodeLines
+						break
+					}
+				}
+			}
+		}
+
+		// Create repository data entry (CodeLines excludes JSON for report total)
 		repo := RepositoryData{
 			Number:      i,
 			Repository:  branch.RepoSlug,
@@ -176,11 +198,11 @@ func getRepositoryData() ([]RepositoryData, error) {
 			Lines:       reportData.TotalLines,
 			BlankLines:  reportData.TotalBlankLines,
 			Comments:    reportData.TotalComments,
-			CodeLines:   reportData.TotalCodeLines,
+			CodeLines:   codeLinesForReport,
 			LinesF:      FormatCodeLines(float64(reportData.TotalLines)),
 			BlankLinesF: FormatCodeLines(float64(reportData.TotalBlankLines)),
 			CommentsF:   FormatCodeLines(float64(reportData.TotalComments)),
-			CodeLinesF:  FormatCodeLines(float64(reportData.TotalCodeLines)),
+			CodeLinesF:  FormatCodeLines(float64(codeLinesForReport)),
 		}
 
 		repositories = append(repositories, repo)
@@ -361,6 +383,7 @@ func generateRepositoryPDFReport(summary *RepositorySummaryReport, outputPath st
 		fmt.Sprintf("Total Code Lines: %s", summary.TotalCodeLinesF),
 		fmt.Sprintf("Total Comments: %s", summary.TotalCommentsF),
 		fmt.Sprintf("Total Blank Lines: %s", summary.TotalBlankLinesF),
+		NoteExcludedFromTotal,
 	}
 
 	for _, data := range summaryData {
