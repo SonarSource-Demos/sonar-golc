@@ -47,6 +47,18 @@ func getTotalCodeLines(languages []LanguageData) int {
 	return total
 }
 
+// getTotalCodeLinesExcludingJSON returns the sum of CodeLines for all languages except JSON.
+// Used for report totals and percentages to match SonarQube standard behavior.
+func getTotalCodeLinesExcludingJSON(languages []LanguageData) int {
+	total := 0
+	for _, lang := range languages {
+		if strings.TrimSpace(lang.Language) != LanguageExcludedFromTotalLOC {
+			total += lang.CodeLines
+		}
+	}
+	return total
+}
+
 func CreateGlobalReport(directory string) error {
 
 	//directory := "Results"
@@ -207,6 +219,8 @@ func renderGlobalPDF(languages []LanguageData, ginfo Globalinfo) error {
 	pdf.CellFormat(100, 10, Lrepos, "0", 1, "", true, 0, "")
 	pdf.CellFormat(100, 10, Lrepoloc, "0", 1, "", true, 0, "")
 	pdf.CellFormat(100, 10, NBrepos, "0", 1, "", true, 0, "")
+	pdf.SetFont("Times", "", 8)
+	pdf.CellFormat(100, 8, "Note: "+NoteExcludedFromTotal, "0", 1, "L", true, 0, "")
 	pdf.Ln(10)
 
 	pdf.SetFont("Times", "B", 12)
@@ -232,10 +246,20 @@ func renderGlobalPDF(languages []LanguageData, ginfo Globalinfo) error {
 
 		}
 
-		lang.Percentage = float64(lang.CodeLines) / float64(getTotalCodeLines(languages)) * 100
+		totalForPct := getTotalCodeLinesExcludingJSON(languages)
+		if strings.TrimSpace(lang.Language) == LanguageExcludedFromTotalLOC {
+			lang.Percentage = 0
+		} else if totalForPct > 0 {
+			lang.Percentage = float64(lang.CodeLines) / float64(totalForPct) * 100
+		} else {
+			lang.Percentage = 0
+		}
 		lang.CodeLinesF = fmt.Sprintf("%d", lang.CodeLines)
 		pdf.SetFont("Times", "", 10)
 		pdflang := fmt.Sprintf("%s : %.2f %s - %s LOC", lang.Language, lang.Percentage, unit, lang.CodeLinesF)
+		if strings.TrimSpace(lang.Language) == LanguageExcludedFromTotalLOC {
+			pdflang = fmt.Sprintf("%s : (excluded from total) - %s LOC", lang.Language, lang.CodeLinesF)
+		}
 		pdf.CellFormat(100, 10, pdflang, "0", 1, "", true, 0, "")
 		rowCount++
 	}

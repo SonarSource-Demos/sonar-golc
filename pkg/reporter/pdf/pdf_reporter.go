@@ -154,6 +154,18 @@ func (p PdfReporter) writePdf(pdfReport *report) error {
 	pdf.Cell(0, 10, Title2)
 	pdf.Ln(10)
 
+	// Total Code Lines excluding JSON (SonarQube standard behavior)
+	totalCodeLinesForReport := pdfReport.TotalCodeLines
+	if fileResults, ok := pdfReport.Results.([]fileResult); ok {
+		jsonCodeLines := 0
+		for _, r := range fileResults {
+			if strings.HasSuffix(strings.ToLower(r.File), ".json") {
+				jsonCodeLines += r.CodeLines
+			}
+		}
+		totalCodeLinesForReport = pdfReport.TotalCodeLines - jsonCodeLines
+	}
+
 	//Global statistics
 	pdf.SetFont("Times", "", 10)
 	pdf.Cell(0, 10, "Total Lines: "+strconv.Itoa(pdfReport.TotalLines))
@@ -162,7 +174,10 @@ func (p PdfReporter) writePdf(pdfReport *report) error {
 	pdf.Ln(5)
 	pdf.Cell(0, 10, "Total Comments: "+strconv.Itoa(pdfReport.TotalComments))
 	pdf.Ln(5)
-	pdf.Cell(0, 10, "Total Code Lines: "+strconv.Itoa(pdfReport.TotalCodeLines))
+	pdf.Cell(0, 10, "Total Code Lines: "+strconv.Itoa(totalCodeLinesForReport))
+	pdf.Ln(5)
+	pdf.SetFont("Times", "", 8)
+	pdf.Cell(0, 8, "Note: "+utils.NoteExcludedFromTotal)
 	pdf.Ln(10)
 
 	// Table Headers

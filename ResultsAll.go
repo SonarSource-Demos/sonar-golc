@@ -150,12 +150,14 @@ type RepositoryDetailData struct {
 	Platform         string                   `json:"Platform"`
 	PlatformIcon     string                   `json:"PlatformIcon"`
 	RepositoryURL    string                   `json:"RepositoryURL"`
+	NoteLOCExcluded  string                   `json:"NoteLOCExcluded"` // Note that JSON is excluded from total (SonarQube behavior)
 }
 
 type PageData struct {
-	Languages    []LanguageData
-	GlobalReport Globalinfo
-	Repositories []RepositoryData
+	Languages        []LanguageData
+	GlobalReport     Globalinfo
+	Repositories     []RepositoryData
+	NoteLOCExcluded  string // Note that JSON is excluded from total (SonarQube behavior)
 }
 
 var globalInfo Globalinfo       // Variable pour stocker les infos globales
@@ -246,7 +248,31 @@ func getRepositoryData() ([]RepositoryData, error) {
 			continue
 		}
 
-		// Create repository data entry
+		// Code lines for report total: exclude JSON to match SonarQube behavior
+		codeLinesForReport := reportData.TotalCodeLines
+		byLanguagePath := buildSecurePath(byLanguageReportDir,
+			fmt.Sprintf("Result_%s_%s_%s.json",
+				sanitizePathComponent(firstPart),
+				sanitizePathComponent(branch.RepoSlug),
+				sanitizePathComponent(branch.MainBranch)))
+		if langData, err := os.ReadFile(byLanguagePath); err == nil {
+			var byLang struct {
+				Results []struct {
+					Language  string `json:"Language"`
+					CodeLines int    `json:"CodeLines"`
+				} `json:"Results"`
+			}
+			if json.Unmarshal(langData, &byLang) == nil {
+				for _, r := range byLang.Results {
+					if strings.TrimSpace(r.Language) == utils.LanguageExcludedFromTotalLOC {
+						codeLinesForReport = reportData.TotalCodeLines - r.CodeLines
+						break
+					}
+				}
+			}
+		}
+
+		// Create repository data entry (CodeLines excludes JSON for report total)
 		repo := RepositoryData{
 			Number:      i,
 			Repository:  branch.RepoSlug,
@@ -254,11 +280,11 @@ func getRepositoryData() ([]RepositoryData, error) {
 			Lines:       reportData.TotalLines,
 			BlankLines:  reportData.TotalBlankLines,
 			Comments:    reportData.TotalComments,
-			CodeLines:   reportData.TotalCodeLines,
+			CodeLines:   codeLinesForReport,
 			LinesF:      utils.FormatCodeLines(float64(reportData.TotalLines)),
 			BlankLinesF: utils.FormatCodeLines(float64(reportData.TotalBlankLines)),
 			CommentsF:   utils.FormatCodeLines(float64(reportData.TotalComments)),
-			CodeLinesF:  utils.FormatCodeLines(float64(reportData.TotalCodeLines)),
+			CodeLinesF:  utils.FormatCodeLines(float64(codeLinesForReport)),
 		}
 
 		repositories = append(repositories, repo)
@@ -590,6 +616,15 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 	// Get platform info and repository URL
 	platformIcon, repositoryURL := getPlatformInfoAndURL(platform, orgName, repoName)
 
+	// Code lines for report total: exclude JSON to match SonarQube behavior
+	totalCodeLinesForReport := byFileReport.TotalCodeLines
+	for _, lang := range languageReport.Results {
+		if strings.TrimSpace(lang.Language) == utils.LanguageExcludedFromTotalLOC {
+			totalCodeLinesForReport = byFileReport.TotalCodeLines - lang.CodeLines
+			break
+		}
+	}
+
 	// Get other branches by finding all byfile reports for this repository
 	otherBranches := getOtherBranchesData(orgName, repoName, branchName)
 
@@ -600,17 +635,18 @@ func getRepositoryDetailData(repoName, branchName string) (*RepositoryDetailData
 		TotalLines:       byFileReport.TotalLines,
 		TotalBlankLines:  byFileReport.TotalBlankLines,
 		TotalComments:    byFileReport.TotalComments,
-		TotalCodeLines:   byFileReport.TotalCodeLines,
+		TotalCodeLines:   totalCodeLinesForReport,
 		TotalLinesF:      utils.FormatCodeLines(float64(byFileReport.TotalLines)),
 		TotalBlankLinesF: utils.FormatCodeLines(float64(byFileReport.TotalBlankLines)),
 		TotalCommentsF:   utils.FormatCodeLines(float64(byFileReport.TotalComments)),
-		TotalCodeLinesF:  utils.FormatCodeLines(float64(byFileReport.TotalCodeLines)),
+		TotalCodeLinesF:  utils.FormatCodeLines(float64(totalCodeLinesForReport)),
 		Languages:        formattedLanguages,
 		OtherBranches:    otherBranches,
 		GlobalReport:     globalInfo,
 		Platform:         platform,
 		PlatformIcon:     platformIcon,
 		RepositoryURL:    repositoryURL,
+		NoteLOCExcluded:  utils.NoteExcludedFromTotal,
 	}
 
 	return repoDetail, nil
@@ -714,8 +750,12 @@ func loadApplicationData() (PageData, error) {
 
 	var languages []LanguageData
 	totalLines := 0
+	totalLinesExcludingJSON := 0
 	for lang, total := range ligneDeCodeParLangage {
 		totalLines += total
+		if strings.TrimSpace(lang) != utils.LanguageExcludedFromTotalLOC {
+			totalLinesExcludingJSON += total
+		}
 		languages = append(languages, LanguageData{
 			Language:   lang,
 			CodeLines:  total,
@@ -723,8 +763,15 @@ func loadApplicationData() (PageData, error) {
 		})
 	}
 
+	// Percentages use total excluding JSON to match SonarQube behavior
 	for i := range languages {
-		languages[i].Percentage = float64(languages[i].CodeLines) / float64(totalLines) * 100
+		if strings.TrimSpace(languages[i].Language) == utils.LanguageExcludedFromTotalLOC {
+			languages[i].Percentage = 0
+		} else if totalLinesExcludingJSON > 0 {
+			languages[i].Percentage = float64(languages[i].CodeLines) / float64(totalLinesExcludingJSON) * 100
+		} else {
+			languages[i].Percentage = 0
+		}
 	}
 
 	data0, err := os.ReadFile(globalReportFile)
@@ -745,9 +792,10 @@ func loadApplicationData() (PageData, error) {
 	}
 
 	pageData = PageData{
-		Languages:    languages,
-		GlobalReport: globalInfo,
-		Repositories: repositoryData,
+		Languages:       languages,
+		GlobalReport:    globalInfo,
+		Repositories:    repositoryData,
+		NoteLOCExcluded: utils.NoteExcludedFromTotal,
 	}
 
 	return pageData, nil
@@ -1074,6 +1122,7 @@ const htmlTemplate = `
                     <p class="card-text"><i class="fas fa-folder"></i> Largest Repository : {{.GlobalReport.LargestRepository}}</p>
                     <p class="card-text"><i class="fas fa-code-branch"></i> Lines of code in largest Repository : {{.GlobalReport.LinesOfCodeLargestRepo}}</p>
                     <p class="card-text"><i class="fas fa-code-branch"></i> Number of Repositories analyzed : {{.GlobalReport.NumberRepos}}</p>
+                    <p class="card-text small"><i class="fas fa-info-circle"></i> {{.NoteLOCExcluded}}</p>
                   </div>
                 </div>
                 <div class="chart-container">
@@ -1086,7 +1135,11 @@ const htmlTemplate = `
                 <div class="card-body text-white" style="padding: 1rem 1rem;">
                     <ul>
                     {{range .Languages}}
+                        {{if eq .Language "JSON"}}
+                        <li>{{.Language}}: (excluded from total) - {{.CodeLinesF}} LOC</li>
+                        {{else}}
                         <li>{{.Language}}: {{printf "%.2f" .Percentage}}% - {{.CodeLinesF}} LOC</li>
+                        {{end}}
                     {{end}}
                     </ul>
                 </div>    
@@ -1557,6 +1610,7 @@ const repositoryDetailTemplate = `
                     <p><strong>Total Lines:</strong> {{.TotalLinesF}}</p>
                     <p><strong>Code Lines:</strong> {{.TotalCodeLinesF}}</p>
                     <p><strong>Languages:</strong> {{len .Languages}}</p>
+                    <p class="small" style="margin-top: 0.5rem; opacity: 0.95;"><i class="fas fa-info-circle"></i> {{.NoteLOCExcluded}}</p>
                   </div>
                 </div>
                 

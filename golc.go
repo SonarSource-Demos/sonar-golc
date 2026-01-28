@@ -1298,7 +1298,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize the sum of TotalCodeLines
+	// Initialize the sum of TotalCodeLines (excluding JSON to match SonarQube behavior)
 	totalCodeLinesSum := 0
 
 	// Analyse All file
@@ -1321,11 +1321,21 @@ func main() {
 				continue
 			}
 
-			totalCodeLinesSum += result.TotalCodeLines
+			// Exclude JSON LOC from total to match SonarQube standard behavior
+			jsonLOC := 0
+			for _, r := range result.Results {
+				if strings.TrimSpace(r.Language) == utils.LanguageExcludedFromTotalLOC {
+					jsonLOC += r.CodeLines
+					break
+				}
+			}
+			codeLinesForTotal := result.TotalCodeLines - jsonLOC
 
-			// Check if this repo has a higher TotalCodeLines than the current maximum
-			if result.TotalCodeLines > maxTotalCodeLines {
-				maxTotalCodeLines = result.TotalCodeLines
+			totalCodeLinesSum += codeLinesForTotal
+
+			// Check if this repo has a higher TotalCodeLines (excl. JSON) than the current maximum
+			if codeLinesForTotal > maxTotalCodeLines {
+				maxTotalCodeLines = codeLinesForTotal
 				// Extract project and repo name from file name
 				parts := strings.Split(strings.TrimSuffix(file.Name(), ".json"), "_")
 				if platformConfig["DevOps"].(string) != "file" {
