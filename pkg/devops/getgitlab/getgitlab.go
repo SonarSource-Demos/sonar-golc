@@ -518,7 +518,7 @@ func analyzeMainBranchForProjects(client *gitlab.Client, projects []*gitlab.Proj
 		mainBranch, largestSize, nbrsize, err := getMainBranchDetails(client, project, since, until)
 				if err != nil {
 					spin1.Stop()
-			loggers.Errorf(err.Error())
+			loggers.Errorf("%s", err.Error())
 			continue
 				}
 		result = append(result, ProjectBranch{
@@ -681,7 +681,7 @@ func analyzeOrgsWithProjects(ctx nonDefaultCtx, perOrg func(org string, projects
 	for _, org := range ctx.orgs {
 		projects, _, spin1, err := getProjectsAndAnalyze(ctx.client, org, ctx.spin)
 			if err != nil {
-			loggers.Errorf(err.Error())
+			loggers.Errorf("%s", err.Error())
 			continue
 		}
 		branches, totalB := perOrg(org, projects, spin1)

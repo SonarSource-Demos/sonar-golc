@@ -10,7 +10,7 @@ if [ -d /app/imgs ] && [ ! -d /data/imgs ]; then
 fi
 
 # Run analysis (config from /config via GOLC_CONFIG_FILE)
-/app/golc -devops "${GOLC_DEVOPS:-Github}"
+/app/golc -devops "${GOLC_DEVOPS}"
 
 # Serve results on PORT (default 8092)
 exec /app/ResultsAll

@@ -42,5 +42,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: timothe/sonar-golc:${{ steps.meta.outputs.tag }}
