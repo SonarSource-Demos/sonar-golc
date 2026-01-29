@@ -9,6 +9,9 @@ if [ -d /app/imgs ] && [ ! -d /data/imgs ]; then
 	cp -r /app/imgs /data/
 fi
 
+# Always overwrite previous results so each run is fresh
+rm -rf /data/Results /data/Logs
+
 # Run analysis (config from /config via GOLC_CONFIG_FILE)
 /app/golc -devops "${GOLC_DEVOPS}"
 
