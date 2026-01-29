@@ -1444,10 +1444,10 @@ func main() {
 	fmt.Println("\n✅ Reports are located in the <'Results'> directory")
 	fmt.Println(message4)*/
 
-	logger.Infof(message0)
-	logger.Infof(message2)
+	logger.Info(message0)
+	logger.Info(message2)
 	logger.Infof("✅ Reports are located in the <'Results'> directory")
-	logger.Infof(message4)
+	logger.Info(message4)
 
 	// Write message in Gobal Report File
 	_, err = file.WriteString(message5)
