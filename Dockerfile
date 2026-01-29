@@ -1,10 +1,5 @@
-# Build stage
-FROM golang:1.24-alpine AS builder
-
-# Use Go cross-compilation so we don't run the whole build under QEMU (very slow on amd64 runners).
-ARG TARGETOS
-ARG TARGETARCH
-ENV GOOS=${TARGETOS} GOARCH=${TARGETARCH}
+# Build stage: always run on the host arch (amd64 on GitHub) so we cross-compile instead of using QEMU.
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache ca-certificates
 
@@ -14,8 +9,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -tags=golc -ldflags "-X main.version1=1.0.9" -o golc golc.go && \
-    CGO_ENABLED=0 go build -trimpath -tags=resultsall -o ResultsAll ResultsAll.go
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=golc -ldflags "-X main.version1=1.0.9" -o golc golc.go && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=resultsall -o ResultsAll ResultsAll.go
 
 # Run stage: minimal Alpine for fewest vulnerabilities and small size
 FROM alpine:3.19
