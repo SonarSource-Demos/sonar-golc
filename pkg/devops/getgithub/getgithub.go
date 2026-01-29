@@ -1218,7 +1218,7 @@ func GetGithubLanguages(parms ParamsReposGithub, ctx context.Context, client *gi
 			languages, _, err := client.Repositories.ListLanguages(ctx, parms.Organization, repoName)
 			if err != nil {
 				mess := fmt.Sprintf("\r❌ failed to fetch languages. Status code: %v\n", err)
-				return 0, 0, 0, 0, fmt.Errorf(mess)
+				return 0, 0, 0, 0, fmt.Errorf("%s", mess)
 			}
 
 			for lang, lines := range languages {
@@ -1250,7 +1250,7 @@ func GetGithubLanguages(parms ParamsReposGithub, ctx context.Context, client *gi
 			jsonData, err := json.MarshalIndent(output, "", "    ")
 			if err != nil {
 				mess := fmt.Sprintf("\r❌ Error marshaling JSON: %v\n", err)
-				return 0, 0, 0, 0, fmt.Errorf(mess)
+				return 0, 0, 0, 0, fmt.Errorf("%s", mess)
 			}
 
 			// Write JSON data to file
@@ -1258,14 +1258,14 @@ func GetGithubLanguages(parms ParamsReposGithub, ctx context.Context, client *gi
 			file, err := os.Create(Resultfile)
 			if err != nil {
 				mess := fmt.Sprintf("\r❌ Error creating file: %v\n", err)
-				return 0, 0, 0, 0, fmt.Errorf(mess)
+				return 0, 0, 0, 0, fmt.Errorf("%s", mess)
 			}
 			defer file.Close()
 
 			_, err = file.Write(jsonData)
 			if err != nil {
 				mess := fmt.Sprintf("\r❌ Error writing JSON to file: %v\n", err)
-				return 0, 0, 0, 0, fmt.Errorf(mess)
+				return 0, 0, 0, 0, fmt.Errorf("%s", mess)
 			}
 
 			fmt.Println("\t  ✅  JSON data written to :", Resultfile)

@@ -181,7 +181,7 @@ func getProjectByName(ctx context.Context, coreClient core.Client, projectName s
 	if isProjectExcluded(exclusionList, projectName) {
 		excludedCount++
 		errmessage := fmt.Sprintf(" - Skipping analysis for Project %s , it is excluded", projectName)
-		err := fmt.Errorf(errmessage)
+		err := fmt.Errorf("%s", errmessage)
 		return nil, excludedCount, err
 	}
 
@@ -426,7 +426,7 @@ func getRepoAnalyse(params ParamsProjectAzure, gitClient git.Client) ([]ProjectB
 			} else {
 				errmessage := fmt.Sprintf(" Get Repo %s for Project %s %v", params.SingleRepos, *project.Name, err)
 				spin1.Stop()
-				return importantBranches, emptyRepos, NBRrepos, TotalBranches, totalexclude, cptarchiv, fmt.Errorf(errmessage)
+				return importantBranches, emptyRepos, NBRrepos, TotalBranches, totalexclude, cptarchiv, fmt.Errorf("%s", errmessage)
 			}
 		}
 

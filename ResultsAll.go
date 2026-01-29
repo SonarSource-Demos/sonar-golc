@@ -21,7 +21,17 @@ import (
 	"github.com/SonarSource-Demos/sonar-golc/pkg/utils"
 )
 
-const port = 8092
+const defaultPort = 8092
+
+// getPort returns the server port from PORT env, or defaultPort.
+func getPort() int {
+	if s := os.Getenv("PORT"); s != "" {
+		if p, err := strconv.Atoi(s); err == nil && p > 0 && p < 65536 {
+			return p
+		}
+	}
+	return defaultPort
+}
 
 // HTTP header constants
 const (
@@ -871,19 +881,33 @@ func setupHTTPHandlers(pageData PageData) {
 
 // handleServerStartup manages port checking and server startup
 func handleServerStartup() {
+	port := getPort()
 	fmt.Println("✅ Launching web visualization...")
 	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("dist"))))
 
 	if isPortOpen(port) {
-		handlePortConflict()
+		handlePortConflict(port)
 	} else {
 		startServer(port)
 	}
 }
 
-// handlePortConflict handles the case when the default port is in use
-func handlePortConflict() {
+// isStdinTTY returns true if stdin is a terminal (interactive).
+func isStdinTTY() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
+// handlePortConflict handles the case when the chosen port is in use
+func handlePortConflict(port int) {
 	fmt.Printf("❗️ Port %d is already in use.\n", port)
+	if !isStdinTTY() {
+		fmt.Println("❌ Not running in a terminal. Set PORT environment variable or free the port and try again.")
+		os.Exit(1)
+	}
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("✅ Please enter the port you wish to use : ")

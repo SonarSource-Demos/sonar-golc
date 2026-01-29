@@ -543,7 +543,7 @@ func getSepecificProjectsWithAuth(workspace, projectKeys, accessToken, users, bi
 
 		if resp.StatusCode != http.StatusOK {
 			errmessage := fmt.Sprintf("%s - HTTP %d", projectKey, resp.StatusCode)
-			err1 := fmt.Errorf(errmessage)
+			err1 := fmt.Errorf("%s", errmessage)
 			return nil, 0, err1
 		}
 
@@ -580,14 +580,14 @@ func getSepecificProjects(client *bitbucket.Client, workspace, projectKeys strin
 	})
 	if err != nil {
 		errmessage := fmt.Sprintf("%s - %v", projectKeys, err)
-		err1 := fmt.Errorf(errmessage)
+		err1 := fmt.Errorf("%s", errmessage)
 		return nil, 0, err1
 	}
 
 	if isProjectExcluded(exclusionList, projectsRes.Key) {
 		excludedCount++
 		errmessage := fmt.Sprintf(" - Skipping analysis for Project %s , it is excluded", projectKeys)
-		err = fmt.Errorf(errmessage)
+		err = fmt.Errorf("%s", errmessage)
 		return projects, excludedCount, err
 
 	} else {
@@ -647,7 +647,7 @@ func getRepoAnalyse(params ParamsProjectBitbucket) ([]ProjectBranch, int, int, i
 			} else {
 				errmessage := fmt.Sprintf(" Get Repo %s for Project %s %v", params.SingleRepos, project.Key, err)
 				spin1.Stop()
-				return importantBranches, emptyRepos, NBRrepos, TotalBranches, totalexclude, cptarchiv, fmt.Errorf(errmessage)
+				return importantBranches, emptyRepos, NBRrepos, TotalBranches, totalexclude, cptarchiv, fmt.Errorf("%s", errmessage)
 			}
 		}
 		emptyRepos = emptyRepos + emptyOrArchivedCount
@@ -826,7 +826,7 @@ func listRepos(parms ParamsProjectBitbucket, projectKey string, reposRes *bitbuc
 				if isRepoExcluded(parms.Exclusionlist, projectKey, repo.Slug) {
 					excludedCount++
 					errmessage := fmt.Sprintf(" - Skipping analysis for Repo %s , it is excluded", repo.Slug)
-					err := fmt.Errorf(errmessage)
+					err := fmt.Errorf("%s", errmessage)
 					return 0, excludedCount, allRepos, err
 				}
 
@@ -837,7 +837,7 @@ func listRepos(parms ParamsProjectBitbucket, projectKey string, reposRes *bitbuc
 				if isEmpty {
 					emptyOrArchivedCount++
 					errmessage := fmt.Sprintf(" - Skipping analysis for Repo %s , it is empty", repo.Slug)
-					err := fmt.Errorf(errmessage)
+					err := fmt.Errorf("%s", errmessage)
 					return emptyOrArchivedCount, excludedCount, allRepos, err
 				}
 

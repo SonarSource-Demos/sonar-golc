@@ -6,6 +6,7 @@
 
 - [Introduction](#introduction)
 - [Installation](#installation)
+- [Docker](#docker)
 - [Prerequisites](#prerequisites)
 - [Usage](#usage)
   - [Environment Configuration](#environment-configuration)
@@ -44,7 +45,43 @@ GoLC The tool analyzes your repositories and identifies the largest branch of ea
 
 You can install from the stable release by clicking [here](https://github.com/SonarSource-Demos/sonar-golc/releases/tag/V1.0.9)
 
+## Docker
 
+Use the published image **`timothe/sonar-golc`** from Docker Hub. Config is provided via a mounted directory; the web UI is served on port 8092. The DevOps platform to analyze is set with the **`GOLC_DEVOPS`** environment variable (e.g. `Github`, `Gitlab`, `BitBucket`, `File`).
+
+**Run with the published image:**
+```bash
+mkdir -p config && cp config_sample.json config/config.json
+# Edit config/config.json with your tokens and organization
+
+docker run -p 8092:8092 \
+  -v "$(pwd)/config:/config:ro" \
+  -e GOLC_DEVOPS=Github \
+  timothe/sonar-golc
+```
+
+To persist results on the host, add: `-v "$(pwd)/data:/data"`. After the analysis completes, open **http://localhost:8092** to view the results. View logs with `docker logs <container>`.
+
+**Building the image** (optional, e.g. for local development): `docker build -t sonar-golc .` — then use `sonar-golc` instead of `timothe/sonar-golc` in the commands below.
+
+**Docker Compose:** Put `config.json` in a `config/` directory. The Compose file uses the image `sonar-golc` (pull the published image and tag it, or use your built image):
+
+```bash
+docker pull timothe/sonar-golc && docker tag timothe/sonar-golc sonar-golc
+mkdir -p config && cp config_sample.json config/config.json
+# Edit config/config.json, then:
+docker compose up
+```
+
+**Docker Compose variables:** Set these in a `.env` file in the project root or pass them when running (e.g. `GOLC_DEVOPS=Gitlab docker compose up`).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GOLC_DEVOPS` | `Github` | DevOps platform to analyze. Must match a key in your config (e.g. `Github`, `Gitlab`, `BitBucket`, `BitBucketSRV`, `Azure`, `File`). |
+
+The Compose file mounts `./config` read-only; `/data` uses an anonymous volume so results persist across restarts.
+
+See [docs/docker.md](docs/docker.md) for full Docker and Compose usage (all env vars, port override, bind mounts).
 
 ## Prerequisites 
 
