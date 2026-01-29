@@ -1,6 +1,11 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
+# Use Go cross-compilation so we don't run the whole build under QEMU (very slow on amd64 runners).
+ARG TARGETOS
+ARG TARGETARCH
+ENV GOOS=${TARGETOS} GOARCH=${TARGETARCH}
+
 RUN apk add --no-cache ca-certificates
 
 WORKDIR /build
