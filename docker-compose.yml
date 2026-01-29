@@ -1,0 +1,14 @@
+# Put config.json in ./config/ (e.g. cp config_sample.json config/config.json then edit).
+# /data uses an anonymous volume (from Dockerfile) so results persist across restarts.
+# Override platform: GOLC_DEVOPS=Gitlab docker compose up
+services:
+  sonar-golc:
+    image: timothe/sonar-golc:latest # or :dev for the dev version
+    container_name: sonar-golc
+    ports:
+      - "8092:8092"
+    environment:
+      GOLC_DEVOPS: Github # Github, Gitlab, BitBucket, File
+    volumes:
+      - /path/to/your/config:/config:ro
+    restart: "unless-stopped"

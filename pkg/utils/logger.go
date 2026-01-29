@@ -42,7 +42,9 @@ func NewLogger() *logrus.Logger {
 
 	logFile, err := os.OpenFile("Logs/Logs.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		logrus.Fatalf("❌ Failed to log to file: %v", err)
+		// Fallback to stdout only when log file cannot be created (e.g. read-only fs, Docker)
+		logger.SetOutput(os.Stdout)
+		return logger
 	}
 
 	logger.SetOutput(io.MultiWriter(os.Stdout, logFile))

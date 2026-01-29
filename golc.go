@@ -893,9 +893,13 @@ func createDirectories(basePath string, paths []string) {
 
 func init() {
 
-	// Load Config file
+	// Load Config file (path from GOLC_CONFIG_FILE env, default config.json)
+	configPath := os.Getenv("GOLC_CONFIG_FILE")
+	if configPath == "" {
+		configPath = "config.json"
+	}
 	var err error
-	AppConfig, err = LoadConfig("config.json")
+	AppConfig, err = LoadConfig(configPath)
 	if err != nil {
 		logrus.Fatalf("\n❌ Failed to load config: %s", err)
 		os.Exit(1)
