@@ -67,8 +67,7 @@ jobs:
       - name: Run SonarQube Analysis
         uses: SonarSource/sonarqube-scan-action@v7.0.0
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_SQC_TOKEN }}
       # Fail the build if the quality gate is not met
       # - uses: SonarSource/sonarqube-quality-gate-action@v1
       #   timeout-minutes: 5
