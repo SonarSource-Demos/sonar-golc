@@ -4,6 +4,14 @@ export TAG="V1.0.9" # Release TAG in GitHub
 export Release1="v1.0.9" # Release Number
 export buildpath="XXXXXXX"  # Replace with the path where the release files are located
 
+# Docker image build (optional). Set BUILD_DOCKER=1 to build; set DOCKER_PUSH=1 to push after build.
+# For push: either run 'docker login' once, or set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN below (or export them before running).
+export BUILD_DOCKER=1
+export DOCKER_PUSH=1
+export DOCKER_IMAGE="fabiogos846/sonar-golc"
+export DOCKERHUB_USERNAME=""   # e.g. "fabiogos846"; leave empty if you use 'docker login' instead
+export DOCKERHUB_TOKEN=""      # Docker Hub access token; leave empty if you use 'docker login' instead
+
 GITHUB_TOKEN="XXXXXXXXX" # Replace with your token
 GITHUB_ORG="SonarSource-Demos"    # Replace with your organization name
 GITHUB_REPO="sonar-golc"   # Replace with the name of your GitHub repository
@@ -248,6 +256,45 @@ zip -r ${FILE_DEST}.zip ${FILE_DEST}
 cd $CMD
 
 #------------------------------ End Build ------------------------------------#
+
+#------------------------------ Docker image (optional) ---------------------#
+# Set BUILD_DOCKER=1 to build; DOCKER_PUSH=1 to push (requires 'docker login' or DOCKERHUB_*).
+if [ "${BUILD_DOCKER}" = "1" ]; then
+    echo "Building Docker image ${DOCKER_IMAGE}:${Release1} ..."
+    if command -v docker &> /dev/null; then
+        if [ "${DOCKER_PUSH}" = "1" ] && [ -n "${DOCKERHUB_USERNAME}" ] && [ -n "${DOCKERHUB_TOKEN}" ]; then
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+        fi
+        if docker buildx version &> /dev/null && [ "${DOCKER_PUSH}" = "1" ]; then
+            # Multi-arch build and push (linux/amd64, linux/arm64)
+            docker buildx create --use --name golc-builder 2>/dev/null || true
+            docker buildx build \
+                --platform linux/amd64,linux/arm64 \
+                --build-arg VERSION="${Release1}" \
+                -t "${DOCKER_IMAGE}:${Release1}" \
+                --push \
+                .
+            echo "✓ Docker image ${DOCKER_IMAGE}:${Release1} pushed (multi-arch)."
+        elif docker buildx version &> /dev/null; then
+            # Build for current platform and load into local docker
+            docker buildx build \
+                --build-arg VERSION="${Release1}" \
+                -t "${DOCKER_IMAGE}:${Release1}" \
+                --load \
+                .
+            echo "✓ Docker image ${DOCKER_IMAGE}:${Release1} built locally. Use DOCKER_PUSH=1 to push multi-arch."
+        else
+            docker build --build-arg VERSION="${Release1}" -t "${DOCKER_IMAGE}:${Release1}" .
+            if [ "${DOCKER_PUSH}" = "1" ]; then
+                docker push "${DOCKER_IMAGE}:${Release1}"
+            fi
+            echo "✓ Docker image ${DOCKER_IMAGE}:${Release1} ready."
+        fi
+    else
+        echo "Warning: docker not found, skipping Docker build."
+    fi
+fi
+#------------------------------ End Docker -----------------------------------#
 
 # Create source code archives
 echo "Creating source code archives..."

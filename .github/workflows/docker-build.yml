@@ -1,11 +1,9 @@
+# Docker images are built and pushed via create_release_sample.sh (set BUILD_DOCKER=1, DOCKER_PUSH=1).
+# This workflow runs only on manual trigger; use the script for release Docker images.
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - docker-support # temporary branch for testing
-      - dev
-      - main
+  workflow_dispatch:
 
 jobs:
   build-and-push:
