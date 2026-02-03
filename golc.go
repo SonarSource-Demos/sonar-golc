@@ -400,6 +400,16 @@ func getExcludePaths(configValue interface{}) []string {
 	return []string{}
 }
 
+func getExcludePathSegments(configValue interface{}) []string {
+	if configValue == nil {
+		return []string{}
+	}
+	if segments, ok := configValue.([]interface{}); ok {
+		return convertToSliceString(segments)
+	}
+	return []string{}
+}
+
 // Analysis functions for different repository types
 
 // Analysis functions for Bitbucket Cloud
@@ -409,6 +419,7 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
+	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	// Determine git clone URL format
 	// For git operations with API tokens, use x-bitbucket-api-token-auth (static username for API tokens)
@@ -438,7 +449,7 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 		MainBranch: p.MainBranch,
 		PathToScan: pathToScan,
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for Bitbucket DC
@@ -448,6 +459,7 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
+	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.ProjectKey,
@@ -456,7 +468,7 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for GitHub
@@ -466,6 +478,7 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
+	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.Org,
@@ -474,7 +487,7 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Analysis functions for GitLab
@@ -484,6 +497,7 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
+	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	domain := extractDomain(platformConfig["Url"].(string))
 
@@ -494,7 +508,7 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 func analyseAzurebRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
@@ -503,6 +517,7 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
+	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.ProjectKey,
@@ -511,21 +526,21 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 }
 
 // Perform repository analysis (common logic)
-func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, excludePaths []string, ResultByFile bool, ResultAll bool) {
+func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, excludePaths []string, excludePathSegments []string, ResultByFile bool, ResultAll bool) {
 	// Always use a consistent filename pattern so downstream parsing works across platforms
 	// Format: Result_<OrgOrProjectKey>_<RepoSlug>_<Branch>
 	outputFileName := fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
 	golocParams := goloc.Params{
-		Path:         params.PathToScan,
-		ByFile:       ResultByFile,
-		ByAll:        ResultAll,
-		ExcludePaths: excludePaths,
-		//ExcludePaths:      []string{},
-		ExcludeExtensions: excludeExtension,
+		Path:                params.PathToScan,
+		ByFile:              ResultByFile,
+		ByAll:               ResultAll,
+		ExcludePaths:        excludePaths,
+		ExcludePathSegments: excludePathSegments,
+		ExcludeExtensions:   excludeExtension,
 		IncludeExtensions: []string{},
 		OrderByLang:       false,
 		OrderByFile:       false,
@@ -675,7 +690,7 @@ func AnalyseReposListAzure(DestinationResult string, platformConfig map[string]i
 
 /* ---------------- Analyse Directory ---------------- */
 
-func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, ResultByFile bool, ResultAll bool) {
+func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, excludePathSegments []string, ResultByFile bool, ResultAll bool) {
 
 	type Configuration struct {
 		ExcludeExtensions []string
@@ -702,12 +717,13 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 			outputFileName := "Result_"
 
 			params := goloc.Params{
-				Path:              dir,
-				ByFile:            ResultByFile,
-				ByAll:             ResultAll,
-				ExcludePaths:      fileexclusionEX,
-				ExcludeExtensions: extexclusion,
-				IncludeExtensions: []string{},
+				Path:                dir,
+				ByFile:              ResultByFile,
+				ByAll:               ResultAll,
+				ExcludePaths:        fileexclusionEX,
+				ExcludePathSegments: excludePathSegments,
+				ExcludeExtensions:   extexclusion,
+				IncludeExtensions:   []string{},
 				OrderByLang:       false,
 				OrderByFile:       false,
 				OrderByCode:       false,
@@ -798,12 +814,13 @@ func AnalyseRepo(DestinationResult string, Users string, AccessToken string, Dev
 
 	outputFileName := fmt.Sprintf("Result_%s", reponame)
 	params := goloc.Params{
-		Path:              pathToScan,
-		ByFile:            false,
-		ByAll:             false,
-		ExcludePaths:      []string{},
-		ExcludeExtensions: []string{},
-		IncludeExtensions: []string{},
+		Path:                pathToScan,
+		ByFile:              false,
+		ByAll:               false,
+		ExcludePaths:        []string{},
+		ExcludePathSegments: []string{},
+		ExcludeExtensions:   []string{},
+		IncludeExtensions:   []string{},
 		OrderByLang:       false,
 		OrderByFile:       false,
 		OrderByCode:       false,
@@ -1269,7 +1286,8 @@ func main() {
 			}
 		}
 		startTime = time.Now()
-		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+		excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
+		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 	}
 
 	/*---------------------------------- End Select type of DevOps Platform ----------------------------------------------------*/

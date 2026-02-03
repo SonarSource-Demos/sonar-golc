@@ -7,11 +7,12 @@ import (
 )
 
 type Analyzer struct {
-	SupportedExtensions map[string]string
-	path                string
-	excludePaths        []string
-	excludeExtensions   map[string]bool
-	includeExtensions   map[string]bool
+	SupportedExtensions   map[string]string
+	path                  string
+	excludePaths          []string
+	excludePathSegments   map[string]bool // segment names that exclude a path if any path component matches
+	excludeExtensions     map[string]bool
+	includeExtensions     map[string]bool
 }
 
 type FileMetadata struct {
@@ -23,14 +24,20 @@ type FileMetadata struct {
 func NewAnalyzer(
 	path string,
 	excludePaths []string,
+	excludePathSegments []string,
 	excludeExtensions map[string]bool,
 	includeExtensions map[string]bool,
 	extensions map[string]string,
 ) *Analyzer {
+	segmentSet := make(map[string]bool)
+	for _, s := range excludePathSegments {
+		segmentSet[s] = true
+	}
 	return &Analyzer{
 		SupportedExtensions: extensions,
 		path:                path,
 		excludePaths:        excludePaths,
+		excludePathSegments: segmentSet,
 		excludeExtensions:   excludeExtensions,
 		includeExtensions:   includeExtensions,
 	}
@@ -78,6 +85,16 @@ func (a *Analyzer) canAdd(path string, extension string) bool {
 	for _, pathToExclude := range a.excludePaths {
 		if strings.HasPrefix(path, pathToExclude) {
 			return false
+		}
+	}
+
+	// Exclude if any path segment (directory or file name) matches ExcludePathSegments
+	if len(a.excludePathSegments) > 0 {
+		dir := filepath.Dir(path)
+		for _, segment := range strings.Split(filepath.ToSlash(dir), "/") {
+			if segment != "" && a.excludePathSegments[segment] {
+				return false
+			}
 		}
 	}
 

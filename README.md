@@ -320,6 +320,9 @@ Results ALL is the default report format. It generates a report for by language 
 ❗️ Exclude directories.
 To exclude directories from your repository from the analysis, initialize the variable **'ExcludePaths': ['']**. For example, to exclude two directories: **'ExcludePaths': ['test1', 'pkg/test2']**.
 
+❗️ Exclude by path segment.
+To exclude any file whose path contains a directory (or segment) with a given name—for example test and integration code at any depth—use **'ExcludePathSegments': ['segment1', 'segment2']**. A file is excluded if any component of its path exactly matches one of the segment names. This works across languages and depths without listing full paths. Example to exclude common test and integration directories: **'ExcludePathSegments': ['test', 'tests', 'integration', 'testdata', '__tests__', 'e2e', 'spec']**.
+
 ❗️ If '**Projects**' and '**Repos**' are not specified, the analysis will be conducted on all repositories. You can specify a project name (PROJECT_KEY) in '**Projects**', and the analysis will be limited to the specified project. If you specify '**Repos**' (REPO_SLUG), the analysis will be limited to the specified repositories.
 ```json
 "Project": "",

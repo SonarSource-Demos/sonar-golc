@@ -123,6 +123,22 @@ func TestUtilityFunctions(t *testing.T) {
 			t.Error("getExcludePaths should return empty slice for invalid input")
 		}
 	})
+
+	t.Run("getExcludePathSegments function", func(t *testing.T) {
+		result := getExcludePathSegments(nil)
+		if len(result) != 0 {
+			t.Error("getExcludePathSegments should return empty slice for nil input")
+		}
+		input := []interface{}{"test", "tests", "integration"}
+		result = getExcludePathSegments(input)
+		if len(result) != 3 {
+			t.Errorf("getExcludePathSegments should return slice of length 3, got: %d", len(result))
+		}
+		result = getExcludePathSegments("not a slice")
+		if len(result) != 0 {
+			t.Error("getExcludePathSegments should return empty slice for invalid input")
+		}
+	})
 }
 
 // TestConfigFunctions tests configuration-related functions
@@ -514,9 +530,10 @@ func TestAnalysisListFunctions(t *testing.T) {
 		"Multithreading":    false,
 		"NumberWorkerRepos": float64(5),
 		"Workers":           float64(2),
-		"ExtExclusion":      []interface{}{".git", ".svn"},
-		"ExcludePaths":      []interface{}{},
-		"ResultByFile":      false,
+		"ExtExclusion":        []interface{}{".git", ".svn"},
+		"ExcludePaths":        []interface{}{},
+		"ExcludePathSegments": []interface{}{},
+		"ResultByFile":        false,
 		"ResultAll":         false,
 		"Protocol":          "https",
 		"AccessToken":       testAccessToken,
@@ -590,7 +607,7 @@ func TestAnalysisListFunctions(t *testing.T) {
 					t.Errorf("AnalyseReposListFile panicked: %v", r)
 				}
 			}()
-			AnalyseReposListFile(emptyDirs, emptyExclusions, emptyExtensions, false, false)
+			AnalyseReposListFile(emptyDirs, emptyExclusions, emptyExtensions, []string{}, false, false)
 		}()
 	})
 }

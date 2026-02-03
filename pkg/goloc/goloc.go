@@ -20,11 +20,12 @@ import (
 )
 
 type Params struct {
-	Path              string
-	ByFile            bool
-	ByAll             bool
-	ExcludePaths      []string
-	ExcludeExtensions []string
+	Path                  string
+	ByFile                bool
+	ByAll                 bool
+	ExcludePaths          []string
+	ExcludePathSegments   []string
+	ExcludeExtensions     []string
 	IncludeExtensions []string
 	OrderByLang       bool
 	OrderByFile       bool
@@ -85,6 +86,7 @@ type GCloc struct {
 		analyzer := analyzer.NewAnalyzer(
 			path,
 			excludePaths,
+			params.ExcludePathSegments,
 			utils.ConvertToMap(params.ExcludeExtensions),
 			utils.ConvertToMap(params.IncludeExtensions),
 			getExtensionsMap(languages),
@@ -120,6 +122,7 @@ type GCloc struct {
 		analyzer := analyzer.NewAnalyzer(
 			path,
 			excludePaths,
+			params.ExcludePathSegments,
 			utils.ConvertToMap(params.ExcludeExtensions),
 			utils.ConvertToMap(params.IncludeExtensions),
 			getExtensionsMap(languages),
@@ -159,7 +162,7 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		return nil, err
 	}
 
-	analyzer, scanner, reporters := initAnalyzerScannerReporters(path, params, excludePaths, languages)
+	analyzer, scanner, reporters := initAnalyzerScannerReporters(path, params, excludePaths, params.ExcludePathSegments, languages)
 
 	params.Cloned = true
 
@@ -184,10 +187,11 @@ func getRepoPath(params Params) (string, error) {
 	return getter.Getter(params.Path)
 }
 
-func initAnalyzerScannerReporters(path string, params Params, excludePaths []string, languages language.Languages) (*analyzer.Analyzer, *scanner.Scanner, []reporter.Reporter) {
+func initAnalyzerScannerReporters(path string, params Params, excludePaths []string, excludePathSegments []string, languages language.Languages) (*analyzer.Analyzer, *scanner.Scanner, []reporter.Reporter) {
 	analyzer := analyzer.NewAnalyzer(
 		path,
 		excludePaths,
+		excludePathSegments,
 		utils.ConvertToMap(params.ExcludeExtensions),
 		utils.ConvertToMap(params.IncludeExtensions),
 		getExtensionsMap(languages),
