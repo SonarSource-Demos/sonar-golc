@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 ARG TARGETOS
 ARG TARGETARCH
-ARG VERSION=1.0.9
+ARG VERSION=1.10
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=golc -ldflags "-X main.version1=${VERSION}" -o golc golc.go && \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=resultsall -o ResultsAll ResultsAll.go
 

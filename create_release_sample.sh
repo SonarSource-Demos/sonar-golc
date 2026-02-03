@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export TAG="V1.0.9" # Release TAG in GitHub
-export Release1="v1.0.9" # Release Number
+export TAG="V1.10" # Release TAG in GitHub
+export Release1="v1.10" # Release Number
 export buildpath="XXXXXXX"  # Replace with the path where the release files are located
 
 # Docker image build (optional). Set BUILD_DOCKER=1 to build; set DOCKER_PUSH=1 to push after build.

@@ -25,7 +25,7 @@ const (
 	testLogsDir              = "Logs"
 	testExclusionFile        = "test_exclusion.txt"
 	sampleExclusionContent   = "repo1\nrepo2\n"
-	validConfigContent       = `{"platforms": {"test": {}}, "logging": {"level": "info"}, "release": {"version": "1.0.9"}}`
+	validConfigContent       = `{"platforms": {"test": {}}, "logging": {"level": "info"}, "release": {"version": "1.10"}}`
 	invalidConfigContent     = `{"invalid": "json"`
 	testBackupSource         = "test_backup_source"
 	testBackupTarget         = "test_backup.zip"
@@ -171,8 +171,8 @@ func TestConfigFunctions(t *testing.T) {
 			t.Errorf("LoadConfig failed with valid config: %v", err)
 		}
 
-		if config.Release.Version != "1.0.9" {
-			t.Errorf("LoadConfig version = %s, want 1.0.9", config.Release.Version)
+		if config.Release.Version != "1.10" {
+			t.Errorf("LoadConfig version = %s, want 1.10", config.Release.Version)
 		}
 
 		// Test with invalid JSON
