@@ -152,8 +152,10 @@ For **GitLab Self-Managed (on-premises)**, also modify the URL configuration:
 
 ```json
 "Gitlab": {
-  "Url": "https://gitlab.yourcompany.com/": Your GitLab Self-Managed Server URL
+  "Url": "https://gitlab.yourcompany.com/": Your GitLab Self-Managed Server URL (You should keep the last '/')
   "Protocol": "https": Adjust the protocol used if needed
+  "Apiver": "": Change this field to blank as shown here
+  "Baseapi": "": Change this field to blank as shown here
 }
 ```
 
