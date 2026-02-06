@@ -114,6 +114,15 @@ type RepoParams struct {
 	PathToScan string
 }
 
+// repoAnalysisOptions groups options for performRepoAnalysis to keep parameter count within limit.
+type repoAnalysisOptions struct {
+	excludeExtension   []string
+	excludePaths       []string
+	excludePathSegments []string
+	resultByFile       bool
+	resultAll          bool
+}
+
 type logWriter struct {
 	stdout  *os.File
 	logFile *os.File
@@ -449,7 +458,8 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 		MainBranch: p.MainBranch,
 		PathToScan: pathToScan,
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
 // Analysis functions for Bitbucket DC
@@ -468,7 +478,8 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
 // Analysis functions for GitHub
@@ -487,7 +498,8 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
 // Analysis functions for GitLab
@@ -508,7 +520,8 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
 func analyseAzurebRepo(project interface{}, DestinationResult string, platformConfig map[string]interface{}, spin *spinner.Spinner, results chan int, count *int) {
@@ -526,41 +539,39 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
 	}
-	performRepoAnalysis(params, DestinationResult, spin, results, count, excludeExtensions, excludePath, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
 // Perform repository analysis (common logic)
-func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, excludeExtension []string, excludePaths []string, excludePathSegments []string, ResultByFile bool, ResultAll bool) {
-	// Always use a consistent filename pattern so downstream parsing works across platforms
-	// Format: Result_<OrgOrProjectKey>_<RepoSlug>_<Branch>
+func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, opts repoAnalysisOptions) {
 	outputFileName := fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
 	golocParams := goloc.Params{
 		Path:                params.PathToScan,
-		ByFile:              ResultByFile,
-		ByAll:               ResultAll,
-		ExcludePaths:        excludePaths,
-		ExcludePathSegments: excludePathSegments,
-		ExcludeExtensions:   excludeExtension,
-		IncludeExtensions: []string{},
-		OrderByLang:       false,
-		OrderByFile:       false,
-		OrderByCode:       false,
-		OrderByLine:       false,
-		OrderByBlank:      false,
-		OrderByComment:    false,
-		Order:             "DESC",
-		OutputName:        outputFileName,
-		OutputPath:        DestinationResult,
-		ReportFormats:     []string{"json"},
-		Branch:            params.MainBranch,
-		Cloned:            false,
-		Repopath:          "",
+		ByFile:              opts.resultByFile,
+		ByAll:               opts.resultAll,
+		ExcludePaths:        opts.excludePaths,
+		ExcludePathSegments: opts.excludePathSegments,
+		ExcludeExtensions:   opts.excludeExtension,
+		IncludeExtensions:   []string{},
+		OrderByLang:         false,
+		OrderByFile:         false,
+		OrderByCode:         false,
+		OrderByLine:         false,
+		OrderByBlank:        false,
+		OrderByComment:      false,
+		Order:               "DESC",
+		OutputName:          outputFileName,
+		OutputPath:          DestinationResult,
+		ReportFormats:       []string{"json"},
+		Branch:              params.MainBranch,
+		Cloned:              false,
+		Repopath:            "",
 	}
-	if ResultAll {
+	if opts.resultAll {
 		golocParams.ByFile = true
 	}
-	MessB := fmt.Sprintf("   Extracting files from repo : %s ", params.RepoSlug)
-	spin.Suffix = MessB
+	spin.Suffix = fmt.Sprintf("   Extracting files from repo : %s ", params.RepoSlug)
 	spin.Start()
 
 	gc, err := goloc.NewGCloc(golocParams, assets.Languages)
@@ -569,64 +580,54 @@ func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spin
 		*count++
 		results <- 1
 		return
-	} else {
-
-		//gc.Run()
-		//*count++
-
-		if ResultAll {
-
-			if err := gc.Run(); err != nil {
-				fmt.Print("\n")
-				logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
-				*count++
-				results <- 1
-				return
-			}
-
-			// Second call to Run with ByFile = false
-			golocParams.ByFile = false
-			golocParams.Cloned = true
-			golocParams.Repopath = gc.Repopath
-
-			gc, err = goloc.NewGCloc(golocParams, assets.Languages)
-			if err != nil {
-				fmt.Print("\n")
-				logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
-				*count++
-				results <- 1
-				return
-			}
-
-			if err := gc.Run(); err != nil {
-				fmt.Print("\n")
-				logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
-				*count++
-				results <- 1
-				return
-			}
-		} else {
-			// If ByAll = false, just run normally
-			if err := gc.Run(); err != nil {
-				fmt.Print("\n")
-				logger.Errorf("❌ Error during analysis: %v", err)
-				*count++
-				results <- 1
-				return
-			}
-		}
-
-		// Remove Repository Directory
-		err1 := os.RemoveAll(gc.Repopath)
-		if err1 != nil {
-			logger.Errorf(errorMessageDi, err1)
-		}
-		golocParams.Cloned = false
-		spin.Stop()
-		logger.Infof("\r\t\t\t\t✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
-		// Send result through channel
-		results <- 1
 	}
+	if err := runRepoAnalysisGc(gc, &golocParams, params.RepoSlug, count, results, spin, opts.resultAll); err != nil {
+		return
+	}
+	_ = os.RemoveAll(gc.Repopath)
+	spin.Stop()
+	logger.Infof("\r\t\t\t\t✅ %d The repository <%s> has been analyzed\n", *count, params.RepoSlug)
+	results <- 1
+}
+
+// runRepoAnalysisGc runs the goloc analysis; with resultAll it runs twice (ByFile then full).
+func runRepoAnalysisGc(gc *goloc.GCloc, golocParams *goloc.Params, repoSlug string, count *int, results chan int, spin *spinner.Spinner, resultAll bool) error {
+	if !resultAll {
+		if err := gc.Run(); err != nil {
+			fmt.Print("\n")
+			logger.Errorf("❌ Error during analysis: %v", err)
+			*count++
+			results <- 1
+			return err
+		}
+		return nil
+	}
+	if err := gc.Run(); err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
+		*count++
+		results <- 1
+		return err
+	}
+	golocParams.ByFile = false
+	golocParams.Cloned = true
+	golocParams.Repopath = gc.Repopath
+	gc2, err := goloc.NewGCloc(*golocParams, assets.Languages)
+	if err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
+		*count++
+		results <- 1
+		return err
+	}
+	if err := gc2.Run(); err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
+		*count++
+		results <- 1
+		return err
+	}
+	return nil
 }
 
 // Wait for all goroutines to complete
@@ -691,12 +692,6 @@ func AnalyseReposListAzure(DestinationResult string, platformConfig map[string]i
 /* ---------------- Analyse Directory ---------------- */
 
 func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, excludePathSegments []string, ResultByFile bool, ResultAll bool) {
-
-	type Configuration struct {
-		ExcludeExtensions []string
-	}
-
-	//fmt.Print("\n🔎 Analysis of Directories ...\n")
 	logger.Infof("🔎 Analysis of Directories ...\n")
 
 	var wg sync.WaitGroup
@@ -706,15 +701,9 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 	for _, Listdirectories := range Listdirectorie {
 		go func(dir string) {
 			defer wg.Done()
-
-			//fmt.Println("Rep:", Listdirectories)
-
 			spin := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 			spin.Color("green", "bold")
-			messageF := ""
-			spin.FinalMSG = messageF
-
-			outputFileName := "Result_"
+			spin.FinalMSG = ""
 
 			params := goloc.Params{
 				Path:                dir,
@@ -724,75 +713,69 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 				ExcludePathSegments: excludePathSegments,
 				ExcludeExtensions:   extexclusion,
 				IncludeExtensions:   []string{},
-				OrderByLang:       false,
-				OrderByFile:       false,
-				OrderByCode:       false,
-				OrderByLine:       false,
-				OrderByBlank:      false,
-				OrderByComment:    false,
-				Order:             "DESC",
-				OutputName:        outputFileName,
-				OutputPath:        "Results",
-				ReportFormats:     []string{"json"},
-				Branch:            "",
-				Token:             "",
-				Cloned:            false,
-				Repopath:          "",
+				OrderByLang:         false,
+				OrderByFile:         false,
+				OrderByCode:         false,
+				OrderByLine:         false,
+				OrderByBlank:        false,
+				OrderByComment:      false,
+				Order:               "DESC",
+				OutputName:          "Result_",
+				OutputPath:          "Results",
+				ReportFormats:       []string{"json"},
+				Branch:              "",
+				Token:               "",
+				Cloned:              false,
+				Repopath:            "",
 			}
 
 			gc, err := goloc.NewGCloc(params, assets.Languages)
 			if err != nil {
 				logger.Errorf(errorMessageRepo+"%v", err)
 				return
-			} else {
-
-				if ResultAll {
-
-					if err := gc.Run(); err != nil {
-						fmt.Print("\n")
-						logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
-
-						return
-					}
-
-					// Second call to Run with ByFile = false
-					params.ByFile = true
-
-					params.Cloned = false
-					params.Repopath = gc.Repopath
-
-					gc, err = goloc.NewGCloc(params, assets.Languages)
-					if err != nil {
-						fmt.Print("\n")
-						logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
-						return
-					}
-
-					if err := gc.Run(); err != nil {
-						fmt.Print("\n")
-						logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
-						return
-					}
-				} else {
-					// If ByAll = false, just run normally
-					if err := gc.Run(); err != nil {
-						fmt.Print("\n")
-						logger.Errorf("❌ Error during analysis: %v", err)
-						return
-					}
-				}
-
 			}
-
-			//gc.Run()
+			if runDirectoryAnalysisGc(gc, &params, ResultAll) != nil {
+				return
+			}
 			spin.Stop()
 			logger.Infof("\t✅ %d The directory <%s> has been analyzed\n", count, dir)
 			count++
 		}(Listdirectories)
-
 	}
 
 	wg.Wait()
+}
+
+// runDirectoryAnalysisGc runs the goloc analysis for one directory; with ResultAll it runs twice.
+func runDirectoryAnalysisGc(gc *goloc.GCloc, params *goloc.Params, resultAll bool) error {
+	if !resultAll {
+		if err := gc.Run(); err != nil {
+			fmt.Print("\n")
+			logger.Errorf("❌ Error during analysis: %v", err)
+			return err
+		}
+		return nil
+	}
+	if err := gc.Run(); err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error during analysis with ByAll = true: %v", err)
+		return err
+	}
+	params.ByFile = false
+	params.Cloned = false
+	params.Repopath = gc.Repopath
+	gc2, err := goloc.NewGCloc(*params, assets.Languages)
+	if err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error initializing GCloc for ByFile = false: %v", err)
+		return err
+	}
+	if err := gc2.Run(); err != nil {
+		fmt.Print("\n")
+		logger.Errorf("❌ Error during analysis with ByFile = false: %v", err)
+		return err
+	}
+	return nil
 }
 
 /* ---------------- End Analyse Directory ---------------- */

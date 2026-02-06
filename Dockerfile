@@ -12,8 +12,10 @@ COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=1.10
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=golc -ldflags "-X main.version1=${VERSION}" -o golc golc.go && \
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -tags=resultsall -o ResultsAll ResultsAll.go
+RUN CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -tags=golc \
+    -ldflags "-X main.version1=${VERSION}" -o golc golc.go && \
+    CGO_ENABLED=0 GOOS="${TARGETOS}" GOARCH="${TARGETARCH}" go build -trimpath -tags=resultsall \
+    -o ResultsAll ResultsAll.go
 
 # Run stage: minimal Alpine for fewest vulnerabilities and small size
 FROM alpine:3.19

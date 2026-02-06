@@ -265,7 +265,7 @@ if [[ "${BUILD_DOCKER}" = "1" ]]; then
         if [[ "${DOCKER_PUSH}" = "1" ]] && [[ -n "${DOCKERHUB_USERNAME}" ]] && [[ -n "${DOCKERHUB_TOKEN}" ]]; then
             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
         fi
-        if docker buildx version &> /dev/null && [ "${DOCKER_PUSH}" = "1" ]; then
+        if docker buildx version &> /dev/null && [[ "${DOCKER_PUSH}" = "1" ]]; then
             # Multi-arch build and push (linux/amd64, linux/arm64)
             docker buildx create --use --name golc-builder 2>/dev/null || true
             docker buildx build \
