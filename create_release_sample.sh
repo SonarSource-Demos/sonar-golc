@@ -108,7 +108,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -134,7 +134,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -160,7 +160,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -187,7 +187,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -213,7 +213,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -239,7 +239,7 @@ mkdir -p $DEST
 
 # Build with proper tags and handle Windows .exe extension
 # -trimpath removes file system paths from binaries for security/privacy
-if [ "${GOOS}" = "windows" ]; then
+if [[ "${GOOS}" = "windows" ]]; then
     go build -trimpath -tags=golc -ldflags "-X main.version=${TAG}" -o ${DEST}/golc.exe golc.go
     go build -trimpath -tags=resultsall -o ${DEST}/ResultsAll.exe ResultsAll.go
 else
@@ -259,10 +259,10 @@ cd $CMD
 
 #------------------------------ Docker image (optional) ---------------------#
 # Set BUILD_DOCKER=1 to build; DOCKER_PUSH=1 to push (requires 'docker login' or DOCKERHUB_*).
-if [ "${BUILD_DOCKER}" = "1" ]; then
+if [[ "${BUILD_DOCKER}" = "1" ]]; then
     echo "Building Docker image ${DOCKER_IMAGE}:${Release1} ..."
     if command -v docker &> /dev/null; then
-        if [ "${DOCKER_PUSH}" = "1" ] && [ -n "${DOCKERHUB_USERNAME}" ] && [ -n "${DOCKERHUB_TOKEN}" ]; then
+        if [[ "${DOCKER_PUSH}" = "1" ]] && [[ -n "${DOCKERHUB_USERNAME}" ]] && [[ -n "${DOCKERHUB_TOKEN}" ]]; then
             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
         fi
         if docker buildx version &> /dev/null && [ "${DOCKER_PUSH}" = "1" ]; then
@@ -285,7 +285,7 @@ if [ "${BUILD_DOCKER}" = "1" ]; then
             echo "✓ Docker image ${DOCKER_IMAGE}:${Release1} built locally. Use DOCKER_PUSH=1 to push multi-arch."
         else
             docker build --build-arg VERSION="${Release1}" -t "${DOCKER_IMAGE}:${Release1}" .
-            if [ "${DOCKER_PUSH}" = "1" ]; then
+            if [[ "${DOCKER_PUSH}" = "1" ]]; then
                 docker push "${DOCKER_IMAGE}:${Release1}"
             fi
             echo "✓ Docker image ${DOCKER_IMAGE}:${Release1} ready."
@@ -361,7 +361,7 @@ for GOARCH in "${GOARCH_VALUES[@]}"; do
         EXISTING_ASSET_ID=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.name == \"$(basename $zip_file)\") | .id")
 
         # Delete existing asset, if found
-        if [ ! -z "$EXISTING_ASSET_ID" ]; then
+        if [[ -n "$EXISTING_ASSET_ID" ]]; then
             delete_asset "$EXISTING_ASSET_ID"
         fi
         upload_asset "$UPLOAD_URL" "$zip_file"
@@ -369,17 +369,17 @@ for GOARCH in "${GOARCH_VALUES[@]}"; do
 done
 
 # Upload source code archives
-if [ -f "${buildpath}${Release1}/source.zip" ]; then
+if [[ -f "${buildpath}${Release1}/source.zip" ]]; then
     EXISTING_ASSET_ID=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.name == \"source.zip\") | .id")
-    if [ ! -z "$EXISTING_ASSET_ID" ]; then
+    if [[ -n "$EXISTING_ASSET_ID" ]]; then
         delete_asset "$EXISTING_ASSET_ID"
     fi
     upload_asset "$UPLOAD_URL" "${buildpath}${Release1}/source.zip"
 fi
 
-if [ -f "${buildpath}${Release1}/source.tar.gz" ]; then
+if [[ -f "${buildpath}${Release1}/source.tar.gz" ]]; then
     EXISTING_ASSET_ID=$(echo "$ASSETS_RESPONSE" | jq -r ".[] | select(.name == \"source.tar.gz\") | .id")
-    if [ ! -z "$EXISTING_ASSET_ID" ]; then
+    if [[ -n "$EXISTING_ASSET_ID" ]]; then
         delete_asset "$EXISTING_ASSET_ID"
     fi
     # Note: GitHub API expects correct Content-Type for tar.gz

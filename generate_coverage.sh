@@ -10,7 +10,7 @@ echo "🔬 Generating test coverage reports for local development..."
 rm -f coverage-*.out coverage.out
 
 # Create config file for testing if it doesn't exist
-if [ ! -f config.json ]; then
+if [[ ! -f config.json ]]; then
     echo "📝 Creating config.json from sample for testing..."
     cp config_sample.json config.json
 fi
@@ -39,7 +39,7 @@ echo "🌐 resultsall application:"
 go tool cover -func=coverage-resultsall.out | tail -1
 
 # 5. Generate HTML reports (optional)
-if [ "$1" = "--html" ]; then
+if [[ "$1" = "--html" ]]; then
     echo "🌐 Generating HTML coverage reports..."
     go tool cover -html=coverage-pkg.out -o coverage-pkg.html
     go tool cover -html=coverage-golc.out -o coverage-golc.html

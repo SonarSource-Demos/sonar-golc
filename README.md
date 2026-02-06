@@ -47,7 +47,7 @@ You can install from the stable release by clicking [here](https://github.com/So
 
 ## Docker
 
-Use the published image **`timothe/sonar-golc`** from Docker Hub. Config is provided via a mounted directory; the web UI is served on port 8092. The DevOps platform to analyze is set with the **`GOLC_DEVOPS`** environment variable (e.g. `Github`, `Gitlab`, `BitBucket`, `File`).
+Use the published image **`fabiogos846/sonar-golc`** from Docker Hub. Config is provided via a mounted directory; the web UI is served on port 8092. The DevOps platform to analyze is set with the **`GOLC_DEVOPS`** environment variable (e.g. `Github`, `Gitlab`, `BitBucket`, `File`).
 
 **Run with the published image:**
 ```bash
@@ -62,12 +62,12 @@ docker run -p 8092:8092 \
 
 To persist results on the host, add: `-v "$(pwd)/data:/data"`. After the analysis completes, open **http://localhost:8092** to view the results. View logs with `docker logs <container>`.
 
-**Building the image** (optional, e.g. for local development): `docker build -t sonar-golc .` — then use `sonar-golc` instead of `timothe/sonar-golc` in the commands below.
+**Building the image** (optional, e.g. for local development): `docker build -t sonar-golc .` — then use `sonar-golc` instead of `fabiogos846/sonar-golc` in the commands below.
 
 **Docker Compose:** Put `config.json` in a `config/` directory. The Compose file uses the image `sonar-golc` (pull the published image and tag it, or use your built image):
 
 ```bash
-docker pull timothe/sonar-golc && docker tag timothe/sonar-golc sonar-golc
+docker pull fabiogos846/sonar-golc && docker tag fabiogos846/sonar-golc sonar-golc
 mkdir -p config && cp config_sample.json config/config.json
 # Edit config/config.json, then:
 docker compose up
