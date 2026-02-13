@@ -323,7 +323,7 @@ Results ALL is the default report format. It generates a report for by language 
 To exclude directories from your repository from the analysis, initialize the variable **'ExcludePaths': ['']**. For example, to exclude two directories: **'ExcludePaths': ['test1', 'pkg/test2']**.
 
 ❗️ **Test code exclusion (SonarQube-style).**  
-GoLC can exclude test code from line counts using the same rules as SonarQube. Configure this via the top-level **`TestExclusion`** object in **config.json** (same level as `"platforms"` and `"Logging"`).
+GoLC can exclude test code from line counts using the same rules as SonarQube automatic test exclusion. Configure this via the top-level **`TestExclusion`** object in **config.json** (same level as `"platforms"` and `"Logging"`).
 
 **How to use TestExclusion**
 
