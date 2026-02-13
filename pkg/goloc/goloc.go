@@ -20,27 +20,27 @@ import (
 )
 
 type Params struct {
-	Path                  string
-	ByFile                bool
-	ByAll                 bool
-	ExcludePaths          []string
-	ExcludePathSegments   []string
-	ExcludeExtensions     []string
-	IncludeExtensions []string
-	OrderByLang       bool
-	OrderByFile       bool
-	OrderByCode       bool
-	OrderByLine       bool
-	OrderByBlank      bool
-	OrderByComment    bool
-	Order             string
-	OutputName        string
-	OutputPath        string
-	ReportFormats     []string
-	Branch            string
-	Token             string
-	Cloned            bool
-	Repopath          string
+	Path                string
+	ByFile              bool
+	ByAll               bool
+	ExcludePaths        []string
+	ExcludeExtensions   []string
+	IncludeExtensions   []string
+	TestExclusion       *analyzer.TestExclusion
+	OrderByLang           bool
+	OrderByFile           bool
+	OrderByCode           bool
+	OrderByLine           bool
+	OrderByBlank          bool
+	OrderByComment        bool
+	Order                 string
+	OutputName            string
+	OutputPath            string
+	ReportFormats         []string
+	Branch                string
+	Token                 string
+	Cloned                bool
+	Repopath              string
 }
 
 type GCloc struct {
@@ -86,10 +86,10 @@ type GCloc struct {
 		analyzer := analyzer.NewAnalyzer(
 			path,
 			excludePaths,
-			params.ExcludePathSegments,
 			utils.ConvertToMap(params.ExcludeExtensions),
 			utils.ConvertToMap(params.IncludeExtensions),
 			getExtensionsMap(languages),
+			params.TestExclusion,
 		)
 		scanner := scanner.NewScanner(languages)
 
@@ -122,10 +122,10 @@ type GCloc struct {
 		analyzer := analyzer.NewAnalyzer(
 			path,
 			excludePaths,
-			params.ExcludePathSegments,
 			utils.ConvertToMap(params.ExcludeExtensions),
 			utils.ConvertToMap(params.IncludeExtensions),
 			getExtensionsMap(languages),
+			params.TestExclusion,
 		)
 
 		scanner := scanner.NewScanner(languages)
@@ -162,7 +162,7 @@ func NewGCloc(params Params, languages language.Languages) (*GCloc, error) {
 		return nil, err
 	}
 
-	analyzer, scanner, reporters := initAnalyzerScannerReporters(path, params, excludePaths, params.ExcludePathSegments, languages)
+	analyzer, scanner, reporters := initAnalyzerScannerReporters(path, params, excludePaths, params.TestExclusion, languages)
 
 	params.Cloned = true
 
@@ -187,14 +187,14 @@ func getRepoPath(params Params) (string, error) {
 	return getter.Getter(params.Path)
 }
 
-func initAnalyzerScannerReporters(path string, params Params, excludePaths []string, excludePathSegments []string, languages language.Languages) (*analyzer.Analyzer, *scanner.Scanner, []reporter.Reporter) {
+func initAnalyzerScannerReporters(path string, params Params, excludePaths []string, testExclusion *analyzer.TestExclusion, languages language.Languages) (*analyzer.Analyzer, *scanner.Scanner, []reporter.Reporter) {
 	analyzer := analyzer.NewAnalyzer(
 		path,
 		excludePaths,
-		excludePathSegments,
 		utils.ConvertToMap(params.ExcludeExtensions),
 		utils.ConvertToMap(params.IncludeExtensions),
 		getExtensionsMap(languages),
+		testExclusion,
 	)
 	scanner := scanner.NewScanner(languages)
 

@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/SonarSource-Demos/sonar-golc/assets"
+	"github.com/SonarSource-Demos/sonar-golc/pkg/analyzer"
 	"github.com/SonarSource-Demos/sonar-golc/pkg/goloc"
 	"github.com/briandowns/spinner"
 
@@ -66,9 +67,19 @@ type SelfLink struct {
 }
 
 type Config struct {
-	Platforms map[string]interface{} `json:"platforms"`
-	Logging   LoggingConfig          `json:"logging"`
-	Release   ReleaseConfig          `json:"release"`
+	Platforms     map[string]interface{} `json:"platforms"`
+	TestExclusion *TestExclusionConfig   `json:"TestExclusion,omitempty"`
+	Logging       LoggingConfig         `json:"logging"`
+	Release       ReleaseConfig         `json:"release"`
+}
+
+// TestExclusionConfig is the configurable SonarQube-style test exclusion (same rules as SonarQube).
+// When absent or empty, SonarQube defaults are used so test code is not counted.
+type TestExclusionConfig struct {
+	FileNamePrefixes  []string `json:"FileNamePrefixes,omitempty"`  // e.g. ["test"] - filename starts with
+	FileNameContains  []string `json:"FileNameContains,omitempty"`    // e.g. ["test.", "tests."] - filename contains
+	DirNames          []string `json:"DirNames,omitempty"`          // e.g. ["doc","docs","test","tests","mock","mocks"]
+	DirNameSuffixes   []string `json:"DirNameSuffixes,omitempty"`   // e.g. ["test","tests"] - directory name ends with
 }
 
 type LoggingConfig struct {
@@ -116,11 +127,11 @@ type RepoParams struct {
 
 // repoAnalysisOptions groups options for performRepoAnalysis to keep parameter count within limit.
 type repoAnalysisOptions struct {
-	excludeExtension   []string
-	excludePaths       []string
-	excludePathSegments []string
-	resultByFile       bool
-	resultAll          bool
+	excludeExtension []string
+	excludePaths     []string
+	testExclusion    *analyzer.TestExclusion
+	resultByFile     bool
+	resultAll        bool
 }
 
 type logWriter struct {
@@ -409,14 +420,30 @@ func getExcludePaths(configValue interface{}) []string {
 	return []string{}
 }
 
-func getExcludePathSegments(configValue interface{}) []string {
-	if configValue == nil {
-		return []string{}
+// SonarQube default test exclusion rules (same as SonarQube).
+var defaultTestExclusion = &analyzer.TestExclusion{
+	FileNamePrefixes: []string{"test"},
+	FileNameContains: []string{"test.", "tests."},
+	DirNames:         []string{"doc", "docs", "test", "tests", "mock", "mocks"},
+	DirNameSuffixes:  []string{"test", "tests"},
+}
+
+// getTestExclusion returns test exclusion from config, or SonarQube defaults when TestExclusion is absent.
+// When TestExclusion is present but all arrays are empty, returns nil (test exclusion disabled).
+func getTestExclusion(cfg *TestExclusionConfig) *analyzer.TestExclusion {
+	if cfg == nil {
+		return defaultTestExclusion
 	}
-	if segments, ok := configValue.([]interface{}); ok {
-		return convertToSliceString(segments)
+	t := &analyzer.TestExclusion{
+		FileNamePrefixes: cfg.FileNamePrefixes,
+		FileNameContains: cfg.FileNameContains,
+		DirNames:         cfg.DirNames,
+		DirNameSuffixes:  cfg.DirNameSuffixes,
 	}
-	return []string{}
+	if len(t.FileNamePrefixes) == 0 && len(t.FileNameContains) == 0 && len(t.DirNames) == 0 && len(t.DirNameSuffixes) == 0 {
+		return nil
+	}
+	return t
 }
 
 // Analysis functions for different repository types
@@ -428,7 +455,6 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
-	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	// Determine git clone URL format
 	// For git operations with API tokens, use x-bitbucket-api-token-auth (static username for API tokens)
@@ -458,7 +484,7 @@ func analyseBitCRepo(project interface{}, DestinationResult string, platformConf
 		MainBranch: p.MainBranch,
 		PathToScan: pathToScan,
 	}
-	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, testExclusion: getTestExclusion(AppConfig.TestExclusion), resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
@@ -469,7 +495,6 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
-	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.ProjectKey,
@@ -478,7 +503,7 @@ func analyseBitSRVRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:%s@%sscm/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["Users"].(string), platformConfig["AccessToken"].(string), trimmedURL, p.ProjectKey, p.RepoSlug),
 	}
-	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, testExclusion: getTestExclusion(AppConfig.TestExclusion), resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
@@ -489,7 +514,6 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
-	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.Org,
@@ -498,7 +522,7 @@ func analyseGithubRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s:x-oauth-basic@%s/%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), platformConfig["Baseapi"].(string), p.Org, p.RepoSlug),
 	}
-	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, testExclusion: getTestExclusion(AppConfig.TestExclusion), resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
@@ -509,7 +533,6 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
-	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	domain := extractDomain(platformConfig["Url"].(string))
 
@@ -520,7 +543,7 @@ func analyseGitlabRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://gitlab-ci-token:%s@%s/%s.git", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), domain, p.Namespace),
 	}
-	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, testExclusion: getTestExclusion(AppConfig.TestExclusion), resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
@@ -530,7 +553,6 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 
 	excludeExtensions = convertToSliceString(platformConfig["ExtExclusion"].([]interface{}))
 	excludePath := getExcludePaths(platformConfig["ExcludePaths"])
-	excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
 
 	params := RepoParams{
 		ProjectKey: p.ProjectKey,
@@ -539,7 +561,7 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 		MainBranch: p.MainBranch,
 		PathToScan: fmt.Sprintf("%s://%s@%s/%s/%s/%s/%s", platformConfig["Protocol"].(string), platformConfig["AccessToken"].(string), "dev.azure.com", platformConfig["Organization"].(string), p.ProjectKey, "_git", p.RepoSlug),
 	}
-	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, excludePathSegments: excludePathSegments, resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
+	opts := repoAnalysisOptions{excludeExtension: excludeExtensions, excludePaths: excludePath, testExclusion: getTestExclusion(AppConfig.TestExclusion), resultByFile: platformConfig["ResultByFile"].(bool), resultAll: platformConfig["ResultAll"].(bool)}
 	performRepoAnalysis(params, DestinationResult, spin, results, count, opts)
 }
 
@@ -547,13 +569,13 @@ func analyseAzurebRepo(project interface{}, DestinationResult string, platformCo
 func performRepoAnalysis(params RepoParams, DestinationResult string, spin *spinner.Spinner, results chan int, count *int, opts repoAnalysisOptions) {
 	outputFileName := fmt.Sprintf("Result_%s_%s_%s", params.ProjectKey, params.RepoSlug, params.MainBranch)
 	golocParams := goloc.Params{
-		Path:                params.PathToScan,
-		ByFile:              opts.resultByFile,
-		ByAll:               opts.resultAll,
-		ExcludePaths:        opts.excludePaths,
-		ExcludePathSegments: opts.excludePathSegments,
-		ExcludeExtensions:   opts.excludeExtension,
-		IncludeExtensions:   []string{},
+		Path:              params.PathToScan,
+		ByFile:            opts.resultByFile,
+		ByAll:             opts.resultAll,
+		ExcludePaths:      opts.excludePaths,
+		ExcludeExtensions: opts.excludeExtension,
+		IncludeExtensions: []string{},
+		TestExclusion:     opts.testExclusion,
 		OrderByLang:         false,
 		OrderByFile:         false,
 		OrderByCode:         false,
@@ -691,7 +713,7 @@ func AnalyseReposListAzure(DestinationResult string, platformConfig map[string]i
 
 /* ---------------- Analyse Directory ---------------- */
 
-func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, excludePathSegments []string, ResultByFile bool, ResultAll bool) {
+func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion []string, testExclusion *analyzer.TestExclusion, ResultByFile bool, ResultAll bool) {
 	logger.Infof("🔎 Analysis of Directories ...\n")
 
 	var wg sync.WaitGroup
@@ -706,13 +728,13 @@ func AnalyseReposListFile(Listdirectorie, fileexclusionEX []string, extexclusion
 			spin.FinalMSG = ""
 
 			params := goloc.Params{
-				Path:                dir,
-				ByFile:              ResultByFile,
-				ByAll:               ResultAll,
-				ExcludePaths:        fileexclusionEX,
-				ExcludePathSegments: excludePathSegments,
-				ExcludeExtensions:   extexclusion,
-				IncludeExtensions:   []string{},
+				Path:              dir,
+				ByFile:            ResultByFile,
+				ByAll:             ResultAll,
+				ExcludePaths:      fileexclusionEX,
+				ExcludeExtensions: extexclusion,
+				IncludeExtensions: []string{},
+				TestExclusion:     testExclusion,
 				OrderByLang:         false,
 				OrderByFile:         false,
 				OrderByCode:         false,
@@ -800,10 +822,10 @@ func AnalyseRepo(DestinationResult string, Users string, AccessToken string, Dev
 		Path:                pathToScan,
 		ByFile:              false,
 		ByAll:               false,
-		ExcludePaths:        []string{},
-		ExcludePathSegments: []string{},
-		ExcludeExtensions:   []string{},
-		IncludeExtensions:   []string{},
+		ExcludePaths:      []string{},
+		ExcludeExtensions: []string{},
+		IncludeExtensions: []string{},
+		TestExclusion:     getTestExclusion(AppConfig.TestExclusion),
 		OrderByLang:       false,
 		OrderByFile:       false,
 		OrderByCode:       false,
@@ -1269,8 +1291,7 @@ func main() {
 			}
 		}
 		startTime = time.Now()
-		excludePathSegments := getExcludePathSegments(platformConfig["ExcludePathSegments"])
-		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions, excludePathSegments, platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
+		AnalyseReposListFile(ListDirectory, ListExclusion, excludeExtensions, getTestExclusion(AppConfig.TestExclusion), platformConfig["ResultByFile"].(bool), platformConfig["ResultAll"].(bool))
 	}
 
 	/*---------------------------------- End Select type of DevOps Platform ----------------------------------------------------*/

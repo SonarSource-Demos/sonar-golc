@@ -16,7 +16,6 @@
         "FileExclusion":".cloc_bitbucketdc_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-5,
         "Factor":33,
         "Multithreading":true,
@@ -44,7 +43,6 @@
         "FileExclusion":".cloc_bitbucket_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -72,7 +70,6 @@
         "FileExclusion":".cloc_github_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -99,7 +96,6 @@
         "FileExclusion":".cloc_github_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -127,7 +123,6 @@
         "FileExclusion":".cloc_gitlab_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -154,7 +149,6 @@
         "FileExclusion":".cloc_azure_ignore",
         "ExtExclusion":[],
         "ExcludePaths":[],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "Period":-1,
         "Factor":33,
         "Multithreading":true,
@@ -171,12 +165,17 @@
         "Directory":"../gcloc_m/.",
         "FileExclusion":".cloc_file_ignore",
         "ExtExclusion":[""],
-        "ExcludePathSegments":["test","tests","testing","Test","Tests","Testing","it","integration","integration-test","integration_test","integrationtests","IntegrationTests","IntegrationTest","e2e","end-to-end","spec","specs","__tests__","__specs__","__mocks__","__fixtures__","testdata","test-data","test_data","fixtures","cypress","playwright","karma","features","acceptance","functional","smoke","benchmark","benchmarks","benches","UITests","UITest","examples"],
         "FileLoad":".cloc_file_load",
         "ResultByFile": false,
         "ResultAll": true
 
       }
+    },
+    "TestExclusion": {
+      "FileNamePrefixes": ["test"],
+      "FileNameContains": ["test.", "tests."],
+      "DirNames": ["doc", "docs", "test", "tests", "mock", "mocks"],
+      "DirNameSuffixes": ["test", "tests"]
     },
     "Logging": {
       "Level": "debug"

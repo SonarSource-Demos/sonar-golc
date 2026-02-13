@@ -6,13 +6,26 @@ import (
 	"strings"
 )
 
+// TestExclusion holds SonarQube-style rules to exclude test code from being counted.
+// When non-nil and any rule is non-empty, files matching any rule are excluded.
+type TestExclusion struct {
+	// FileNamePrefixes: exclude if the filename (base) starts with any of these (e.g. "test").
+	FileNamePrefixes []string
+	// FileNameContains: exclude if the filename contains any of these substrings (e.g. "test.", "tests.").
+	FileNameContains []string
+	// DirNames: exclude if any directory in the file path has this exact name (e.g. "doc", "docs", "test", "tests", "mock", "mocks").
+	DirNames []string
+	// DirNameSuffixes: exclude if any directory in the path has a name ending with any of these (e.g. "test", "tests").
+	DirNameSuffixes []string
+}
+
 type Analyzer struct {
-	SupportedExtensions   map[string]string
-	path                  string
-	excludePaths          []string
-	excludePathSegments   map[string]bool // segment names that exclude a path if any path component matches
-	excludeExtensions     map[string]bool
-	includeExtensions     map[string]bool
+	SupportedExtensions map[string]string
+	path                string
+	excludePaths        []string
+	excludeExtensions   map[string]bool
+	includeExtensions   map[string]bool
+	testExclusion       *TestExclusion
 }
 
 type FileMetadata struct {
@@ -24,22 +37,18 @@ type FileMetadata struct {
 func NewAnalyzer(
 	path string,
 	excludePaths []string,
-	excludePathSegments []string,
 	excludeExtensions map[string]bool,
 	includeExtensions map[string]bool,
 	extensions map[string]string,
+	testExclusion *TestExclusion,
 ) *Analyzer {
-	segmentSet := make(map[string]bool)
-	for _, s := range excludePathSegments {
-		segmentSet[s] = true
-	}
 	return &Analyzer{
 		SupportedExtensions: extensions,
 		path:                path,
 		excludePaths:        excludePaths,
-		excludePathSegments: segmentSet,
 		excludeExtensions:   excludeExtensions,
 		includeExtensions:   includeExtensions,
+		testExclusion:       testExclusion,
 	}
 }
 
@@ -88,14 +97,9 @@ func (a *Analyzer) canAdd(path string, extension string) bool {
 		}
 	}
 
-	// Exclude if any path segment (directory or file name) matches ExcludePathSegments
-	if len(a.excludePathSegments) > 0 {
-		dir := filepath.Dir(path)
-		for _, segment := range strings.Split(filepath.ToSlash(dir), "/") {
-			if segment != "" && a.excludePathSegments[segment] {
-				return false
-			}
-		}
+	// SonarQube-style test code exclusion (configurable via config.json TestExclusion)
+	if a.testExclusion != nil && a.isTestCode(path) {
+		return false
 	}
 
 	if len(a.includeExtensions) > 0 {
@@ -109,4 +113,55 @@ func (a *Analyzer) canAdd(path string, extension string) bool {
 
 	_, ok := a.SupportedExtensions[extension]
 	return ok
+}
+
+// isTestCode returns true if the file path matches any SonarQube-style test exclusion rule.
+// Matching is case-insensitive so that e.g. "Test", "Tests", "test", "tests" all match.
+func (a *Analyzer) isTestCode(path string) bool {
+	t := a.testExclusion
+	base := filepath.Base(path)
+	baseLower := strings.ToLower(base)
+	dir := filepath.Dir(path)
+	segments := strings.Split(filepath.ToSlash(dir), "/")
+
+	// Filename starts with any of FileNamePrefixes (e.g. "test")
+	for _, p := range t.FileNamePrefixes {
+		if p != "" && strings.HasPrefix(baseLower, strings.ToLower(p)) {
+			return true
+		}
+	}
+
+	// Filename contains any of FileNameContains (e.g. "test.", "tests.")
+	for _, sub := range t.FileNameContains {
+		if sub != "" && strings.Contains(baseLower, strings.ToLower(sub)) {
+			return true
+		}
+	}
+
+	// Any directory in path has exact name in DirNames (e.g. doc, docs, test, tests, mock, mocks)
+	for _, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		for _, d := range t.DirNames {
+			if d != "" && strings.EqualFold(segment, d) {
+				return true
+			}
+		}
+	}
+
+	// Any directory in path has name ending with DirNameSuffixes (e.g. "test", "tests")
+	for _, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		segLower := strings.ToLower(segment)
+		for _, suffix := range t.DirNameSuffixes {
+			if suffix != "" && strings.HasSuffix(segLower, strings.ToLower(suffix)) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
